@@ -63,33 +63,6 @@ class Settings(BaseSettings):
         default=2, description="Polling interval for parser worker"
     )
 
-    # --- Azure Service Bus ---
-    azure_servicebus_connection_string: Optional[str] = Field(
-        default=None, description="Azure Service Bus connection string"
-    )
-    azure_servicebus_queue_name: str = Field(
-        default="email-analysis-queue", description="Service Bus queue name"
-    )
-
-    # --- Azure Storage ---
-    azure_storage_connection_string: Optional[str] = Field(
-        default=None, description="Azure Storage connection string"
-    )
-    azure_storage_container_name: str = Field(
-        default="email-attachments", description="Blob storage container name"
-    )
-
-    # --- Azure Identity ---
-    azure_tenant_id: Optional[str] = Field(
-        default=None, description="Azure AD tenant ID"
-    )
-    azure_client_id: Optional[str] = Field(
-        default=None, description="Azure AD client ID"
-    )
-    azure_client_secret: Optional[str] = Field(
-        default=None, description="Azure AD client secret"
-    )
-
     # --- Azure OpenAI ---
     azure_openai_endpoint: Optional[str] = Field(
         default=None, description="Azure OpenAI endpoint"
@@ -160,6 +133,20 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/0", description="Redis connection URL"
     )
 
+    # --- Orchestrator Finalization Controls ---
+    orchestrator_cache_ttl_seconds: int = Field(
+        default=900,
+        description="Redis TTL for per-analysis aggregated agent results",
+    )
+    orchestrator_partial_timeout_seconds: int = Field(
+        default=90,
+        description="Finalize with partial agent results after this many seconds",
+    )
+    orchestrator_min_agents_for_decision: int = Field(
+        default=4,
+        description="Minimum agent count required for timeout-based partial finalization",
+    )
+
     # --- Logging ---
     log_dir: str = Field(default="logs/", description="Log output directory")
     log_format: str = Field(default="json", description="Log format (json or text)")
@@ -172,6 +159,34 @@ class Settings(BaseSettings):
     )
     garuda_timeout_seconds: int = Field(
         default=15, description="Garuda API request timeout"
+    )
+
+    # --- Action Layer Endpoints ---
+    quarantine_api_url: Optional[str] = Field(
+        default=None,
+        description="Endpoint URL for quarantine action dispatch",
+    )
+    soc_alert_api_url: Optional[str] = Field(
+        default=None,
+        description="Endpoint URL for SOC alert dispatch",
+    )
+
+    # --- Threat Intel Local IOC DB ---
+    ioc_db_path: str = Field(
+        default="data/ioc_store.db",
+        description="SQLite path for local IOC database",
+    )
+    ioc_refresh_seconds: int = Field(
+        default=300,
+        description="How often to refresh IOC DB from filesystem feeds",
+    )
+
+    # --- Sandbox Detonation ---
+    sandbox_detonation_image: str = Field(
+        default="python:3.11-slim", description="Container image used for sandbox detonation"
+    )
+    sandbox_timeout_seconds: int = Field(
+        default=60, description="Max runtime for each sandbox detonation"
     )
 
     @property

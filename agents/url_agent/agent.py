@@ -8,6 +8,9 @@ from urllib.parse import urlparse
 
 import httpx
 
+from agents.url_agent.feature_extractor import extract_features
+from agents.url_agent.inference import predict
+from agents.url_agent.model_loader import load_model
 from configs.settings import settings
 from services.logging_service import get_agent_logger
 
@@ -96,11 +99,24 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         scores.append(final_score)
         indicators.extend([f"{url}::{entry}" for entry in heur_ind + vt_ind])
 
-    risk_score = _clamp(sum(scores) / len(scores))
+    heuristic_risk = _clamp(sum(scores) / len(scores))
+
+    features = extract_features(data)
+    model = load_model()
+    ml_prediction = predict(features, model=model)
+
+    if ml_prediction.get("confidence", 0.0) > 0.0:
+        risk_score = _clamp((0.65 * ml_prediction.get("risk_score", 0.0)) + (0.35 * heuristic_risk))
+        confidence = _clamp(max(0.6 + min(0.3, 0.02 * len(urls)), ml_prediction.get("confidence", 0.0)))
+        indicators.extend(ml_prediction.get("indicators", []))
+    else:
+        risk_score = heuristic_risk
+        confidence = _clamp(0.6 + min(0.3, 0.02 * len(urls)))
+
     result = {
         "agent_name": "url_agent",
         "risk_score": risk_score,
-        "confidence": _clamp(0.6 + min(0.3, 0.02 * len(urls))),
+        "confidence": confidence,
         "indicators": indicators[:20],
     }
     logger.info("Analysis complete", risk_score=result["risk_score"], url_count=len(urls))

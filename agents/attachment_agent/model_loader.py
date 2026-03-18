@@ -1,47 +1,40 @@
-"""
-Model loader for the Attachment Static Analysis Agent.
+"""Model loader for attachment static-analysis models."""
 
-Handles loading, caching, and version management of ML models.
-"""
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Optional
 
+from agents.ml_runtime import load_model_bundle
+from configs.settings import settings
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
 
 
 class ModelLoader:
-    """Loads and caches the ML model for attachment_agent."""
+    """Loads and caches attachment model artifacts."""
 
-    def __init__(self, model_path: str = "models/attachment_agent/"):
-        self.model_path = Path(model_path)
+    def __init__(self, model_path: str | None = None):
+        self.model_path = Path(model_path or settings.attachment_model_path)
         self._model: Optional[Any] = None
 
     def load_model(self) -> Any:
-        """
-        Load the model from disk.
-
-        Returns:
-            The loaded model object, or None if not yet trained.
-        """
         if self._model is not None:
             return self._model
-
         logger.info("Loading model", path=str(self.model_path))
-
-        # Placeholder – model loading logic will be added in later phases
-        self._model = None
-        logger.warning("No trained model found; using placeholder")
+        self._model = load_model_bundle(self.model_path)
+        if self._model is None:
+            logger.warning("No trained model found; falling back to heuristic mode")
         return self._model
 
-    def is_loaded(self) -> bool:
-        """Check whether the model is currently loaded."""
-        return self._model is not None
+
+_LOADER = ModelLoader()
 
 
-def load_model(model_path: str = "models/attachment_agent/") -> Any:
-    """Convenience function to load the agent model."""
-    loader = ModelLoader(model_path)
-    return loader.load_model()
+def load_model(model_path: str | None = None) -> Any:
+    """Convenience function to load a cached attachment model."""
+    global _LOADER
+    if model_path:
+        _LOADER = ModelLoader(model_path)
+    return _LOADER.load_model()

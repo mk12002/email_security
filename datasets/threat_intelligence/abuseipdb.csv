@@ -1,0 +1,3 @@
+indicator,type,source
+192.168.1.100,ip,abuseipdb
+malicious-domain.com,domain,abuseipdb

@@ -1,35 +1,18 @@
-"""
-Inference engine for the User Interaction Prediction Agent.
+"""Inference engine for user interaction prediction models."""
 
-Runs the loaded model against extracted features to produce predictions.
-"""
+from __future__ import annotations
 
 from typing import Any
 
+from agents.ml_runtime import predict_with_model
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("user_behavior_agent")
 
 
 def predict(features: dict[str, Any], model: Any = None) -> dict[str, Any]:
-    """
-    Run inference using the agent model.
-
-    Args:
-        features: Extracted feature dictionary.
-        model: Pre-loaded model object (optional).
-
-    Returns:
-        Prediction result with risk_score and confidence.
-    """
+    """Run inference for user-behavior model and return normalized risk output."""
     logger.debug("Running inference", agent="user_behavior_agent")
-
-    # Placeholder – inference logic will be added in later phases
-    prediction = {
-        "risk_score": 0.0,
-        "confidence": 0.0,
-        "indicators": [],
-    }
-
+    prediction = predict_with_model(features, model, model_indicator="ml_user_behavior_model_used")
     logger.debug("Inference complete", prediction=prediction)
     return prediction

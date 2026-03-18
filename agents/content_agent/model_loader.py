@@ -1,47 +1,85 @@
-"""
-Model loader for the Content Phishing Detection Agent.
+"""Model loader for content phishing detection agent."""
 
-Handles loading, caching, and version management of ML models.
-"""
+from __future__ import annotations
 
+import pickle
 from pathlib import Path
 from typing import Any, Optional
 
+import joblib
+
+from configs.settings import settings
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
 
 
 class ModelLoader:
-    """Loads and caches the ML model for content_agent."""
+    """Loads and caches model artifacts for content analysis."""
 
-    def __init__(self, model_path: str = "models/content_agent/"):
-        self.model_path = Path(model_path)
+    def __init__(self, model_path: str | None = None):
+        self.model_path = Path(model_path or settings.content_model_path)
         self._model: Optional[Any] = None
 
-    def load_model(self) -> Any:
-        """
-        Load the model from disk.
+    def _load_transformer_pipeline(self) -> Any:
+        try:
+            from transformers import pipeline
+        except Exception:
+            return None
 
-        Returns:
-            The loaded model object, or None if not yet trained.
-        """
+        config_file = self.model_path / "config.json"
+        if not config_file.exists():
+            return None
+
+        logger.info("Loading local transformer pipeline", path=str(self.model_path))
+        pipe = pipeline(
+            "text-classification",
+            model=str(self.model_path),
+            tokenizer=str(self.model_path),
+            truncation=True,
+        )
+        return {"kind": "transformer_pipeline", "model": pipe}
+
+    def _load_joblib_or_pickle(self) -> Any:
+        candidates = ["model.joblib", "model.pkl"]
+        for name in candidates:
+            artifact = self.model_path / name
+            if not artifact.exists():
+                continue
+
+            logger.info("Loading content model artifact", path=str(artifact))
+            if artifact.suffix == ".joblib":
+                loaded = joblib.load(artifact)
+            else:
+                with open(artifact, "rb") as handle:
+                    loaded = pickle.load(handle)
+
+            if isinstance(loaded, dict) and "model" in loaded:
+                loaded.setdefault("kind", "sklearn_bundle")
+                return loaded
+            return {"kind": "sklearn_model", "model": loaded}
+        return None
+
+    def load_model(self) -> Any:
         if self._model is not None:
             return self._model
 
-        logger.info("Loading model", path=str(self.model_path))
+        if not self.model_path.exists():
+            logger.warning("Content model path not found", path=str(self.model_path))
+            return None
 
-        # Placeholder – model loading logic will be added in later phases
-        self._model = None
-        logger.warning("No trained model found; using placeholder")
+        self._model = self._load_joblib_or_pickle() or self._load_transformer_pipeline()
+        if self._model is None:
+            logger.warning("No trained model found; falling back to heuristic mode")
         return self._model
 
-    def is_loaded(self) -> bool:
-        """Check whether the model is currently loaded."""
-        return self._model is not None
+
+_LOADER = ModelLoader()
 
 
-def load_model(model_path: str = "models/content_agent/") -> Any:
-    """Convenience function to load the agent model."""
-    loader = ModelLoader(model_path)
-    return loader.load_model()
+def load_model(model_path: str | None = None) -> Any:
+    """Convenience function to load cached content model."""
+    global _LOADER
+    if model_path:
+        _LOADER = ModelLoader(model_path=model_path)
+    return _LOADER.load_model()

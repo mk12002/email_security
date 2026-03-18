@@ -1,6 +1,6 @@
 # Agentic AI Email Security system
 
-Production-grade **Agentic AI Cybersecurity System** for **Phishing Email Detection** using multiple independent AI agents, designed for deployment on **Docker** and **Microsoft Azure**.
+Production-grade **Agentic AI Cybersecurity System** for **Phishing Email Detection** using multiple independent AI agents, designed for deployment on **Docker** with **Azure OpenAI** for reasoning.
 
 ---
 
@@ -25,6 +25,17 @@ The system uses **7 independent AI agents** that run in parallel to analyze diff
 The system follows a **3-layer architecture**:
 
 ```
+
+The orchestrator uses a **LangGraph state graph** to execute decisioning nodes in order:
+
+1. Score normalization
+2. Threat correlation
+3. Verdict/action selection
+4. Azure OpenAI explanation
+5. Conditional Garuda investigation
+6. Report persistence + action dispatch
+
+This provides explicit state transitions, structured inputs/outputs per node, and auditable decision flow.
 ┌─────────────────────────────────────────────┐
 │              Decision Layer                  │
 │   7 Independent AI Agents (parallel)         │
@@ -179,11 +190,12 @@ Configuration is managed via environment variables with a `.env` file. See `.env
 
 Key configuration areas:
 
-- **Azure Services** – Service Bus, Blob Storage, Identity
+- **Azure OpenAI** – Endpoint, deployment, API key, and API version
 - **Threat Intelligence** – VirusTotal, AbuseIPDB, URLScan, Shodan API keys
 - **Model Paths** – Per-agent model directory paths
 - **Database** – PostgreSQL connection URL
-- **Redis** – Message queue connection URL
+- **Redis** – Temporary orchestration state cache
+- **RabbitMQ** – Event and result messaging configuration
 - **Logging** – Log level, format, rotation, retention
 
 ---
@@ -196,9 +208,11 @@ Key configuration areas:
 | **NLP** | spaCy, NLTK |
 | **Security** | YARA, ssdeep, oletools, pefile, tldextract |
 | **API** | FastAPI, Uvicorn |
-| **Cloud** | Azure Service Bus, Azure Blob Storage |
+| **Agentic Orchestration** | LangGraph |
+| **LLM Reasoning** | Azure OpenAI |
 | **Database** | PostgreSQL |
-| **Queue** | Redis |
+| **Queue** | RabbitMQ |
+| **Cache** | Redis |
 | **Containerization** | Docker, Docker Compose |
 | **Logging** | Loguru (JSON structured) |
 | **Config** | Pydantic Settings, python-dotenv |

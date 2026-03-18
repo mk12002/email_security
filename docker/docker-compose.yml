@@ -18,7 +18,14 @@ x-common-app-env: &common-app-env
   RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
   NEW_EMAIL_EXCHANGE: ${NEW_EMAIL_EXCHANGE:-email.new.exchange}
   RESULTS_QUEUE: ${RESULTS_QUEUE:-email.results.queue}
+  ORCHESTRATOR_CACHE_TTL_SECONDS: ${ORCHESTRATOR_CACHE_TTL_SECONDS:-900}
+  ORCHESTRATOR_PARTIAL_TIMEOUT_SECONDS: ${ORCHESTRATOR_PARTIAL_TIMEOUT_SECONDS:-90}
+  ORCHESTRATOR_MIN_AGENTS_FOR_DECISION: ${ORCHESTRATOR_MIN_AGENTS_FOR_DECISION:-4}
   ATTACHMENT_VOLUME_DIR: /mnt/attachments
+  QUARANTINE_API_URL: ${QUARANTINE_API_URL:-http://host.docker.internal:8091/quarantine}
+  SOC_ALERT_API_URL: ${SOC_ALERT_API_URL:-http://host.docker.internal:8092/alerts}
+  IOC_DB_PATH: ${IOC_DB_PATH:-/app/data/ioc_store.db}
+  IOC_REFRESH_SECONDS: ${IOC_REFRESH_SECONDS:-300}
 
 services:
   api_service:
@@ -95,6 +102,8 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   header_agent_service:
@@ -205,6 +214,8 @@ services:
       AGENT_NAME: threat_intel_agent
     volumes:
       - attachments_data:/mnt/attachments
+      - ioc_data:/app/data
+      - ../../datasets:/app/datasets:ro
       - app_logs:/app/logs
     depends_on:
       rabbitmq:
@@ -335,6 +346,8 @@ volumes:
   attachments_data:
     driver: local
   email_drop:
+    driver: local
+  ioc_data:
     driver: local
 
 # ---------------------------------------------------------------------------

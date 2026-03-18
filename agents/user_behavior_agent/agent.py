@@ -1,7 +1,12 @@
 """User interaction prediction agent for click-risk estimation."""
 
+from __future__ import annotations
+
 from typing import Any
 
+from agents.user_behavior_agent.feature_extractor import extract_features
+from agents.user_behavior_agent.inference import predict
+from agents.user_behavior_agent.model_loader import load_model
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("user_behavior_agent")
@@ -35,11 +40,31 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     if sender_familiarity < 1.0:
         indicators.append("unfamiliar_sender_domain")
 
-    result = {
+    heuristic_result = {
         "agent_name": "user_behavior_agent",
         "risk_score": _clamp(click_probability),
         "confidence": 0.72,
         "indicators": indicators or ["low_click_likelihood"],
+    }
+
+    features = extract_features(data)
+    model = load_model()
+    ml_prediction = predict(features, model=model)
+
+    if ml_prediction.get("confidence", 0.0) > 0.0:
+        final_risk = _clamp((0.65 * ml_prediction.get("risk_score", 0.0)) + (0.35 * heuristic_result["risk_score"]))
+        final_confidence = _clamp(max(heuristic_result["confidence"], ml_prediction.get("confidence", 0.0)))
+        final_indicators = (heuristic_result["indicators"] + ml_prediction.get("indicators", []))[:20]
+    else:
+        final_risk = heuristic_result["risk_score"]
+        final_confidence = heuristic_result["confidence"]
+        final_indicators = heuristic_result["indicators"]
+
+    result = {
+        "agent_name": "user_behavior_agent",
+        "risk_score": final_risk,
+        "confidence": final_confidence,
+        "indicators": final_indicators,
     }
 
     logger.info("Analysis complete", risk_score=result["risk_score"])

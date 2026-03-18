@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from configs.settings import settings
 from services.logging_service import get_service_logger
 
 logger = get_service_logger("response_engine")
@@ -34,8 +35,28 @@ def execute_actions(decision: dict[str, Any]) -> None:
     }
 
     if "quarantine" in actions:
-        _safe_call("http://localhost:8091/quarantine", payload)
-        logger.info("Quarantine action emitted", analysis_id=analysis_id)
+        if settings.quarantine_api_url:
+            _safe_call(settings.quarantine_api_url, payload)
+            logger.info(
+                "Quarantine action emitted",
+                analysis_id=analysis_id,
+                endpoint=settings.quarantine_api_url,
+            )
+        else:
+            logger.warning(
+                "Quarantine action skipped: QUARANTINE_API_URL not configured",
+                analysis_id=analysis_id,
+            )
     if "soc_alert" in actions or "trigger_garuda" in actions:
-        _safe_call("http://localhost:8092/alerts", payload)
-        logger.info("SOC alert action emitted", analysis_id=analysis_id)
+        if settings.soc_alert_api_url:
+            _safe_call(settings.soc_alert_api_url, payload)
+            logger.info(
+                "SOC alert action emitted",
+                analysis_id=analysis_id,
+                endpoint=settings.soc_alert_api_url,
+            )
+        else:
+            logger.warning(
+                "SOC alert action skipped: SOC_ALERT_API_URL not configured",
+                analysis_id=analysis_id,
+            )

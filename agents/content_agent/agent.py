@@ -1,7 +1,12 @@
 """Content phishing detection agent using semantic heuristics and ML-ready hooks."""
 
+from __future__ import annotations
+
 from typing import Any
 
+from agents.content_agent.feature_extractor import extract_features
+from agents.content_agent.inference import predict
+from agents.content_agent.model_loader import load_model
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
@@ -41,11 +46,31 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         risk += 0.12
         indicators.append("click_through_language")
 
-    result = {
+    heuristic_result = {
         "agent_name": "content_agent",
         "risk_score": _clamp(risk),
         "confidence": _clamp(0.55 + min(0.35, len(indicators) * 0.05)),
         "indicators": indicators,
     }
-    logger.info("Analysis complete", risk_score=result["risk_score"])
+
+    features = extract_features(data)
+    model = load_model()
+    ml_prediction = predict(features, model=model)
+
+    if ml_prediction.get("confidence", 0.0) > 0.0:
+        final_risk = _clamp((0.6 * ml_prediction.get("risk_score", 0.0)) + (0.4 * heuristic_result["risk_score"]))
+        final_confidence = _clamp(max(heuristic_result["confidence"], ml_prediction.get("confidence", 0.0)))
+        final_indicators = (heuristic_result["indicators"] + ml_prediction.get("indicators", []))[:20]
+    else:
+        final_risk = heuristic_result["risk_score"]
+        final_confidence = heuristic_result["confidence"]
+        final_indicators = heuristic_result["indicators"]
+
+    result = {
+        "agent_name": "content_agent",
+        "risk_score": final_risk,
+        "confidence": final_confidence,
+        "indicators": final_indicators,
+    }
+    logger.info("Analysis complete", risk_score=result["risk_score"], used_ml=ml_prediction.get("confidence", 0.0) > 0)
     return result

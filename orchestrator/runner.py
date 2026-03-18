@@ -17,8 +17,8 @@ from psycopg2.extras import Json
 
 from action_layer.response_engine import execute_actions
 from configs.settings import settings
-from garuda_integration.bridge import trigger_garuda_investigation
-from orchestrator.decision_engine import make_decision
+from orchestrator.langgraph_state import OrchestratorState
+from orchestrator.langgraph_workflow import LangGraphOrchestrator
 from services.logging_service import get_service_logger, setup_logging
 from services.messaging_service import RabbitMQClient
 
@@ -39,6 +39,10 @@ class OrchestratorWorker:
     def __init__(self):
         self.messaging = RabbitMQClient()
         self.redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+        self.graph = LangGraphOrchestrator(
+            save_report=self._save_report,
+            execute_actions=execute_actions,
+        )
 
     def _pg_conn(self):
         return psycopg2.connect(settings.database_url)
@@ -90,19 +94,61 @@ class OrchestratorWorker:
     def _cache_key(self, analysis_id: str) -> str:
         return f"analysis:{analysis_id}:agent_results"
 
-    def _merge_results(self, analysis_id: str, incoming: dict[str, Any]) -> list[dict[str, Any]]:
+    def _report_exists(self, analysis_id: str) -> bool:
+        with self._pg_conn() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT 1
+                    FROM threat_reports
+                    WHERE analysis_id = %s
+                    LIMIT 1
+                    """,
+                    (analysis_id,),
+                )
+                return cursor.fetchone() is not None
+
+    def _merge_results(self, analysis_id: str, incoming: dict[str, Any]) -> tuple[list[dict[str, Any]], float]:
         key = self._cache_key(analysis_id)
         current = self.redis_client.get(key)
-        items: list[dict[str, Any]] = json.loads(current) if current else []
+
+        first_seen_ts = datetime.now(timezone.utc).timestamp()
+        items: list[dict[str, Any]] = []
+        if current:
+            decoded = json.loads(current)
+            if isinstance(decoded, dict):
+                first_seen_ts = float(decoded.get("first_seen_ts", first_seen_ts))
+                items = decoded.get("results", []) or []
+            elif isinstance(decoded, list):
+                # Backward-compatible path for cache entries written before state wrapping.
+                items = decoded
 
         filtered = [entry for entry in items if entry.get("agent_name") != incoming.get("agent_name")]
         filtered.append(incoming)
-        self.redis_client.setex(key, 900, json.dumps(filtered))
-        return filtered
+
+        state = {
+            "first_seen_ts": first_seen_ts,
+            "results": filtered,
+        }
+        self.redis_client.setex(key, settings.orchestrator_cache_ttl_seconds, json.dumps(state))
+        return filtered, first_seen_ts
 
     def _is_complete(self, agent_results: list[dict[str, Any]]) -> bool:
         names = {entry.get("agent_name") for entry in agent_results}
         return EXPECTED_AGENTS.issubset(names)
+
+    def _should_finalize(self, agent_results: list[dict[str, Any]], first_seen_ts: float) -> tuple[bool, str]:
+        if self._is_complete(agent_results):
+            return True, "complete"
+
+        elapsed = datetime.now(timezone.utc).timestamp() - first_seen_ts
+        if (
+            elapsed >= settings.orchestrator_partial_timeout_seconds
+            and len(agent_results) >= settings.orchestrator_min_agents_for_decision
+        ):
+            return True, "partial_timeout"
+
+        return False, "waiting"
 
     def _handle_result(self, payload: dict[str, Any]) -> None:
         analysis_id = payload.get("analysis_id")
@@ -110,26 +156,38 @@ class OrchestratorWorker:
             logger.warning("Skipping result without analysis_id")
             return
 
-        merged = self._merge_results(analysis_id, payload)
-        logger.info("Result received", analysis_id=analysis_id, count=len(merged))
-        if not self._is_complete(merged):
+        if self._report_exists(analysis_id):
+            logger.info("Ignoring late result for finalized analysis", analysis_id=analysis_id)
             return
 
-        decision = make_decision(merged)
-        decision["analysis_id"] = analysis_id
-        self._save_report(analysis_id, decision)
+        merged, first_seen_ts = self._merge_results(analysis_id, payload)
+        logger.info("Result received", analysis_id=analysis_id, count=len(merged))
 
-        if decision.get("overall_risk_score", 0.0) > 0.7:
-            garuda_feedback = trigger_garuda_investigation(decision)
-            decision["garuda_feedback"] = garuda_feedback
+        finalize, reason = self._should_finalize(merged, first_seen_ts)
+        if not finalize:
+            return
 
-        execute_actions(decision)
+        received_agents = sorted(
+            {entry.get("agent_name") for entry in merged if entry.get("agent_name")}
+        )
+        initial_state: OrchestratorState = {
+            "analysis_id": analysis_id,
+            "agent_results": merged,
+            "finalization_reason": reason,
+            "received_agents": received_agents,
+            "missing_agents": sorted(EXPECTED_AGENTS - set(received_agents)),
+            "is_partial": reason != "complete",
+        }
+
+        final_state = self.graph.run(initial_state)
+        decision = final_state.get("decision", {})
         self.redis_client.delete(self._cache_key(analysis_id))
         logger.info(
             "Final decision produced",
             analysis_id=analysis_id,
             verdict=decision.get("verdict"),
             score=decision.get("overall_risk_score"),
+            reason=reason,
         )
 
     def run(self) -> None:

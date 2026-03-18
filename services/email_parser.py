@@ -15,6 +15,11 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
+try:
+    import extract_msg  # type: ignore
+except Exception:  # pragma: no cover
+    extract_msg = None
+
 from configs.settings import settings
 from services.logging_service import get_service_logger
 from services.messaging_service import RabbitMQClient
@@ -32,17 +37,40 @@ class EmailParserService:
         self.attachments_dir.mkdir(parents=True, exist_ok=True)
         self.messaging = RabbitMQClient()
 
-    def parse_file(self, file_path: str | Path) -> dict[str, Any]:
-        with open(file_path, "rb") as source:
-            raw_bytes = source.read()
+    def supports_extension(self, extension: str) -> bool:
+        ext = (extension or "").lower()
+        if ext in {".eml", ".txt"}:
+            return True
+        if ext == ".msg":
+            return extract_msg is not None
+        return False
 
-        message = BytesParser(policy=policy.default).parsebytes(raw_bytes)
+    def supported_extensions(self) -> set[str]:
+        exts = {".eml", ".txt"}
+        if extract_msg is not None:
+            exts.add(".msg")
+        return exts
+
+    def parse_file(self, file_path: str | Path) -> dict[str, Any]:
+        source_path = Path(file_path)
+        extension = source_path.suffix.lower()
         analysis_id = str(uuid.uuid4())
 
-        headers = self._extract_headers(message)
-        body_plain, body_html = self._extract_body_parts(message)
+        if extension == ".msg":
+            if extract_msg is None:
+                raise ValueError(
+                    "Outlook .msg parsing requires optional dependency 'extract-msg'."
+                )
+            headers, body_plain, body_html, attachments = self._parse_msg(source_path, analysis_id)
+        else:
+            with open(source_path, "rb") as source:
+                raw_bytes = source.read()
+            message = BytesParser(policy=policy.default).parsebytes(raw_bytes)
+            headers = self._extract_headers(message)
+            body_plain, body_html = self._extract_body_parts(message)
+            attachments = self._extract_attachments(message, analysis_id)
+
         urls = self._extract_urls(body_plain, body_html)
-        attachments = self._extract_attachments(message, analysis_id)
 
         payload = {
             "event_type": "NewEmailEvent",
@@ -62,6 +90,96 @@ class EmailParserService:
             },
         }
         return payload
+
+    def _parse_msg(
+        self,
+        source_path: Path,
+        analysis_id: str,
+    ) -> tuple[dict[str, Any], str, str, list[dict[str, Any]]]:
+        msg = extract_msg.Message(str(source_path))  # type: ignore[union-attr]
+        sender_raw = str(getattr(msg, "sender", "") or "")
+        to_raw = str(getattr(msg, "to", "") or "")
+        cc_raw = str(getattr(msg, "cc", "") or "")
+        subject = str(getattr(msg, "subject", "") or "")
+        message_id = str(getattr(msg, "messageId", "") or "")
+
+        body_plain = str(getattr(msg, "body", "") or "")
+        html_body = getattr(msg, "htmlBody", "")
+        if isinstance(html_body, bytes):
+            body_html = html_body.decode("utf-8", errors="replace")
+        else:
+            body_html = str(html_body or "")
+
+        raw_header = str(getattr(msg, "header", "") or "")
+        auth_results = ""
+        received: list[str] = []
+        raw_headers: dict[str, str] = {}
+        if raw_header:
+            for line in raw_header.splitlines():
+                if ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                cleaned_key = key.strip()
+                cleaned_value = value.strip()
+                if cleaned_key:
+                    raw_headers[cleaned_key] = cleaned_value
+                if cleaned_key.lower() == "authentication-results":
+                    auth_results = cleaned_value
+                if cleaned_key.lower() == "received":
+                    received.append(cleaned_value)
+
+        sender_addr = getaddresses([sender_raw])
+        recipient_addrs = getaddresses([to_raw, cc_raw])
+
+        headers = {
+            "from": sender_raw,
+            "sender": sender_addr[0][1] if sender_addr else "",
+            "reply_to": raw_headers.get("Reply-To"),
+            "to": [entry[1] for entry in recipient_addrs if entry[1]],
+            "subject": subject,
+            "message_id": message_id or raw_headers.get("Message-ID"),
+            "received": received,
+            "authentication_results": auth_results,
+            "raw": raw_headers,
+        }
+
+        attachments: list[dict[str, Any]] = []
+        for item in getattr(msg, "attachments", []) or []:
+            payload = getattr(item, "data", None)
+            if callable(payload):
+                payload = payload()
+            if payload is None:
+                continue
+            if isinstance(payload, str):
+                payload = payload.encode("utf-8", errors="ignore")
+            if not isinstance(payload, (bytes, bytearray)):
+                continue
+
+            attachment_uuid = str(uuid.uuid4())
+            filename = (
+                getattr(item, "longFilename", None)
+                or getattr(item, "filename", None)
+                or f"attachment-{attachment_uuid}.bin"
+            )
+            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", str(filename))
+            target_name = f"{analysis_id}_{attachment_uuid}_{safe_name}"
+            target_path = self.attachments_dir / target_name
+            with open(target_path, "wb") as output:
+                output.write(bytes(payload))
+
+            sha256 = hashlib.sha256(bytes(payload)).hexdigest()
+            attachments.append(
+                {
+                    "attachment_id": attachment_uuid,
+                    "filename": str(filename),
+                    "content_type": getattr(item, "mimetype", None) or "application/octet-stream",
+                    "size_bytes": len(payload),
+                    "sha256": sha256,
+                    "path": str(target_path),
+                }
+            )
+
+        return headers, body_plain, body_html, attachments
 
     def parse_and_publish(self, file_path: str | Path) -> dict[str, Any]:
         payload = self.parse_file(file_path)

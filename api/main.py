@@ -165,15 +165,24 @@ async def analyze_email(request: EmailAnalysisRequest):
 async def ingest_raw_email(file: UploadFile = File(...)):
     """Accept raw .eml/.txt file, parse it fully, and publish NewEmailEvent."""
     suffix = Path(file.filename or "email.eml").suffix.lower()
-    if suffix not in {".eml", ".txt", ".msg"}:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
-
     parser = EmailParserService()
+    if not parser.supports_extension(suffix):
+        supported = ", ".join(sorted(parser.supported_extensions()))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file extension '{suffix}'. Supported: {supported}",
+        )
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
         temp_file.write(await file.read())
         temp_path = temp_file.name
 
-    event = parser.parse_and_publish(temp_path)
+    try:
+        event = parser.parse_and_publish(temp_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to parse raw email: {exc}") from exc
 
     return EmailAnalysisResponse(
         status="received",

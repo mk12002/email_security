@@ -1,0 +1,2 @@
+{"indicator": "http://bad-url.com", "type": "url", "source": "urlhaus"}
+{"indicator": "http://worse-url.com", "type": "url", "source": "urlhaus"}

@@ -6,6 +6,9 @@ import math
 from pathlib import Path
 from typing import Any
 
+from agents.attachment_agent.feature_extractor import extract_features
+from agents.attachment_agent.inference import predict
+from agents.attachment_agent.model_loader import load_model
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
@@ -71,11 +74,31 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         cumulative += _clamp(file_score)
 
     avg_score = cumulative / max(1, len(attachments[:10]))
-    result = {
+    heuristic_result = {
         "agent_name": "attachment_agent",
         "risk_score": _clamp(avg_score),
         "confidence": _clamp(0.6 + min(0.3, len(attachments) * 0.03)),
         "indicators": indicators[:20],
+    }
+
+    features = extract_features(data)
+    model = load_model()
+    ml_prediction = predict(features, model=model)
+
+    if ml_prediction.get("confidence", 0.0) > 0.0:
+        risk_score = _clamp((0.65 * ml_prediction.get("risk_score", 0.0)) + (0.35 * heuristic_result["risk_score"]))
+        confidence = _clamp(max(heuristic_result["confidence"], ml_prediction.get("confidence", 0.0)))
+        merged_indicators = (heuristic_result["indicators"] + ml_prediction.get("indicators", []))[:20]
+    else:
+        risk_score = heuristic_result["risk_score"]
+        confidence = heuristic_result["confidence"]
+        merged_indicators = heuristic_result["indicators"]
+
+    result = {
+        "agent_name": "attachment_agent",
+        "risk_score": risk_score,
+        "confidence": confidence,
+        "indicators": merged_indicators,
     }
 
     logger.info("Analysis complete", risk_score=result["risk_score"])

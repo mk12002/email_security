@@ -17,8 +17,8 @@ from services.logging_service import setup_logging, get_service_logger
 logger = get_service_logger("parser_worker")
 
 
-def _supported(path: Path) -> bool:
-    return path.suffix.lower() in {".eml", ".msg", ".txt"}
+def _supported(path: Path, parser: EmailParserService) -> bool:
+    return parser.supports_extension(path.suffix.lower())
 
 
 def run() -> None:
@@ -34,7 +34,9 @@ def run() -> None:
 
     logger.info("Parser worker started", drop_dir=str(drop_dir))
     while True:
-        candidates = [path for path in drop_dir.iterdir() if path.is_file() and _supported(path)]
+        candidates = [
+            path for path in drop_dir.iterdir() if path.is_file() and _supported(path, parser)
+        ]
         for file_path in candidates:
             try:
                 event = parser.parse_and_publish(file_path)

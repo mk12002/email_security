@@ -1,35 +1,18 @@
-"""
-Inference engine for the Attachment Static Analysis Agent.
+"""Inference engine for attachment static-analysis models."""
 
-Runs the loaded model against extracted features to produce predictions.
-"""
+from __future__ import annotations
 
 from typing import Any
 
+from agents.ml_runtime import predict_with_model
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
 
 
 def predict(features: dict[str, Any], model: Any = None) -> dict[str, Any]:
-    """
-    Run inference using the agent model.
-
-    Args:
-        features: Extracted feature dictionary.
-        model: Pre-loaded model object (optional).
-
-    Returns:
-        Prediction result with risk_score and confidence.
-    """
+    """Run inference for attachment model and return normalized risk output."""
     logger.debug("Running inference", agent="attachment_agent")
-
-    # Placeholder – inference logic will be added in later phases
-    prediction = {
-        "risk_score": 0.0,
-        "confidence": 0.0,
-        "indicators": [],
-    }
-
+    prediction = predict_with_model(features, model, model_indicator="ml_attachment_model_used")
     logger.debug("Inference complete", prediction=prediction)
     return prediction

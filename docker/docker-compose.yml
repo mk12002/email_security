@@ -1,0 +1,345 @@
+# =============================================================================
+# Agentic Email Security System – Docker Compose
+# =============================================================================
+# Orchestrates all services for the phishing detection platform.
+# Actual agent service containers will be added in later phases.
+# =============================================================================
+
+version: "3.9"
+
+x-common-app-env: &common-app-env
+  APP_ENV: ${APP_ENV:-development}
+  APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@database:5432/${POSTGRES_DB:-email_security}
+  REDIS_URL: redis://redis:6379/0
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+  NEW_EMAIL_EXCHANGE: ${NEW_EMAIL_EXCHANGE:-email.new.exchange}
+  RESULTS_QUEUE: ${RESULTS_QUEUE:-email.results.queue}
+  ATTACHMENT_VOLUME_DIR: /mnt/attachments
+
+services:
+  api_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      <<: *common-app-env
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+    volumes:
+      - app_logs:/app/logs
+      - app_models:/app/models
+      - attachments_data:/mnt/attachments
+      - email_drop:/mnt/email_drop
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  parser_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-parser
+    command: ["python", "-m", "services.parser_worker"]
+    environment:
+      <<: *common-app-env
+      EMAIL_DROP_DIR: /mnt/email_drop
+      PARSER_POLL_SECONDS: ${PARSER_POLL_SECONDS:-2}
+    volumes:
+      - attachments_data:/mnt/attachments
+      - email_drop:/mnt/email_drop
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  orchestrator_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-orchestrator
+    command: ["python", "-m", "orchestrator.runner"]
+    environment:
+      <<: *common-app-env
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-02-15-preview}
+      GARUDA_API_BASE_URL: ${GARUDA_API_BASE_URL:-http://garuda-agent:8088}
+      GARUDA_TIMEOUT_SECONDS: ${GARUDA_TIMEOUT_SECONDS:-15}
+    volumes:
+      - app_logs:/app/logs
+      - attachments_data:/mnt/attachments
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  header_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-header-agent
+    command: ["python", "-m", "agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: header_agent
+    volumes:
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  content_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-content-agent
+    command: ["python", "-m", "agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: content_agent
+    volumes:
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  url_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-url-agent
+    command: ["python", "-m", "agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: url_agent
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+    volumes:
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  attachment_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-attachment-agent
+    command: ["python", "-m", "agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: attachment_agent
+    volumes:
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  sandbox_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-sandbox-agent
+    command: ["python", "-m", "agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: sandbox_agent
+    volumes:
+      - attachments_data:/mnt/attachments
+      - /var/run/docker.sock:/var/run/docker.sock
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  threat_intel_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-threat-intel-agent
+    command: ["python", "-m", "agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: threat_intel_agent
+    volumes:
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  user_behavior_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-user-behavior-agent
+    command: ["python", "-m", "agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: user_behavior_agent
+    volumes:
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Agent Services – Placeholder for individual agent containers
+  # ---------------------------------------------------------------------------
+  # In later phases, each agent will run as its own container:
+  #
+  # header_agent:
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/Dockerfile.agent
+  #   environment:
+  #     - AGENT_NAME=header_agent
+  #   depends_on:
+  #     - message_queue
+  #
+  # content_agent:
+  #   ...
+  # url_agent:
+  #   ...
+  # attachment_agent:
+  #   ...
+  # sandbox_agent:
+  #   ...
+  # threat_intel_agent:
+  #   ...
+  # user_behavior_agent:
+  #   ...
+
+  # ---------------------------------------------------------------------------
+  # Database – PostgreSQL
+  # ---------------------------------------------------------------------------
+  database:
+    image: postgres:16-alpine
+    container_name: email-security-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-email_security}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: email-security-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: email-security-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_models:
+    driver: local
+  attachments_data:
+    driver: local
+  email_drop:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  email_security_net:
+    driver: bridge

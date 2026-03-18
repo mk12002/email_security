@@ -1,0 +1,70 @@
+{
+    "generated_at": "2026-03-13T06:12:06.710295Z",
+    "datasets": {
+        "email_content": {
+            "type": "file_collection",
+            "samples": 2,
+            "extensions_distribution": {
+                ".eml": 1,
+                ".txt": 1
+            },
+            "total_size_mb": 0.0,
+            "missing_values": "N/A for raw file collections."
+        },
+        "urls": {
+            "type": "tabular",
+            "samples": 4,
+            "columns": [
+                "url",
+                "source_file",
+                "label"
+            ],
+            "missing_values": {
+                "url": 0,
+                "source_file": 0,
+                "label": 2
+            },
+            "label_distribution": {
+                "1.0": 1,
+                "0.0": 1
+            },
+            "memory_usage_mb": 0.00067901611328125
+        },
+        "attachments": {
+            "type": "file_collection",
+            "samples": 2,
+            "extensions_distribution": {
+                ".exe": 1,
+                ".pdf": 1
+            },
+            "total_size_mb": 0.0,
+            "missing_values": "N/A for raw file collections."
+        },
+        "threat_intel": {
+            "type": "tabular",
+            "samples": 4,
+            "columns": [
+                "indicator",
+                "type",
+                "source",
+                "source_feed"
+            ],
+            "missing_values": {
+                "indicator": 0,
+                "type": 0,
+                "source": 0,
+                "source_feed": 0
+            },
+            "label_distribution": {
+                "url": 2,
+                "ip": 1,
+                "domain": 1
+            },
+            "memory_usage_mb": 0.0010328292846679688
+        }
+    },
+    "summary": {
+        "total_datasets_loaded": 4,
+        "total_samples_aggregate": 12
+    }
+}

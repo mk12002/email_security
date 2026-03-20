@@ -7,6 +7,8 @@ Handles loading, caching, and version management of ML models.
 from pathlib import Path
 from typing import Any, Optional
 
+import joblib
+
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("header_agent")
@@ -15,7 +17,7 @@ logger = get_agent_logger("header_agent")
 class ModelLoader:
     """Loads and caches the ML model for header_agent."""
 
-    def __init__(self, model_path: str = "models/header_agent/"):
+    def __init__(self, model_path: str = "models/header_agent/model.joblib"):
         self.model_path = Path(model_path)
         self._model: Optional[Any] = None
 
@@ -31,9 +33,18 @@ class ModelLoader:
 
         logger.info("Loading model", path=str(self.model_path))
 
-        # Placeholder – model loading logic will be added in later phases
-        self._model = None
-        logger.warning("No trained model found; using placeholder")
+        if not self.model_path.exists():
+            logger.warning("No trained model found; using placeholder")
+            return None
+
+        try:
+            bundle = joblib.load(self.model_path)
+            self._model = bundle.get("model")
+            logger.info("Model loaded successfully")
+        except Exception as e:
+            logger.warning("Failed to load header model", error=str(e))
+            self._model = None
+
         return self._model
 
     def is_loaded(self) -> bool:
@@ -41,7 +52,7 @@ class ModelLoader:
         return self._model is not None
 
 
-def load_model(model_path: str = "models/header_agent/") -> Any:
+def load_model(model_path: str = "models/header_agent/model.joblib") -> Any:
     """Convenience function to load the agent model."""
     loader = ModelLoader(model_path)
     return loader.load_model()

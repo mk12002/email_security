@@ -6,13 +6,14 @@ Handles diverse CSV formats:
   - Alexa Top 1M      (rank, domain)
   - URLhaus            (comment lines starting with #, url in column 3)
   - PhishTank / OpenPhish (url column)
-  - Nazario phishing   (CSV with email body text)
+  - Kaggle/Nazario   (CSV with email body text, message, Text, etc)
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+import random
 
 import pandas as pd
 
@@ -42,17 +43,16 @@ def _read_text_files(directory: Path, label: int) -> list[dict]:
     return items
 
 
-def _read_nazario_csv(csv_path: Path, label: int) -> list[dict]:
-    """Read Nazario phishing CSV and extract email body text."""
+def _read_csv_corpus(csv_path: Path, label: int) -> list[dict]:
+    """Read CSV corpus (Nazario, Enron, Kaggle) and extract email body text."""
     items: list[dict] = []
     if not csv_path.exists():
         return items
     try:
-        df = pd.read_csv(csv_path, encoding="utf-8", on_bad_lines="skip")
-        # Nazario CSVs typically have a 'body' or 'content' column; fall back
-        # to concatenating all string columns if neither is found
+        df = pd.read_csv(csv_path, encoding="utf-8", on_bad_lines="skip", low_memory=False)
         text_col = None
-        for candidate in ("body", "content", "text", "Body", "Content", "Text"):
+        # Enron uses 'message', Ling-Spam uses 'Text', Nigerian uses 'Text', Nazario uses 'body'
+        for candidate in ("message", "Message", "body", "content", "text", "Body", "Content", "Text", "email"):
             if candidate in df.columns:
                 text_col = candidate
                 break
@@ -61,39 +61,39 @@ def _read_nazario_csv(csv_path: Path, label: int) -> list[dict]:
             # Use the widest string column as a proxy for email body
             str_cols = df.select_dtypes(include="object").columns.tolist()
             if str_cols:
-                text_col = max(str_cols, key=lambda c: df[c].str.len().mean())
+                text_col = max(str_cols, key=lambda c: df[c].dropna().astype(str).str.len().mean())
 
         if text_col:
             for row_text in df[text_col].dropna():
                 text = str(row_text).strip()
                 if len(text) > 10:
                     items.append({"content": text, "label": label})
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Warning: Failed to read CSV {csv_path}: {e}")
     return items
 
 
 def _extract_urls_from_csv(file_path: Path) -> list[str]:
     """
     Intelligently extract URLs or domains from a CSV file.
-    Handles: Majestic Million, Alexa Top 1M, URLhaus, PhishTank.
+    Handles: Majestic Million, Alexa Top 1M, URLhaus, PhishTank, Kaggle Malicious URLs.
     """
     urls: list[str] = []
     try:
         # URLhaus uses # comment lines
-        df = pd.read_csv(file_path, comment="#", on_bad_lines="skip")
+        df = pd.read_csv(file_path, comment="#", on_bad_lines="skip", low_memory=False)
     except Exception:
         try:
-            df = pd.read_csv(file_path, on_bad_lines="skip")
+            df = pd.read_csv(file_path, on_bad_lines="skip", low_memory=False)
         except Exception:
             return urls
 
     if df.empty:
         return urls
 
-    col_lower = {c.lower(): c for c in df.columns}
+    col_lower = {str(c).lower(): c for c in df.columns}
 
-    # Priority 1: Explicit 'url' column (PhishTank, URLhaus, OpenPhish)
+    # Priority 1: Explicit 'url' column (PhishTank, URLhaus, OpenPhish, Kaggle)
     if "url" in col_lower:
         raw = df[col_lower["url"]].dropna().astype(str).tolist()
         urls.extend(raw)
@@ -128,36 +128,96 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
     output.mkdir(parents=True, exist_ok=True)
 
     # ── Content Training (spam + phishing = label 1, ham = label 0) ──
-    spam_rows = _read_text_files(base / "email_content" / "spam", label=1)
-    ham_rows = _read_text_files(base / "email_content" / "legitimate", label=0)
+    print("Extracting Content training data...")
+    all_content_rows = []
+    
+    # Process legitimate (0)
+    legit_dir = base / "email_content" / "legitimate"
+    if legit_dir.exists():
+        all_content_rows.extend(_read_text_files(legit_dir, label=0))
+        for csv_file in legit_dir.rglob("*.csv"):
+            all_content_rows.extend(_read_csv_corpus(csv_file, label=0))
+            
+    # Process spam (1)
+    spam_dir = base / "email_content" / "spam"
+    if spam_dir.exists():
+        all_content_rows.extend(_read_text_files(spam_dir, label=1))
+        for csv_file in spam_dir.rglob("*.csv"):
+            all_content_rows.extend(_read_csv_corpus(csv_file, label=1))
 
-    # Include Nazario phishing CSVs as phishing (label=1)
+    # Process phishing (1)
     phishing_dir = base / "email_content" / "phishing"
-    phishing_rows: list[dict] = []
     if phishing_dir.exists():
-        # Read raw text/eml files
-        phishing_rows.extend(_read_text_files(phishing_dir, label=1))
-        # Read Nazario CSVs
+        all_content_rows.extend(_read_text_files(phishing_dir, label=1))
         for csv_file in phishing_dir.rglob("*.csv"):
-            phishing_rows.extend(_read_nazario_csv(csv_file, label=1))
+            all_content_rows.extend(_read_csv_corpus(csv_file, label=1))
 
-    all_content_rows = spam_rows + phishing_rows + ham_rows
+    legit_rows = [r for r in all_content_rows if r["label"] == 0]
+    spam_rows = [r for r in all_content_rows if r["label"] == 1]
+    
+    # Ensure PERFECT Data Balancing for Content
+    if len(legit_rows) > len(spam_rows) and len(spam_rows) > 0:
+        print(f"Down-sampling Legitimate emails from {len(legit_rows)} to {len(spam_rows)} to balance classes.")
+        random.seed(42)
+        legit_rows = random.sample(legit_rows, len(spam_rows))
+    elif len(spam_rows) > len(legit_rows) and len(legit_rows) > 0:
+        print(f"Down-sampling Spam/Phishing emails from {len(spam_rows)} to {len(legit_rows)} to balance classes.")
+        random.seed(42)
+        spam_rows = random.sample(spam_rows, len(legit_rows))
+        
+    all_content_rows = legit_rows + spam_rows
+
     content_df = build_content_features(all_content_rows)
     content_path = write_processed_dataset(content_df, output / "content_training.csv")
 
     # ── URL Training ──
+    print("Extracting URL training data...")
     malicious_urls: list[str] = []
     benign_urls: list[str] = []
-
+    
+    # Process Malicious (1)
     mal_dir = base / "url_dataset" / "malicious"
     if mal_dir.exists():
         for file_path in mal_dir.rglob("*.csv"):
             malicious_urls.extend(_extract_urls_from_csv(file_path))
 
+    # Process Benign (0)
     ben_dir = base / "url_dataset" / "benign"
     if ben_dir.exists():
         for file_path in ben_dir.rglob("*.csv"):
             benign_urls.extend(_extract_urls_from_csv(file_path))
+
+    # Add Kaggle Malicious URLs dataset specifically if it exists in base
+    kaggle_url_csv = base / "url_dataset" / "malicious_phish.csv"
+    if kaggle_url_csv.exists():
+        urls_from_kaggle = _extract_urls_from_csv(kaggle_url_csv)
+        # Kaggle dataset contains both benign and malicious depending on a 'type' column
+        # Our _extract_urls_from_csv just pulls the 'url' column indiscriminately.
+        # To handle the kaggle correctly, we need to partition it.
+        try:
+            df_k = pd.read_csv(kaggle_url_csv, on_bad_lines="skip")
+            col_l = {c.lower(): c for c in df_k.columns}
+            if "type" in col_l and "url" in col_l:
+                df_benign = df_k[df_k[col_l['type']] == 'benign']
+                df_mal = df_k[df_k[col_l['type']] != 'benign']
+                benign_urls.extend(df_benign[col_l['url']].dropna().astype(str).tolist())
+                malicious_urls.extend(df_mal[col_l['url']].dropna().astype(str).tolist())
+        except Exception as e:
+             print(f"Warning: Failed precise extraction of Kaggle URLs: {e}")
+
+    # Remove duplicates
+    malicious_urls = list(set(malicious_urls))
+    benign_urls = list(set(benign_urls))
+    
+    # Ensure PERFECT Data Balancing
+    if len(benign_urls) > len(malicious_urls) and len(malicious_urls) > 0:
+        print(f"Down-sampling Benign URLs from {len(benign_urls)} to {len(malicious_urls)} to balance classes.")
+        random.seed(42)
+        benign_urls = random.sample(benign_urls, len(malicious_urls))
+    elif len(malicious_urls) > len(benign_urls) and len(benign_urls) > 0:
+        print(f"Down-sampling Malicious URLs from {len(malicious_urls)} to {len(benign_urls)} to balance classes.")
+        random.seed(42)
+        malicious_urls = random.sample(malicious_urls, len(benign_urls))
 
     url_df = pd.concat(
         [
@@ -169,6 +229,7 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
     url_path = write_processed_dataset(url_df, output / "url_training.csv")
 
     # ── User Behavior Training ──
+    print("Extracting User Behavior training data...")
     user_behavior_path = base / "user_behavior" / "user_email_behavior.csv"
     user_behavior_out = ""
     if user_behavior_path.exists():
@@ -176,18 +237,31 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
         user_behavior_out = write_processed_dataset(frame, output / "user_behavior_training.csv")
 
     # ── Header Training (synthetic CSV if available) ──
+    print("Extracting Header training data...")
     header_training_path = base / "email_content" / "header_training.csv"
     header_training_out = ""
     if header_training_path.exists():
         frame = pd.read_csv(header_training_path)
         header_training_out = write_processed_dataset(frame, output / "header_training.csv")
 
-    # ── Attachment / EMBER Training (pass-through reference) ──
+    # ── Attachment / EMBER Training ──
+    print("Checking Attachment/EMBER training data...")
     ember_dir = base / "attachments" / "malware" / "ember_features"
     ember_training_out = ""
     ember_train_parquet = ember_dir / "train_ember_2018_v2_features.parquet"
+    
+    if not ember_train_parquet.exists() and (ember_dir / "train_features_0.jsonl").exists():
+        print("EMBER Parquet not found but JSONL exists. Converting JSONL to Parquet automatically...")
+        try:
+            from preprocessing.convert_ember_jsonl import convert_ember_jsonl_to_parquet
+            convert_ember_jsonl_to_parquet(ember_dir, ember_train_parquet)
+        except Exception as e:
+            print(f"Failed to convert EMBER JSONL: {e}")
+
     if ember_train_parquet.exists():
         ember_training_out = str(ember_train_parquet)
+    else:
+        print("Warning: EMBER Parquet is missing, Attachment Agent cannot be trained.")
 
     report = {
         "content_training": content_path,
@@ -197,9 +271,16 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
         "attachment_training_ember": ember_training_out,
     }
     (output / "training_manifest.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print("\nDataset Preprocessing Complete!")
     return report
 
 
 if __name__ == "__main__":
-    output = run(base_dir="../datasets", output_dir="../datasets_processed")
+    import os
+    # Default to /home/LabsKraft/new_work/datasets if it exists and running locally
+    default_base = "../datasets"
+    if not Path(default_base).exists() and Path("/home/LabsKraft/new_work/datasets").exists():
+        default_base = "/home/LabsKraft/new_work/datasets"
+        
+    output = run(base_dir=default_base, output_dir="../datasets_processed")
     print(json.dumps(output, indent=2))

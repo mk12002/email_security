@@ -68,7 +68,7 @@ class ModelLoader:
             logger.warning("Content model path not found", path=str(self.model_path))
             return None
 
-        self._model = self._load_joblib_or_pickle() or self._load_transformer_pipeline()
+        self._model = self._load_transformer_pipeline() or self._load_joblib_or_pickle()
         if self._model is None:
             logger.warning("No trained model found; falling back to heuristic mode")
         return self._model

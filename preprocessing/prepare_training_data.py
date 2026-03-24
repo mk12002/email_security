@@ -16,31 +16,71 @@ from pathlib import Path
 import random
 
 import pandas as pd
+import numpy as np
+import re
 
-from preprocessing.feature_pipeline import (
+from .feature_pipeline import (
     build_content_features,
     build_url_features,
     write_processed_dataset,
 )
 
 
+def _clean_email_text(raw_text: str) -> str:
+    """Strips RFC-822 and forwarded/quoted headers to reduce target leakage."""
+    lines = str(raw_text).splitlines()
+    cleaned: list[str] = []
+    in_header = True
+    header_like_line = re.compile(
+        r'^(Message-ID|Date|From|To|Subject|Cc|Bcc|X-.*|Mime-Version|Content-Type|Content-Transfer-Encoding|Reply-To|Return-Path|Sent):',
+        re.IGNORECASE,
+    )
+    forwarded_markers = re.compile(
+        r'^(-----Original Message-----|Begin forwarded message:|Forwarded by\b|FW:|FWD:)',
+        re.IGNORECASE,
+    )
+    for line in lines:
+        if in_header:
+            if header_like_line.match(line):
+                continue
+            if not line.strip():
+                in_header = False
+                continue
+
+        # Remove forwarded/quoted headers that appear inside the body.
+        if forwarded_markers.match(line.strip()):
+            continue
+        if header_like_line.match(line.strip()):
+            continue
+
+        # Only reached post-header or if lines aren't header artifacts.
+        cleaned.append(line)
+        in_header = False
+        
+    result = '\n'.join(cleaned).strip()
+    return result if result else str(raw_text).strip()
+
 def _read_text_files(directory: Path, label: int) -> list[dict]:
-    """Read raw text/eml files from a directory and assign a label."""
-    items: list[dict] = []
+    """Reads all unstructured text files (.txt, .eml) in the given directory."""
+    rows = []
     if not directory.exists():
-        return items
+        return rows
+    
     for file_path in directory.rglob("*"):
         if not file_path.is_file():
             continue
-        # Skip CSVs — they are handled separately
         if file_path.suffix.lower() == ".csv":
             continue
+        
         try:
             text = file_path.read_text(encoding="utf-8", errors="ignore")
-            items.append({"content": text, "label": label})
+            # Strip target leakage headers immediately
+            cleaned_text = _clean_email_text(text)
+            if cleaned_text.strip():
+                rows.append({"content": cleaned_text, "label": label})
         except Exception:
             continue
-    return items
+    return rows
 
 
 def _read_csv_corpus(csv_path: Path, label: int) -> list[dict]:
@@ -65,9 +105,9 @@ def _read_csv_corpus(csv_path: Path, label: int) -> list[dict]:
 
         if text_col:
             for row_text in df[text_col].dropna():
-                text = str(row_text).strip()
-                if len(text) > 10:
-                    items.append({"content": text, "label": label})
+                cleaned_text = _clean_email_text(str(row_text))
+                if len(cleaned_text) > 10:
+                    items.append({"content": cleaned_text, "label": label})
     except Exception as e:
         print(f"Warning: Failed to read CSV {csv_path}: {e}")
     return items
@@ -145,27 +185,27 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
         for csv_file in spam_dir.rglob("*.csv"):
             all_content_rows.extend(_read_csv_corpus(csv_file, label=1))
 
-    # Process phishing (1)
+    # Process phishing (2)
     phishing_dir = base / "email_content" / "phishing"
     if phishing_dir.exists():
-        all_content_rows.extend(_read_text_files(phishing_dir, label=1))
+        all_content_rows.extend(_read_text_files(phishing_dir, label=2))
         for csv_file in phishing_dir.rglob("*.csv"):
-            all_content_rows.extend(_read_csv_corpus(csv_file, label=1))
+            all_content_rows.extend(_read_csv_corpus(csv_file, label=2))
 
     legit_rows = [r for r in all_content_rows if r["label"] == 0]
     spam_rows = [r for r in all_content_rows if r["label"] == 1]
+    phish_rows = [r for r in all_content_rows if r["label"] == 2]
     
-    # Ensure PERFECT Data Balancing for Content
-    if len(legit_rows) > len(spam_rows) and len(spam_rows) > 0:
-        print(f"Down-sampling Legitimate emails from {len(legit_rows)} to {len(spam_rows)} to balance classes.")
+    # Ensure PERFECT 3-way Data Balancing for Content
+    if len(legit_rows) > 0 and len(spam_rows) > 0 and len(phish_rows) > 0:
+        min_len = min(len(legit_rows), len(spam_rows), len(phish_rows))
+        print(f"Down-sampling all 3 classes (Legitimate, Spam, Phishing) to exactly {min_len} samples each to balance.")
         random.seed(42)
-        legit_rows = random.sample(legit_rows, len(spam_rows))
-    elif len(spam_rows) > len(legit_rows) and len(legit_rows) > 0:
-        print(f"Down-sampling Spam/Phishing emails from {len(spam_rows)} to {len(legit_rows)} to balance classes.")
-        random.seed(42)
-        spam_rows = random.sample(spam_rows, len(legit_rows))
+        legit_rows = random.sample(legit_rows, min_len)
+        spam_rows = random.sample(spam_rows, min_len)
+        phish_rows = random.sample(phish_rows, min_len)
         
-    all_content_rows = legit_rows + spam_rows
+    all_content_rows = legit_rows + spam_rows + phish_rows
 
     content_df = build_content_features(all_content_rows)
     content_path = write_processed_dataset(content_df, output / "content_training.csv")
@@ -253,7 +293,7 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
     if not ember_train_parquet.exists() and (ember_dir / "train_features_0.jsonl").exists():
         print("EMBER Parquet not found but JSONL exists. Converting JSONL to Parquet automatically...")
         try:
-            from preprocessing.convert_ember_jsonl import convert_ember_jsonl_to_parquet
+            from .convert_ember_jsonl import convert_ember_jsonl_to_parquet
             convert_ember_jsonl_to_parquet(ember_dir, ember_train_parquet)
         except Exception as e:
             print(f"Failed to convert EMBER JSONL: {e}")
@@ -276,11 +316,5 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
 
 
 if __name__ == "__main__":
-    import os
-    # Default to /home/LabsKraft/new_work/datasets if it exists and running locally
-    default_base = "../datasets"
-    if not Path(default_base).exists() and Path("/home/LabsKraft/new_work/datasets").exists():
-        default_base = "/home/LabsKraft/new_work/datasets"
-        
-    output = run(base_dir=default_base, output_dir="../datasets_processed")
+    output = run(base_dir="datasets", output_dir="datasets_processed")
     print(json.dumps(output, indent=2))

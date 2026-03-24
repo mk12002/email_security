@@ -79,8 +79,8 @@ def analyze_content_dataset():
     # Class Balance
     plt.figure(figsize=(8, 5))
     counts = df["label"].value_counts()
-    counts.plot(kind="bar", color=["#4CAF50", "#F44336"])
-    plt.title("Content Dataset: Class Balance (1=Phishing/Spam, 0=Legitimate)")
+    counts.plot(kind="bar", color=["#4CAF50", "#FF9800", "#F44336"][:len(counts)])
+    plt.title("Content Dataset: Class Balance (0=Legit, 1=Spam, 2=Phish)")
     plt.xlabel("Label")
     plt.ylabel("Count")
     plt.xticks(rotation=0)
@@ -100,8 +100,11 @@ def analyze_content_dataset():
     q95 = df["word_count"].quantile(0.95)
     filtered = df[df["word_count"] <= q95]
     
-    plt.hist(filtered[filtered["label"] == 0]["word_count"], bins=50, alpha=0.5, label="Legitimate", color="green")
-    plt.hist(filtered[filtered["label"] == 1]["word_count"], bins=50, alpha=0.5, label="Phishing", color="red")
+    plt.hist(filtered[filtered["label"] == 0]["word_count"], bins=50, alpha=0.5, label="Legit", color="green")
+    if 1 in filtered["label"].values:
+        plt.hist(filtered[filtered["label"] == 1]["word_count"], bins=50, alpha=0.5, label="Spam", color="orange")
+    if 2 in filtered["label"].values:
+        plt.hist(filtered[filtered["label"] == 2]["word_count"], bins=50, alpha=0.5, label="Phishing", color="red")
     plt.title("Word Count Distribution (Truncated at 95th percentile)")
     plt.xlabel("Number of Words")
     plt.ylabel("Frequency")

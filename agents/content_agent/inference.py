@@ -1,4 +1,14 @@
-"""Inference engine for content phishing detection models."""
+"""Inference engine for content phishing detection models.
+
+Supports the tri-class SLM output:
+    Label 0 = Legitimate
+    Label 1 = Spam
+    Label 2 = Phishing
+
+The text preprocessing step (_compact_text) MUST mirror the exact
+preprocessing applied during training so the tokenizer sees the same
+distribution at inference time.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +17,8 @@ from typing import Any
 from services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
+
+MAX_WORDS_PER_SAMPLE = 180  # Must match training script default
 
 
 def _clamp(value: float) -> float:
@@ -19,6 +31,26 @@ def _from_proba(value: Any) -> float:
     return float(value)
 
 
+def _compact_text(text: str) -> str:
+    """Normalize and shorten text — identical to the training preprocessor."""
+    normalized = " ".join(str(text).split())
+    words = normalized.split()
+    if len(words) > MAX_WORDS_PER_SAMPLE:
+        words = words[:MAX_WORDS_PER_SAMPLE]
+    return " ".join(words)
+
+
+# Labels the SLM was trained on (must stay in sync with prepare_training_data)
+_LABEL_RISK = {
+    "LABEL_0": 0.0,   # Legitimate  → zero risk
+    "LABEL_1": 0.65,  # Spam        → moderate risk
+    "LABEL_2": 0.95,  # Phishing    → high risk
+    "Legitimate": 0.0,
+    "Spam": 0.65,
+    "Phishing": 0.95,
+}
+
+
 def predict(features: dict[str, Any], model: Any = None) -> dict[str, Any]:
     """Run model inference and return normalized risk/confidence values."""
     logger.debug("Running inference", agent="content_agent")
@@ -29,18 +61,29 @@ def predict(features: dict[str, Any], model: Any = None) -> dict[str, Any]:
         kind = model.get("kind") if isinstance(model, dict) else "sklearn_model"
 
         if kind == "transformer_pipeline":
-            text = features.get("text", "")
-            output = model["model"](text[:4000], truncation=True)
+            raw_text = features.get("text", "")
+
+            # ── CRITICAL: apply the same preprocessing used during training ──
+            processed_text = _compact_text(raw_text)
+
+            output = model["model"](processed_text, truncation=True)
             row = output[0] if output else {}
-            label = str(row.get("label", "")).lower()
+            label = str(row.get("label", ""))
             score = float(row.get("score", 0.0))
-            risk = score if any(token in label for token in ["phish", "spam", "fraud", "malicious", "1"]) else 1.0 - score
+
+            # Map the tri-class label to a risk score
+            risk = _LABEL_RISK.get(label, 0.5)
+            # Scale risk by confidence (low-confidence predictions should lower risk)
+            risk = risk * score
+
+            indicators = [f"ml_slm_label:{label}", f"ml_slm_confidence:{score:.4f}"]
             return {
                 "risk_score": _clamp(risk),
                 "confidence": _clamp(score),
-                "indicators": [f"ml_transformer_label:{label}"] if label else ["ml_transformer_used"],
+                "indicators": indicators,
             }
 
+        # ── Fallback: sklearn model ──
         base_model = model.get("model") if isinstance(model, dict) else model
         vectorizer = model.get("vectorizer") if isinstance(model, dict) else None
         text = features.get("text", "")

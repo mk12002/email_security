@@ -40,7 +40,7 @@ def main() -> None:
     if not csv_path.exists():
         print(f"ERROR: Training data not found at {csv_path}")
         print("Run:  python scripts/generate_synthetic_datasets.py")
-        print("Then: python -m preprocessing.prepare_training_data")
+        print("Then: python -m preprocessing.user_behavior_preprocessing")
         sys.exit(1)
 
     print(f"Loading training data from {csv_path} ...")

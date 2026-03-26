@@ -15,6 +15,7 @@ import os
 import sys
 import json
 import shutil
+import hashlib
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -33,6 +34,7 @@ from sklearn.metrics import (
     confusion_matrix,
     ConfusionMatrixDisplay,
 )
+from sklearn.model_selection import train_test_split
 from datasets import Dataset
 from tqdm.auto import tqdm
 from transformers import (
@@ -51,6 +53,7 @@ PROCESSED_DIR = REPO_ROOT.parent / "datasets_processed"
 OUTPUT_DIR = REPO_ROOT.parent / "models" / "content_agent_slm_checkpoints"
 FINAL_MODEL_DIR = REPO_ROOT.parent / "models" / "content_agent"
 RUN_LOG_DIR = FINAL_MODEL_DIR / "run_logs"
+FINGERPRINT_FILE = OUTPUT_DIR / "data_fingerprint.json"
 
 RANDOM_SEED = 42
 
@@ -58,10 +61,33 @@ RANDOM_SEED = 42
 MAX_SEQ_LEN = int(os.getenv("SLM_MAX_SEQ_LEN", "96"))
 MAX_WORDS_PER_SAMPLE = int(os.getenv("SLM_MAX_WORDS_PER_SAMPLE", "180"))
 MAX_SAMPLES_PER_CLASS = int(os.getenv("SLM_MAX_SAMPLES_PER_CLASS", "120000"))
+MIN_SAMPLES_PER_CLASS = int(os.getenv("SLM_MIN_SAMPLES_PER_CLASS", "8000"))
 NUM_EPOCHS = int(os.getenv("SLM_NUM_EPOCHS", "10"))
 LOGGING_STEPS = int(os.getenv("SLM_LOGGING_STEPS", "25"))
 RESUME_TRAINING = os.getenv("SLM_RESUME", "1") == "1"
 FORCE_RETRAIN = os.getenv("SLM_FORCE_RETRAIN", "0") == "1"
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_fingerprint() -> dict[str, str]:
+    if not FINGERPRINT_FILE.exists():
+        return {}
+    try:
+        return json.loads(FINGERPRINT_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_fingerprint(payload: dict[str, str]) -> None:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    FINGERPRINT_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _load_checkpoint_epoch(checkpoint_path: Path) -> float | None:
@@ -89,11 +115,38 @@ def _compact_text(text: str) -> str:
         words = words[:MAX_WORDS_PER_SAMPLE]
     return " ".join(words)
 
+
+def _ensure_canonical_dataset(csv_path: Path) -> None:
+    if csv_path.exists():
+        return
+
+    print("Canonical SLM CSV missing. Regenerating content preprocessing outputs...")
+    from email_security.preprocessing.content_preprocessing import run as run_content_preprocessing
+
+    run_content_preprocessing(base_dir="datasets", output_dir="datasets_processed")
+
 def main():
-    csv_path = PROCESSED_DIR / "content_training.csv"
+    csv_path = PROCESSED_DIR / "content_training_slm.csv"
+    _ensure_canonical_dataset(csv_path)
     if not csv_path.exists():
-        print(f"ERROR: Training data not found at {csv_path}")
+        print(f"ERROR: Canonical SLM training data not found at {csv_path} after regeneration attempt")
         sys.exit(1)
+
+    # Enforce strict schema compatibility for this SLM trainer.
+    header = pd.read_csv(csv_path, nrows=1)
+    expected_cols = ["text", "label"]
+    if list(header.columns) != expected_cols:
+        print(
+            "ERROR: Invalid content SLM CSV schema. "
+            f"Expected columns {expected_cols} in order, got {list(header.columns)}"
+        )
+        sys.exit(1)
+
+    current_fingerprint = {
+        "csv_path": str(csv_path),
+        "sha256": _file_sha256(csv_path),
+    }
+    previous_fingerprint = _load_fingerprint()
 
     print("1. Loading TinyBERT tokenizer...")
     # Use a stable tiny BERT checkpoint with explicit bert model_type.
@@ -122,8 +175,11 @@ def main():
     df = df.drop_duplicates(subset=["text"]).reset_index(drop=True)
 
     label_values = sorted(df["label"].unique().tolist())
-    if len(label_values) < 2:
-        print("ERROR: Need at least 2 classes for training.")
+    if set(label_values) != {0, 1, 2}:
+        print(
+            "ERROR: Content SLM requires exactly 3 canonical labels {0,1,2}. "
+            f"Found labels: {label_values}"
+        )
         sys.exit(1)
 
     # Cap samples per class to bound token usage while keeping class balance.
@@ -132,6 +188,8 @@ def main():
         part = df[df["label"] == label]
         if len(part) > MAX_SAMPLES_PER_CLASS:
             part = part.sample(n=MAX_SAMPLES_PER_CLASS, random_state=RANDOM_SEED)
+        elif len(part) < MIN_SAMPLES_PER_CLASS:
+            part = part.sample(n=MIN_SAMPLES_PER_CLASS, replace=True, random_state=RANDOM_SEED)
         balanced.append(part)
 
     df = pd.concat(balanced, ignore_index=True)
@@ -145,25 +203,37 @@ def main():
     print(
         f"   -> Token budget settings: max_seq_len={MAX_SEQ_LEN}, "
         f"max_words_per_sample={MAX_WORDS_PER_SAMPLE}, "
-        f"max_samples_per_class={MAX_SAMPLES_PER_CLASS}"
+        f"max_samples_per_class={MAX_SAMPLES_PER_CLASS}, "
+        f"min_samples_per_class={MIN_SAMPLES_PER_CLASS}"
     )
 
-    dataset = Dataset.from_pandas(df)
-    
-    # 80/20 Train-Test Split natively in HF
-    dataset = dataset.train_test_split(test_size=0.2, seed=RANDOM_SEED)
+    train_df, test_df = train_test_split(
+        df,
+        test_size=0.2,
+        random_state=RANDOM_SEED,
+        stratify=df["label"],
+    )
+
+    dataset = {
+        "train": Dataset.from_pandas(train_df.reset_index(drop=True), preserve_index=False),
+        "test": Dataset.from_pandas(test_df.reset_index(drop=True), preserve_index=False),
+    }
 
     def tokenize_function(examples):
         # Truncate to a strict token budget; no global max-length padding here.
         return tokenizer(examples["text"], truncation=True, max_length=MAX_SEQ_LEN)
 
     print("3. Tokenizing dataset (multi-processing limited to 2 cores)...")
-    tokenized_datasets = dataset.map(tokenize_function, batched=True, num_proc=2)
+    tokenized_datasets = {
+        split: dataset[split].map(tokenize_function, batched=True, num_proc=2)
+        for split in ("train", "test")
+    }
     
     # Remove raw text to free up any stray RAM
-    tokenized_datasets = tokenized_datasets.remove_columns(["text"])
-    tokenized_datasets = tokenized_datasets.rename_column("label", "labels")
-    tokenized_datasets.set_format("torch")
+    for split in ("train", "test"):
+        tokenized_datasets[split] = tokenized_datasets[split].remove_columns(["text"])
+        tokenized_datasets[split] = tokenized_datasets[split].rename_column("label", "labels")
+        tokenized_datasets[split].set_format("torch")
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     print("4. Initializing BERT-Tiny Model for Sequence Classification...")
@@ -195,6 +265,15 @@ def main():
     last_checkpoint = None
     if FORCE_RETRAIN and OUTPUT_DIR.exists():
         print(f"FORCE_RETRAIN enabled. Removing old checkpoints at {OUTPUT_DIR}")
+        shutil.rmtree(OUTPUT_DIR)
+
+    if (
+        OUTPUT_DIR.exists()
+        and previous_fingerprint
+        and previous_fingerprint.get("sha256")
+        and previous_fingerprint.get("sha256") != current_fingerprint.get("sha256")
+    ):
+        print("Detected changed training data fingerprint. Resetting old checkpoints for clean retraining.")
         shutil.rmtree(OUTPUT_DIR)
 
     if RESUME_TRAINING and OUTPUT_DIR.exists() and len(os.listdir(OUTPUT_DIR)) > 0:
@@ -252,6 +331,7 @@ def main():
 
     print("5. Starting Optimized Training...")
     trainer.train(resume_from_checkpoint=last_checkpoint)
+    _save_fingerprint(current_fingerprint)
 
     final_eval = trainer.evaluate()
     print("   -> Final evaluation metrics:", final_eval)
@@ -336,6 +416,7 @@ def main():
             "max_seq_len": MAX_SEQ_LEN,
             "max_words_per_sample": MAX_WORDS_PER_SAMPLE,
             "max_samples_per_class": MAX_SAMPLES_PER_CLASS,
+            "min_samples_per_class": MIN_SAMPLES_PER_CLASS,
         },
         "training": {
             "num_epochs": NUM_EPOCHS,
@@ -368,6 +449,7 @@ def main():
         f"Deduplicated rows removed: {dedup_removed}",
         f"Label distribution: {df['label'].value_counts().to_dict()}",
         f"Token budget: max_seq_len={MAX_SEQ_LEN}, max_words_per_sample={MAX_WORDS_PER_SAMPLE}, max_samples_per_class={MAX_SAMPLES_PER_CLASS}",
+        f"Class floor: min_samples_per_class={MIN_SAMPLES_PER_CLASS}",
         "",
         "Training summary",
         "----------------",

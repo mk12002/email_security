@@ -16,6 +16,12 @@ MODEL_DIR = Path(__file__).resolve().parents[2] / "models" / "content_agent"
 
 MAX_WORDS_PER_SAMPLE = 180
 
+LABEL_NORMALIZATION = {
+    "label_0": "Legitimate",
+    "label_1": "Spam",
+    "label_2": "Phishing",
+}
+
 
 def _compact_text(text: str) -> str:
     """Identical to the training preprocessor."""
@@ -24,6 +30,10 @@ def _compact_text(text: str) -> str:
     if len(words) > MAX_WORDS_PER_SAMPLE:
         words = words[:MAX_WORDS_PER_SAMPLE]
     return " ".join(words)
+
+
+def _normalize_label(label: str) -> str:
+    return LABEL_NORMALIZATION.get(str(label).strip().lower(), str(label))
 
 
 def main():
@@ -63,13 +73,19 @@ def main():
         # Apply the SAME preprocessing as training
         processed = _compact_text(text)
 
-        result = classifier(processed, truncation=True, max_length=96)[0]
-        label = result["label"]
+        top_results = classifier(processed, truncation=True, max_length=96, top_k=3)
+        result = top_results[0]
+        raw_label = result["label"]
+        label = _normalize_label(raw_label)
         score = result["score"]
 
         print(f"\n[Expected: {category}]")
         print(f"  Input: '{text[:80]}...'")
-        print(f"  Predicted: {label} (Confidence: {score:.4f})")
+        print(f"  Predicted: {label} (raw: {raw_label}, Confidence: {score:.4f})")
+        top_fmt = ", ".join(
+            f"{_normalize_label(row['label'])}:{float(row['score']):.4f}" for row in top_results
+        )
+        print(f"  Top-3: {top_fmt}")
 
         # Simple pass/fail check
         expected_map = {

@@ -80,13 +80,28 @@ def predict_with_model(features: dict[str, Any], model_bundle: Any, model_indica
 
         model = model_bundle.get("model") if isinstance(model_bundle, dict) else model_bundle
         vectorizer = model_bundle.get("vectorizer") if isinstance(model_bundle, dict) else None
+        feature_names = model_bundle.get("features") if isinstance(model_bundle, dict) else None
         text = str(features.get("text", "") or "")
         numeric_vector = features.get("numeric_vector")
+        feature_map = features.get("feature_map") if isinstance(features, dict) else None
 
         if vectorizer is not None:
             x = vectorizer.transform([text])
+        elif feature_names and isinstance(feature_map, dict):
+            try:
+                import pandas as pd
+
+                x = pd.DataFrame(
+                    [[float(feature_map.get(name, 0.0)) for name in feature_names]],
+                    columns=feature_names,
+                )
+            except Exception:
+                x = [[float(feature_map.get(name, 0.0)) for name in feature_names]]
         else:
             x = numeric_vector
+
+        if x is None:
+            return {"risk_score": 0.0, "confidence": 0.0, "indicators": ["ml_missing_feature_vector"]}
 
         if hasattr(model, "predict_proba"):
             proba = model.predict_proba(x)[0]

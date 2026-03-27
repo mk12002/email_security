@@ -32,7 +32,11 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> s
     output = _resolve_output_dir(output_dir)
     output.mkdir(parents=True, exist_ok=True)
 
-    source = base / "email_content" / "header_training.csv"
+    email_content_dir = base / "email_content"
+    extracted_source = email_content_dir / "header_training_extracted.csv"
+    default_source = email_content_dir / "header_training.csv"
+
+    source = extracted_source if extracted_source.exists() else default_source
     if not source.exists():
         return ""
 

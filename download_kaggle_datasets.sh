@@ -52,15 +52,6 @@ else
     echo "Kaggle Malicious URLs already exist. Skipping."
 fi
 
-# Phishing Susceptibility (User Behavior)
-if [ -z "$(ls -A "$BASE_DIR"/user_behavior/phishing_susceptibility 2>/dev/null)" ]; then
-    echo "Downloading Phishing Susceptibility..."
-    mkdir -p "$BASE_DIR/user_behavior/phishing_susceptibility"
-    kaggle datasets download -d davidgarciahz/phishing-susceptibility -p "$BASE_DIR/user_behavior/phishing_susceptibility" --unzip
-else
-    echo "Phishing Susceptibility already exists. Skipping."
-fi
-
 # Enron
 if [ ! -f "$BASE_DIR/email_content/legitimate/enron/emails.csv" ]; then
     echo "Downloading Enron Email Dataset..."

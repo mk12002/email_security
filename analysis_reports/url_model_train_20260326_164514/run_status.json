@@ -1,0 +1,10 @@
+{
+  "run_id": "20260326_164514",
+  "status": "success",
+  "started_at_utc": "2026-03-26T16:45:14.048739+00:00",
+  "report_dir": "D:\\Code_stuff\\email_stuff\\email_security\\analysis_reports\\url_model_train_20260326_164514",
+  "error": null,
+  "summary_path": "D:\\Code_stuff\\email_stuff\\email_security\\analysis_reports\\url_model_train_20260326_164514\\summary.json",
+  "quality_gate_passed": true,
+  "finished_at_utc": "2026-03-26T16:48:43.175655+00:00"
+}

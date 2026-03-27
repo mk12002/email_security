@@ -2,10 +2,9 @@
 Generate synthetic datasets for agents that lack sufficient training data.
 
 Produces:
-  1. User behavior       → datasets/user_behavior/user_email_behavior.csv   (5 000 rows)
-  2. Threat intel IOC feeds  → datasets/threat_intelligence/{domains,ips,urls}/*.csv
-  3. Sandbox behavior    → datasets/sandbox_behavior/sandbox_logs.csv        (500 rows)
-  4. Header training     → datasets/email_content/header_training.csv        (3 000 rows)
+    1. Threat intel IOC feeds  → datasets/threat_intelligence/{domains,ips,urls}/*.csv
+    2. Sandbox behavior    → datasets/sandbox_behavior/sandbox_logs.csv        (500 rows)
+    3. Header training     → datasets/email_content/header_training.csv        (3 000 rows)
 
 Usage:
     cd /home/LabsKraft/new_work/email_security
@@ -30,58 +29,7 @@ BASE = Path(__file__).resolve().parents[1].parent / "datasets"
 
 
 # ─────────────────────────────────────────────────────────────
-#  1.  User Behavior Dataset  (5 000 rows)
-# ─────────────────────────────────────────────────────────────
-
-def _generate_user_behavior(n: int = 5000) -> None:
-    """Generate realistic user email interaction data."""
-    out = BASE / "user_behavior" / "user_email_behavior.csv"
-    out.parent.mkdir(parents=True, exist_ok=True)
-
-    email_types = ["phishing", "spam", "legitimate", "internal", "marketing", "newsletter"]
-    weights_by_type = {
-        "phishing":   {"click_base": 0.35, "urgency_range": (1, 3), "link_range": (1, 5)},
-        "spam":       {"click_base": 0.15, "urgency_range": (0, 2), "link_range": (1, 8)},
-        "legitimate": {"click_base": 0.60, "urgency_range": (0, 1), "link_range": (0, 3)},
-        "internal":   {"click_base": 0.70, "urgency_range": (0, 1), "link_range": (0, 2)},
-        "marketing":  {"click_base": 0.25, "urgency_range": (0, 1), "link_range": (2, 6)},
-        "newsletter": {"click_base": 0.40, "urgency_range": (0, 0), "link_range": (1, 4)},
-    }
-
-    rows = []
-    for _ in range(n):
-        etype = random.choice(email_types)
-        w = weights_by_type[etype]
-
-        sender_fam = random.choice([0, 1])
-        urgency = random.randint(*w["urgency_range"])
-        links = random.randint(*w["link_range"])
-
-        # Click probability influenced by familiarity, urgency, and type
-        p = w["click_base"]
-        p += 0.15 * (1 - sender_fam)   # unfamiliar senders increase risk
-        p += 0.10 * min(urgency, 2)     # urgency increases risk
-        p = max(0.0, min(1.0, p + random.gauss(0, 0.08)))
-        clicked = 1 if random.random() < p else 0
-
-        rows.append({
-            "sender_familiarity": sender_fam,
-            "subject_urgency": urgency,
-            "link_count": links,
-            "email_type": etype,
-            "user_clicked": clicked,
-        })
-
-    with open(out, "w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=["sender_familiarity", "subject_urgency", "link_count", "email_type", "user_clicked"])
-        writer.writeheader()
-        writer.writerows(rows)
-
-    print(f"  ✓ User behavior: {len(rows)} rows → {out}")
-
-
-# ─────────────────────────────────────────────────────────────
-#  2.  Threat Intelligence IOC Feeds
+#  1.  Threat Intelligence IOC Feeds
 # ─────────────────────────────────────────────────────────────
 
 def _random_domain(malicious: bool = True) -> str:
@@ -144,7 +92,7 @@ def _generate_threat_intel() -> None:
 
 
 # ─────────────────────────────────────────────────────────────
-#  3.  Sandbox Behavior Logs  (500 rows)
+#  2.  Sandbox Behavior Logs  (500 rows)
 # ─────────────────────────────────────────────────────────────
 
 def _generate_sandbox_logs(n: int = 500) -> None:
@@ -193,7 +141,7 @@ def _generate_sandbox_logs(n: int = 500) -> None:
 
 
 # ─────────────────────────────────────────────────────────────
-#  4.  Header Training Dataset  (3 000 rows)
+#  3.  Header Training Dataset  (3 000 rows)
 # ─────────────────────────────────────────────────────────────
 
 def _generate_header_training(n: int = 3000) -> None:
@@ -254,7 +202,6 @@ def _generate_header_training(n: int = 3000) -> None:
 
 def main() -> None:
     print(f"Generating synthetic datasets into: {BASE}\n")
-    _generate_user_behavior()
     _generate_threat_intel()
     _generate_sandbox_logs()
     _generate_header_training()

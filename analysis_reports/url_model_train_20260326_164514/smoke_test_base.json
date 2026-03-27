@@ -1,0 +1,33 @@
+{
+  "timestamp_utc": "20260326_164738",
+  "model_dir": "D:\\Code_stuff\\email_stuff\\models\\url_agent",
+  "threshold": 0.5099999999999999,
+  "threshold_source": "model_bundle",
+  "benign_scores": [
+    0.9702,
+    0.8853,
+    0.1674,
+    0.7061
+  ],
+  "malicious_scores": [
+    0.9358,
+    0.9646,
+    0.895,
+    0.9966
+  ],
+  "benign_mean": 0.68225,
+  "malicious_mean": 0.948,
+  "mean_gap": 0.26574999999999993,
+  "benign_below_threshold": 1,
+  "malicious_above_threshold": 4,
+  "conditions": {
+    "malicious_mean_gt_benign_mean": true,
+    "mean_gap_at_least_0_18": true,
+    "benign_below_threshold_at_least_1": true,
+    "malicious_above_threshold_at_least_3": true,
+    "score_ranges_overlap_expected": true
+  },
+  "passed": true,
+  "attempt": "base",
+  "exit_code": 0
+}

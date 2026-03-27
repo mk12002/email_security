@@ -110,9 +110,6 @@ class Settings(BaseSettings):
     threat_intel_model_path: str = Field(
         default="models/threat_intel_agent/", description="Threat intel model path"
     )
-    user_behavior_model_path: str = Field(
-        default="models/user_behavior_agent/", description="User behavior model path"
-    )
 
     # --- Dataset Paths ---
     dataset_base_path: str = Field(

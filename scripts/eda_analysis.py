@@ -144,8 +144,8 @@ def analyze_ember_dataset():
 
 
 def analyze_small_datasets():
-    print("\n--- Analyzing User Behavior & Header Datasets ---")
-    for name in ["user_behavior", "header"]:
+    print("\n--- Analyzing Header Dataset ---")
+    for name in ["header"]:
         csv_path = PROCESSED_DIR / f"{name}_training.csv"
         if not csv_path.exists():
             continue
@@ -170,5 +170,5 @@ if __name__ == "__main__":
     analyze_url_dataset()
     analyze_content_dataset()
     analyze_ember_dataset()
-    # analyze_small_datasets()
+    analyze_small_datasets()
     print("\nEDA Complete! Check the 'analysis_reports' folder for visualization plots.")

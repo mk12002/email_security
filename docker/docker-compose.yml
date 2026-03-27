@@ -224,25 +224,6 @@ services:
       - email_security_net
     restart: unless-stopped
 
-  user_behavior_agent_service:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    container_name: email-security-user-behavior-agent
-    command: ["python", "-m", "agents.service_runner"]
-    environment:
-      <<: *common-app-env
-      AGENT_NAME: user_behavior_agent
-    volumes:
-      - attachments_data:/mnt/attachments
-      - app_logs:/app/logs
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - email_security_net
-    restart: unless-stopped
-
   # ---------------------------------------------------------------------------
   # Agent Services – Placeholder for individual agent containers
   # ---------------------------------------------------------------------------
@@ -267,9 +248,6 @@ services:
   #   ...
   # threat_intel_agent:
   #   ...
-  # user_behavior_agent:
-  #   ...
-
   # ---------------------------------------------------------------------------
   # Database – PostgreSQL
   # ---------------------------------------------------------------------------

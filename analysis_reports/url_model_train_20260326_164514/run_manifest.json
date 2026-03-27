@@ -1,0 +1,23 @@
+{
+  "timestamp_utc": "20260326_164514",
+  "cli_args": {
+    "csv_path": "D:\\Code_stuff\\email_stuff\\datasets_processed\\url_training.csv",
+    "chunk_size": 150000,
+    "max_train_rows": 900000,
+    "seed": 42,
+    "test_size": 0.2,
+    "val_size": 0.1,
+    "force_retrain": true,
+    "audit_only": false,
+    "max_retrain_attempts": 1,
+    "skip_smoke_test": false,
+    "min_roc_auc": 0.97,
+    "min_pr_auc": 0.97,
+    "min_f1": 0.93
+  },
+  "quality_thresholds": {
+    "min_roc_auc": 0.97,
+    "min_pr_auc": 0.97,
+    "min_f1": 0.93
+  }
+}

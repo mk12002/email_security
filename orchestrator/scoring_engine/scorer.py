@@ -12,13 +12,12 @@ logger = get_service_logger("scoring_engine")
 
 # Default agent weights (sum to 1.0)
 DEFAULT_WEIGHTS = {
-    "header_agent": 0.15,
-    "content_agent": 0.20,
-    "url_agent": 0.20,
-    "attachment_agent": 0.15,
+    "header_agent": 0.17,
+    "content_agent": 0.23,
+    "url_agent": 0.23,
+    "attachment_agent": 0.17,
     "sandbox_agent": 0.10,
     "threat_intel_agent": 0.10,
-    "user_behavior_agent": 0.10,
 }
 
 

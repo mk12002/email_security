@@ -9,7 +9,6 @@ from .attachment_preprocessing import run as run_attachment_preprocessing
 from .content_preprocessing import run as run_content_preprocessing
 from .header_preprocessing import run as run_header_preprocessing
 from .url_preprocessing import run as run_url_preprocessing
-from .user_behavior_preprocessing import run as run_user_behavior_preprocessing
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 
@@ -31,9 +30,6 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
     print("Extracting URL training data...")
     url_path = run_url_preprocessing(base_dir=base_dir, output_dir=output_dir)
 
-    print("Extracting User Behavior training data...")
-    user_behavior_out = run_user_behavior_preprocessing(base_dir=base_dir, output_dir=output_dir)
-
     print("Extracting Header training data...")
     header_training_out = run_header_preprocessing(base_dir=base_dir, output_dir=output_dir)
 
@@ -46,7 +42,6 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
         "content_training": content_path,
         "content_training_slm": str(output / "content_training_slm.csv"),
         "url_training": url_path,
-        "user_behavior_training": user_behavior_out,
         "header_training": header_training_out,
         "attachment_training_ember": attachment_out,
     }

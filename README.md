@@ -6,7 +6,7 @@ Production-grade **Agentic AI Cybersecurity System** for **Phishing Email Detect
 
 ## System Overview
 
-The system uses **7 independent AI agents** that run in parallel to analyze different components of an email and collectively determine whether it is malicious.
+The system uses **6 independent AI agents** that run in parallel to analyze different components of an email and collectively determine whether it is malicious.
 
 ### Agents
 
@@ -18,7 +18,6 @@ The system uses **7 independent AI agents** that run in parallel to analyze diff
 | **Attachment Static Analysis** | Static analysis of attachments for malware signatures |
 | **Sandbox Behavior** | Dynamic behavioral analysis references for attachments |
 | **Threat Intelligence** | Cross-references indicators with threat intelligence feeds |
-| **User Interaction Prediction** | Predicts user susceptibility and behavioral risk factors |
 
 ### Architecture
 
@@ -38,7 +37,7 @@ The orchestrator uses a **LangGraph state graph** to execute decisioning nodes i
 This provides explicit state transitions, structured inputs/outputs per node, and auditable decision flow.
 ┌─────────────────────────────────────────────┐
 │              Decision Layer                  │
-│   7 Independent AI Agents (parallel)         │
+│   6 Independent AI Agents (parallel)         │
 ├─────────────────────────────────────────────┤
 │              Analysis Layer                  │
 │   Threat Correlation │ Scoring Engine        │
@@ -61,7 +60,6 @@ email_security/
 │   ├── attachment_agent/          #   Attachment static analysis
 │   ├── sandbox_agent/             #   Sandbox behavior analysis
 │   ├── threat_intel_agent/        #   Threat intelligence lookups
-│   └── user_behavior_agent/       #   User interaction prediction
 │
 ├── orchestrator/                  # Agent coordination & scoring
 │   ├── decision_engine/           #   Final threat determination

@@ -1,0 +1,244 @@
+{
+  "rows": 150000,
+  "columns": [
+    "url",
+    "url_length",
+    "host_length",
+    "path_length",
+    "query_length",
+    "subdomain_count",
+    "dot_count",
+    "digit_count",
+    "digit_ratio",
+    "special_char_count",
+    "slash_count",
+    "hyphen_count",
+    "at_count",
+    "question_count",
+    "ampersand_count",
+    "percent_count",
+    "equals_count",
+    "path_depth",
+    "suspicious_token_count",
+    "host_entropy",
+    "url_entropy",
+    "is_https",
+    "has_ip_host",
+    "has_port",
+    "punycode_flag",
+    "tld_length",
+    "label"
+  ],
+  "unique_urls": 148605,
+  "duplicate_urls": 1395,
+  "label_distribution": {
+    "0": 75000,
+    "1": 75000
+  },
+  "class_ratio_major_to_minor": 1.0,
+  "missing_values": {},
+  "feature_columns_used": [
+    "url_length",
+    "host_length",
+    "path_length",
+    "query_length",
+    "subdomain_count",
+    "dot_count",
+    "digit_count",
+    "digit_ratio",
+    "special_char_count",
+    "slash_count",
+    "hyphen_count",
+    "at_count",
+    "question_count",
+    "ampersand_count",
+    "percent_count",
+    "equals_count",
+    "path_depth",
+    "suspicious_token_count",
+    "host_entropy",
+    "url_entropy",
+    "is_https",
+    "has_ip_host",
+    "has_port",
+    "punycode_flag",
+    "tld_length"
+  ],
+  "feature_summary": {
+    "url_length": {
+      "mean": 47.7834,
+      "std": 40.66613565778364,
+      "p50": 34.0,
+      "p95": 122.0,
+      "p99": 199.0
+    },
+    "host_length": {
+      "mean": 16.884886666666667,
+      "std": 8.599091922001694,
+      "p50": 15.0,
+      "p95": 29.0,
+      "p99": 44.0
+    },
+    "path_length": {
+      "mean": 14.348873333333334,
+      "std": 22.687285546831266,
+      "p50": 7.0,
+      "p95": 60.0,
+      "p99": 108.0
+    },
+    "query_length": {
+      "mean": 8.697986666666667,
+      "std": 29.824725280233668,
+      "p50": 0.0,
+      "p95": 61.0,
+      "p99": 135.0
+    },
+    "subdomain_count": {
+      "mean": 0.5163866666666667,
+      "std": 0.81505167886285,
+      "p50": 0.0,
+      "p95": 2.0,
+      "p99": 3.0
+    },
+    "dot_count": {
+      "mean": 1.9928533333333334,
+      "std": 1.2310912621438186,
+      "p50": 2.0,
+      "p95": 4.0,
+      "p99": 6.0
+    },
+    "digit_count": {
+      "mean": 3.5655733333333335,
+      "std": 9.077329055985622,
+      "p50": 0.0,
+      "p95": 17.0,
+      "p99": 35.0
+    },
+    "digit_ratio": {
+      "mean": 0.05560195155334802,
+      "std": 0.11314565340212222,
+      "p50": 0.0,
+      "p95": 0.3461538461538461,
+      "p99": 0.52
+    },
+    "special_char_count": {
+      "mean": 8.671306666666666,
+      "std": 5.6543281801469,
+      "p50": 7.0,
+      "p95": 20.0,
+      "p99": 29.0
+    },
+    "slash_count": {
+      "mean": 3.5780266666666667,
+      "std": 1.2727722913457824,
+      "p50": 3.0,
+      "p95": 6.0,
+      "p99": 9.0
+    },
+    "hyphen_count": {
+      "mean": 0.6519666666666667,
+      "std": 1.7140728453580036,
+      "p50": 0.0,
+      "p95": 4.0,
+      "p99": 9.0
+    },
+    "at_count": {
+      "mean": 0.0014933333333333333,
+      "std": 0.03980511506331136,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 0.0
+    },
+    "question_count": {
+      "mean": 0.16924,
+      "std": 0.38402969363323625,
+      "p50": 0.0,
+      "p95": 1.0,
+      "p99": 1.0
+    },
+    "ampersand_count": {
+      "mean": 0.3357266666666667,
+      "std": 1.1413250878293162,
+      "p50": 0.0,
+      "p95": 3.0,
+      "p99": 5.0
+    },
+    "percent_count": {
+      "mean": 0.10086666666666666,
+      "std": 1.7116168125789653,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 1.0
+    },
+    "equals_count": {
+      "mean": 0.50776,
+      "std": 1.4300652955879314,
+      "p50": 0.0,
+      "p95": 4.0,
+      "p99": 6.0
+    },
+    "path_depth": {
+      "mean": 1.1929866666666666,
+      "std": 1.444819503090795,
+      "p50": 1.0,
+      "p95": 4.0,
+      "p99": 6.0
+    },
+    "suspicious_token_count": {
+      "mean": 0.1031,
+      "std": 0.3352677626860129,
+      "p50": 0.0,
+      "p95": 1.0,
+      "p99": 1.0
+    },
+    "host_entropy": {
+      "mean": 3.2931710377164403,
+      "std": 0.4049019355628814,
+      "p50": 3.3248629576173565,
+      "p95": 3.893660689688186,
+      "p99": 4.20233009230464
+    },
+    "url_entropy": {
+      "mean": 4.082217579703011,
+      "std": 0.4310739915008916,
+      "p50": 4.023661393171458,
+      "p95": 4.808586244733986,
+      "p99": 5.527495704540407
+    },
+    "is_https": {
+      "mean": 0.48779333333333336,
+      "std": 0.49985264125871015,
+      "p50": 0.0,
+      "p95": 1.0,
+      "p99": 1.0
+    },
+    "has_ip_host": {
+      "mean": 0.05642,
+      "std": 0.2307317457877367,
+      "p50": 0.0,
+      "p95": 1.0,
+      "p99": 1.0
+    },
+    "has_port": {
+      "mean": 0.03468,
+      "std": 0.1829686333322515,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 1.0
+    },
+    "punycode_flag": {
+      "mean": 0.0011733333333333333,
+      "std": 0.03423396610558668,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 0.0
+    },
+    "tld_length": {
+      "mean": 2.548426666666667,
+      "std": 0.8585140874005178,
+      "p50": 3.0,
+      "p95": 3.0,
+      "p99": 4.0
+    }
+  }
+}

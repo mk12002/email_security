@@ -1,0 +1,196 @@
+{
+  "timestamp_utc": "20260331_095429",
+  "dataset": {
+    "path": "/home/LabsKraft/new_work/datasets_processed/header_training.csv",
+    "rows_used": 10000,
+    "train_rows": 6800,
+    "val_rows": 1200,
+    "test_rows": 2000,
+    "label_distribution": {
+      "0": 7978,
+      "1": 2022
+    }
+  },
+  "data_audit": {
+    "rows": 10000,
+    "label_distribution": {
+      "0": 7978,
+      "1": 2022
+    },
+    "class_ratio_major_to_minor": 3.95,
+    "feature_columns": [
+      "spf_pass",
+      "dkim_pass",
+      "dmarc_pass",
+      "sender_domain_len",
+      "display_name_mismatch",
+      "hop_count",
+      "reply_to_mismatch",
+      "sender_domain_entropy"
+    ],
+    "feature_summary": {
+      "spf_pass": {
+        "mean": 0.6933,
+        "std": 0.4611,
+        "min": 0.0,
+        "max": 1.0,
+        "p50": 1.0,
+        "p95": 1.0
+      },
+      "dkim_pass": {
+        "mean": 0.7375,
+        "std": 0.44,
+        "min": 0.0,
+        "max": 1.0,
+        "p50": 1.0,
+        "p95": 1.0
+      },
+      "dmarc_pass": {
+        "mean": 0.6392,
+        "std": 0.4803,
+        "min": 0.0,
+        "max": 1.0,
+        "p50": 1.0,
+        "p95": 1.0
+      },
+      "sender_domain_len": {
+        "mean": 14.3165,
+        "std": 6.592,
+        "min": 3.0,
+        "max": 51.0,
+        "p50": 13.0,
+        "p95": 26.0
+      },
+      "display_name_mismatch": {
+        "mean": 0.1194,
+        "std": 0.3243,
+        "min": 0.0,
+        "max": 1.0,
+        "p50": 0.0,
+        "p95": 1.0
+      },
+      "hop_count": {
+        "mean": 3.0086,
+        "std": 1.4362,
+        "min": 1.0,
+        "max": 9.0,
+        "p50": 3.0,
+        "p95": 6.0
+      },
+      "reply_to_mismatch": {
+        "mean": 0.1681,
+        "std": 0.374,
+        "min": 0.0,
+        "max": 1.0,
+        "p50": 0.0,
+        "p95": 1.0
+      },
+      "sender_domain_entropy": {
+        "mean": 2.9883,
+        "std": 0.5668,
+        "min": 1.0553,
+        "max": 5.0261,
+        "p50": 2.9861,
+        "p95": 3.9223
+      }
+    }
+  },
+  "model": {
+    "type": "RandomForestClassifier",
+    "selected_candidate": "rf_header",
+    "decision_threshold": 0.745,
+    "candidate_scores": [
+      {
+        "name": "hgb_header",
+        "train_seconds": 1.28,
+        "val_threshold": 0.56,
+        "val_precision": 0.9524,
+        "val_recall": 0.823,
+        "val_f1": 0.883,
+        "val_roc_auc": 0.9719,
+        "val_pr_auc": 0.9401,
+        "val_balanced_accuracy": 0.9063,
+        "composite_score": 0.9368
+      },
+      {
+        "name": "rf_header",
+        "train_seconds": 1.56,
+        "val_threshold": 0.745,
+        "val_precision": 0.9754,
+        "val_recall": 0.8148,
+        "val_f1": 0.8879,
+        "val_roc_auc": 0.9743,
+        "val_pr_auc": 0.9434,
+        "val_balanced_accuracy": 0.9048,
+        "composite_score": 0.9399
+      }
+    ]
+  },
+  "test_metrics": {
+    "accuracy": 0.959,
+    "balanced_accuracy": 0.9124,
+    "precision": 0.9574,
+    "recall": 0.8342,
+    "f1": 0.8915,
+    "roc_auc": 0.977,
+    "pr_auc": 0.9534
+  },
+  "curves": {
+    "roc_auc": 0.9769581751408223,
+    "pr_auc": 0.9533888149063795
+  },
+  "feature_importance": [
+    {
+      "feature": "display_name_mismatch",
+      "importance_mean": 0.21256945045672748,
+      "importance_std": 0.008335296987344113
+    },
+    {
+      "feature": "reply_to_mismatch",
+      "importance_mean": 0.10471133248430024,
+      "importance_std": 0.009789794087911531
+    },
+    {
+      "feature": "sender_domain_len",
+      "importance_mean": 0.07901775689160553,
+      "importance_std": 0.006657209383583414
+    },
+    {
+      "feature": "hop_count",
+      "importance_mean": 0.03494172929440727,
+      "importance_std": 0.00646624534825151
+    },
+    {
+      "feature": "sender_domain_entropy",
+      "importance_mean": 0.017687468430278373,
+      "importance_std": 0.002308159860980698
+    },
+    {
+      "feature": "dkim_pass",
+      "importance_mean": 0.017179299202486197,
+      "importance_std": 0.0019548477677140646
+    },
+    {
+      "feature": "spf_pass",
+      "importance_mean": 0.0058212636088802675,
+      "importance_std": 0.003127025655300375
+    },
+    {
+      "feature": "dmarc_pass",
+      "importance_mean": -0.002132968800435764,
+      "importance_std": 0.002973807583318253
+    }
+  ],
+  "artifacts": {
+    "training_log": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/training.log",
+    "dataset_audit": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/dataset_audit.json",
+    "candidate_comparison": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/candidate_comparison.png",
+    "confusion_matrix": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/confusion_matrix.png",
+    "roc_curve": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/roc_curve.png",
+    "precision_recall_curve": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/precision_recall_curve.png",
+    "score_histogram": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/score_histogram.png",
+    "threshold_sweep": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/threshold_sweep.png",
+    "learning_curve": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/learning_curve.png",
+    "feature_importance": "/home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/feature_importance.png"
+  }
+}

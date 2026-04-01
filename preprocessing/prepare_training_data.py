@@ -8,8 +8,8 @@ from pathlib import Path
 from .attachment_preprocessing import run as run_attachment_preprocessing
 from .content_preprocessing import run as run_content_preprocessing
 from .header_preprocessing import run as run_header_preprocessing
+from .sandbox_preprocessing import run as run_sandbox_preprocessing
 from .url_preprocessing import run as run_url_preprocessing
-from .user_behavior_preprocessing import run as run_user_behavior_preprocessing
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 
@@ -31,9 +31,6 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
     print("Extracting URL training data...")
     url_path = run_url_preprocessing(base_dir=base_dir, output_dir=output_dir)
 
-    print("Extracting User Behavior training data...")
-    user_behavior_out = run_user_behavior_preprocessing(base_dir=base_dir, output_dir=output_dir)
-
     print("Extracting Header training data...")
     header_training_out = run_header_preprocessing(base_dir=base_dir, output_dir=output_dir)
 
@@ -42,13 +39,20 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> d
     if not attachment_out:
         print("Warning: EMBER Parquet is missing, Attachment Agent cannot be trained.")
 
+    print("Extracting Sandbox behavior training data...")
+    try:
+        sandbox_out = run_sandbox_preprocessing(base_dir=base_dir, output_dir=output_dir)
+    except FileNotFoundError:
+        sandbox_out = ""
+        print("Warning: No sandbox behavior datasets found. Sandbox training data not generated.")
+
     report = {
         "content_training": content_path,
         "content_training_slm": str(output / "content_training_slm.csv"),
         "url_training": url_path,
-        "user_behavior_training": user_behavior_out,
         "header_training": header_training_out,
         "attachment_training_ember": attachment_out,
+        "sandbox_behavior_training": sandbox_out,
     }
     (output / "training_manifest.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     print("\nDataset Preprocessing Complete!")

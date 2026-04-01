@@ -14,7 +14,6 @@ from agents.url_agent import analyze as url_analyze
 from agents.attachment_agent import analyze as attachment_analyze
 from agents.sandbox_agent import analyze as sandbox_analyze
 from agents.threat_intel_agent import analyze as threat_intel_analyze
-from agents.user_behavior_agent import analyze as user_behavior_analyze
 from configs.settings import settings
 from services.logging_service import setup_logging
 
@@ -25,7 +24,6 @@ AGENT_FUNCTIONS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "attachment_agent": attachment_analyze,
     "sandbox_agent": sandbox_analyze,
     "threat_intel_agent": threat_intel_analyze,
-    "user_behavior_agent": user_behavior_analyze,
 }
 
 

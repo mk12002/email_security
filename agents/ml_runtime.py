@@ -97,11 +97,67 @@ def predict_with_model(features: dict[str, Any], model_bundle: Any, model_indica
                 )
             except Exception:
                 x = [[float(feature_map.get(name, 0.0)) for name in feature_names]]
+        elif feature_names and numeric_vector is not None:
+            try:
+                import pandas as pd
+
+                x = pd.DataFrame(numeric_vector, columns=feature_names)
+            except Exception:
+                x = numeric_vector
         else:
             x = numeric_vector
 
         if x is None:
             return {"risk_score": 0.0, "confidence": 0.0, "indicators": ["ml_missing_feature_vector"]}
+
+        # Support bagging/ensemble bundles where multiple base models vote via mean probability.
+        if isinstance(model, dict) and isinstance(model.get("models"), list):
+            members = model.get("models", [])
+            if not members:
+                return {"risk_score": 0.0, "confidence": 0.0, "indicators": ["ml_ensemble_empty"]}
+
+            probs: list[float] = []
+            for member in members:
+                if hasattr(member, "predict_proba"):
+                    member_proba = member.predict_proba(x)[0]
+                    if hasattr(member_proba, "tolist"):
+                        member_proba = member_proba.tolist()
+                    probs.append(float(member_proba[-1]) if isinstance(member_proba, list) else float(member_proba))
+                elif hasattr(member, "predict"):
+                    probs.append(float(member.predict(x)[0]))
+
+            if not probs:
+                return {"risk_score": 0.0, "confidence": 0.0, "indicators": ["ml_ensemble_no_predict_interface"]}
+
+            risk = sum(probs) / len(probs)
+            confidence = max(risk, 1.0 - risk)
+            return {
+                "risk_score": clamp(risk),
+                "confidence": clamp(confidence),
+                "indicators": [f"{model_indicator}_ensemble_{len(probs)}"],
+            }
+
+        if isinstance(model, (list, tuple)):
+            probs: list[float] = []
+            for member in model:
+                if hasattr(member, "predict_proba"):
+                    member_proba = member.predict_proba(x)[0]
+                    if hasattr(member_proba, "tolist"):
+                        member_proba = member_proba.tolist()
+                    probs.append(float(member_proba[-1]) if isinstance(member_proba, list) else float(member_proba))
+                elif hasattr(member, "predict"):
+                    probs.append(float(member.predict(x)[0]))
+
+            if not probs:
+                return {"risk_score": 0.0, "confidence": 0.0, "indicators": ["ml_ensemble_no_predict_interface"]}
+
+            risk = sum(probs) / len(probs)
+            confidence = max(risk, 1.0 - risk)
+            return {
+                "risk_score": clamp(risk),
+                "confidence": clamp(confidence),
+                "indicators": [f"{model_indicator}_ensemble_{len(probs)}"],
+            }
 
         if hasattr(model, "predict_proba"):
             proba = model.predict_proba(x)[0]
@@ -125,5 +181,16 @@ def predict_with_model(features: dict[str, Any], model_bundle: Any, model_indica
             "confidence": clamp(confidence),
             "indicators": [model_indicator],
         }
-    except Exception:
+    except Exception as e:
+        import logging
+        import traceback
+        log = logging.getLogger("ml_runtime")
+        shape_info = "unknown"
+        if "x" in locals() and hasattr(locals()["x"], "shape"):
+            shape_info = str(locals()["x"].shape)
+        elif "x" in locals() and isinstance(locals()["x"], list):
+            shape_info = f"list(len={len(locals()['x'])})"
+        
+        err_msg = traceback.format_exc()
+        log.error(f"ML inference failed: {e} | Model type: {type(model_bundle.get('model') if isinstance(model_bundle, dict) else model_bundle)} | Input shape: {shape_info}\n{err_msg}")
         return {"risk_score": 0.0, "confidence": 0.0, "indicators": ["ml_inference_failed"]}

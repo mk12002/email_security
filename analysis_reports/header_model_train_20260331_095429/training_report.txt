@@ -1,0 +1,20 @@
+Header Agent Model Training Report
+===================================
+
+Timestamp (UTC): 20260331_095429
+Dataset: /home/LabsKraft/new_work/datasets_processed/header_training.csv
+Rows used: 10000
+Selected candidate: rf_header
+Decision threshold: 0.7450
+
+Test Metrics
+------------
+Accuracy:          0.9590
+Balanced Accuracy: 0.9124
+Precision:         0.9574
+Recall:            0.8342
+F1:                0.8915
+ROC AUC:           0.9770
+PR AUC:            0.9534
+
+Detailed summary: /home/LabsKraft/new_work/email_security/analysis_reports/header_model_train_20260331_095429/summary.json

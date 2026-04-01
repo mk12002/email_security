@@ -93,25 +93,22 @@ class Settings(BaseSettings):
 
     # --- Model Paths ---
     header_model_path: str = Field(
-        default="models/header_agent/", description="Header agent model path"
+        default="../models/header_agent/", description="Header agent model path"
     )
     content_model_path: str = Field(
-        default="models/content_agent/", description="Content agent model path"
+        default="../models/content_agent/", description="Content agent model path"
     )
     url_model_path: str = Field(
-        default="models/url_agent/", description="URL agent model path"
+        default="../models/url_agent/", description="URL agent model path"
     )
     attachment_model_path: str = Field(
-        default="models/attachment_agent/", description="Attachment agent model path"
+        default="../models/attachment_agent/", description="Attachment agent model path"
     )
     sandbox_model_path: str = Field(
-        default="models/sandbox_agent/", description="Sandbox agent model path"
+        default="../models/sandbox_agent/", description="Sandbox agent model path"
     )
     threat_intel_model_path: str = Field(
-        default="models/threat_intel_agent/", description="Threat intel model path"
-    )
-    user_behavior_model_path: str = Field(
-        default="models/user_behavior_agent/", description="User behavior model path"
+        default="../models/threat_intel_agent/", description="Threat intel model path"
     )
 
     # --- Dataset Paths ---

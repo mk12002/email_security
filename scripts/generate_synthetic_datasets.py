@@ -2,10 +2,9 @@
 Generate synthetic datasets for agents that lack sufficient training data.
 
 Produces:
-  1. User behavior       → datasets/user_behavior/user_email_behavior.csv   (5 000 rows)
-  2. Threat intel IOC feeds  → datasets/threat_intelligence/{domains,ips,urls}/*.csv
-  3. Sandbox behavior    → datasets/sandbox_behavior/sandbox_logs.csv        (500 rows)
-  4. Header training     → datasets/email_content/header_training.csv        (3 000 rows)
+    1. Threat intel IOC feeds  → datasets/threat_intelligence/{domains,ips,urls}/*.csv
+    2. Sandbox behavior    → datasets/sandbox_behavior/sandbox_logs.csv        (500 rows)
+    3. Header training     → datasets/email_content/header_training.csv        (3 000 rows)
 
 Usage:
     cd /home/LabsKraft/new_work/email_security
@@ -30,58 +29,7 @@ BASE = Path(__file__).resolve().parents[1].parent / "datasets"
 
 
 # ─────────────────────────────────────────────────────────────
-#  1.  User Behavior Dataset  (5 000 rows)
-# ─────────────────────────────────────────────────────────────
-
-def _generate_user_behavior(n: int = 5000) -> None:
-    """Generate realistic user email interaction data."""
-    out = BASE / "user_behavior" / "user_email_behavior.csv"
-    out.parent.mkdir(parents=True, exist_ok=True)
-
-    email_types = ["phishing", "spam", "legitimate", "internal", "marketing", "newsletter"]
-    weights_by_type = {
-        "phishing":   {"click_base": 0.35, "urgency_range": (1, 3), "link_range": (1, 5)},
-        "spam":       {"click_base": 0.15, "urgency_range": (0, 2), "link_range": (1, 8)},
-        "legitimate": {"click_base": 0.60, "urgency_range": (0, 1), "link_range": (0, 3)},
-        "internal":   {"click_base": 0.70, "urgency_range": (0, 1), "link_range": (0, 2)},
-        "marketing":  {"click_base": 0.25, "urgency_range": (0, 1), "link_range": (2, 6)},
-        "newsletter": {"click_base": 0.40, "urgency_range": (0, 0), "link_range": (1, 4)},
-    }
-
-    rows = []
-    for _ in range(n):
-        etype = random.choice(email_types)
-        w = weights_by_type[etype]
-
-        sender_fam = random.choice([0, 1])
-        urgency = random.randint(*w["urgency_range"])
-        links = random.randint(*w["link_range"])
-
-        # Click probability influenced by familiarity, urgency, and type
-        p = w["click_base"]
-        p += 0.15 * (1 - sender_fam)   # unfamiliar senders increase risk
-        p += 0.10 * min(urgency, 2)     # urgency increases risk
-        p = max(0.0, min(1.0, p + random.gauss(0, 0.08)))
-        clicked = 1 if random.random() < p else 0
-
-        rows.append({
-            "sender_familiarity": sender_fam,
-            "subject_urgency": urgency,
-            "link_count": links,
-            "email_type": etype,
-            "user_clicked": clicked,
-        })
-
-    with open(out, "w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=["sender_familiarity", "subject_urgency", "link_count", "email_type", "user_clicked"])
-        writer.writeheader()
-        writer.writerows(rows)
-
-    print(f"  ✓ User behavior: {len(rows)} rows → {out}")
-
-
-# ─────────────────────────────────────────────────────────────
-#  2.  Threat Intelligence IOC Feeds
+#  1.  Threat Intelligence IOC Feeds
 # ─────────────────────────────────────────────────────────────
 
 def _random_domain(malicious: bool = True) -> str:
@@ -144,7 +92,7 @@ def _generate_threat_intel() -> None:
 
 
 # ─────────────────────────────────────────────────────────────
-#  3.  Sandbox Behavior Logs  (500 rows)
+#  2.  Sandbox Behavior Logs  (500 rows)
 # ─────────────────────────────────────────────────────────────
 
 def _generate_sandbox_logs(n: int = 500) -> None:
@@ -193,59 +141,261 @@ def _generate_sandbox_logs(n: int = 500) -> None:
 
 
 # ─────────────────────────────────────────────────────────────
-#  4.  Header Training Dataset  (3 000 rows)
+#  3.  Header Training Dataset  (10 000 rows)
+#
+#  Uses archetype-based generation for realistic, correlated
+#  features that mirror real-world email header patterns.
 # ─────────────────────────────────────────────────────────────
 
-def _generate_header_training(n: int = 3000) -> None:
-    """Generate synthetic header analysis training data."""
+# Real-world domain entropy values (pre-calculated from common domains)
+_REAL_DOMAINS = {
+    # Benign domains with known entropy values
+    "gmail.com": 2.25,
+    "yahoo.com": 2.81,
+    "outlook.com": 3.09,
+    "hotmail.com": 3.09,
+    "icloud.com": 2.81,
+    "protonmail.com": 3.42,
+    "zoho.com": 2.0,
+    "aol.com": 1.58,
+    "company.com": 2.81,
+    "acme.org": 2.32,
+    "example.net": 3.09,
+    "university.edu": 3.61,
+    "hospital.org": 3.25,
+    "govoffice.gov": 3.46,
+    "smallbiz.co": 2.85,
+    "startup.io": 2.85,
+    "consulting-firm.com": 3.81,
+    "techcorp.com": 3.17,
+}
+
+
+def _realistic_domain_entropy(malicious: bool) -> tuple[float, float]:
+    """Return (domain_length, domain_entropy) based on realistic distributions."""
+    if malicious:
+        pattern = random.choices(
+            ["random_gibberish", "lookalike", "compromised_legit", "free_tld", "subdomain_abuse"],
+            weights=[30, 25, 15, 20, 10],
+            k=1,
+        )[0]
+        if pattern == "random_gibberish":
+            # e.g., xk49fj-services.top  →  high entropy, long
+            length = float(random.randint(15, 40))
+            entropy = round(random.gauss(4.0, 0.35), 4)
+        elif pattern == "lookalike":
+            # e.g., paypa1.com, amaz0n.co  →  similar to real domains
+            length = float(random.randint(8, 18))
+            entropy = round(random.gauss(2.8, 0.4), 4)
+        elif pattern == "compromised_legit":
+            # Attacker using a real-looking domain  →  normal entropy
+            length = float(random.randint(8, 16))
+            entropy = round(random.gauss(2.7, 0.3), 4)
+        elif pattern == "free_tld":
+            # e.g., something.tk, phish.ml  →  short, low-ish entropy
+            length = float(random.randint(6, 14))
+            entropy = round(random.gauss(3.0, 0.5), 4)
+        else:  # subdomain_abuse
+            # e.g., login.secure.microsoft.phishing.xyz  →  very long
+            length = float(random.randint(25, 50))
+            entropy = round(random.gauss(3.5, 0.4), 4)
+    else:
+        # Pick from real domain stats or generate realistic ones
+        if random.random() < 0.4:
+            name, ent = random.choice(list(_REAL_DOMAINS.items()))
+            length = float(len(name))
+            entropy = round(ent + random.gauss(0, 0.05), 4)
+        else:
+            length = float(random.randint(6, 20))
+            entropy = round(random.gauss(2.8, 0.5), 4)
+    return length, max(0.5, entropy)
+
+
+def _generate_archetype_row(archetype: str) -> dict:
+    """Generate a single row from a specific email archetype."""
+
+    if archetype == "corporate_legit":
+        # Standard corporate email — all auth passes, normal hops
+        spf = 1.0 if random.random() < 0.95 else 0.0
+        dkim = 1.0 if random.random() < 0.93 else 0.0
+        dmarc = 1.0 if random.random() < 0.90 else 0.0
+        dom_len, dom_ent = _realistic_domain_entropy(False)
+        display_mm = 0.0
+        hops = float(random.choices([2, 3, 4, 5], weights=[15, 40, 30, 15], k=1)[0])
+        reply_mm = 0.0
+        label = 0
+
+    elif archetype == "forwarded_legit":
+        # Forwarded email — SPF often fails, DKIM may survive, extra hops
+        spf = 1.0 if random.random() < 0.30 else 0.0  # SPF frequently breaks on forward
+        dkim = 1.0 if random.random() < 0.75 else 0.0  # DKIM often survives
+        dmarc = 1.0 if random.random() < 0.40 else 0.0  # Depends on alignment
+        dom_len, dom_ent = _realistic_domain_entropy(False)
+        display_mm = 0.0
+        hops = float(random.choices([3, 4, 5, 6, 7, 8], weights=[10, 20, 25, 25, 15, 5], k=1)[0])
+        reply_mm = 1.0 if random.random() < 0.15 else 0.0  # Sometimes forwarded reply-to differs
+        label = 0
+
+    elif archetype == "newsletter_legit":
+        # Marketing/newsletter — auth usually passes, dedicated sending infra
+        spf = 1.0 if random.random() < 0.88 else 0.0
+        dkim = 1.0 if random.random() < 0.92 else 0.0
+        dmarc = 1.0 if random.random() < 0.80 else 0.0
+        dom_len = float(random.randint(10, 25))  # Subdomains like mail.company.com
+        dom_ent = round(random.gauss(3.2, 0.4), 4)
+        display_mm = 0.0
+        hops = float(random.choices([2, 3, 4], weights=[30, 50, 20], k=1)[0])
+        reply_mm = 1.0 if random.random() < 0.30 else 0.0  # reply-to often differs (noreply vs support)
+        label = 0
+
+    elif archetype == "personal_legit":
+        # Personal email from freemail — generally passes auth
+        spf = 1.0 if random.random() < 0.92 else 0.0
+        dkim = 1.0 if random.random() < 0.95 else 0.0
+        dmarc = 1.0 if random.random() < 0.85 else 0.0
+        dom_len, dom_ent = _realistic_domain_entropy(False)
+        display_mm = 0.0
+        hops = float(random.choices([2, 3, 4], weights=[40, 40, 20], k=1)[0])
+        reply_mm = 0.0
+        label = 0
+
+    elif archetype == "legacy_server_legit":
+        # Old mail server — no/broken auth, few hops
+        spf = 1.0 if random.random() < 0.10 else 0.0
+        dkim = 1.0 if random.random() < 0.05 else 0.0
+        dmarc = 1.0 if random.random() < 0.05 else 0.0
+        dom_len = float(random.randint(8, 18))
+        dom_ent = round(random.gauss(3.0, 0.4), 4)
+        display_mm = 0.0
+        hops = float(random.choices([1, 2, 3], weights=[30, 50, 20], k=1)[0])
+        reply_mm = 0.0
+        label = 0
+
+    elif archetype == "mass_phishing":
+        # Mass phishing — random domain, all auth fails, short trace
+        spf = 1.0 if random.random() < 0.08 else 0.0
+        dkim = 1.0 if random.random() < 0.05 else 0.0
+        dmarc = 1.0 if random.random() < 0.03 else 0.0
+        dom_len, dom_ent = _realistic_domain_entropy(True)
+        display_mm = 1.0 if random.random() < 0.60 else 0.0
+        hops = float(random.choices([1, 2], weights=[70, 30], k=1)[0])
+        reply_mm = 1.0 if random.random() < 0.55 else 0.0
+        label = 1
+
+    elif archetype == "spear_phishing":
+        # Targeted spear phishing — lookalike domain, may pass some auth
+        spf = 1.0 if random.random() < 0.40 else 0.0  # Sometimes properly configured
+        dkim = 1.0 if random.random() < 0.35 else 0.0
+        dmarc = 1.0 if random.random() < 0.20 else 0.0
+        dom_len, dom_ent = _realistic_domain_entropy(True)
+        display_mm = 1.0 if random.random() < 0.70 else 0.0
+        hops = float(random.choices([1, 2, 3], weights=[30, 45, 25], k=1)[0])
+        reply_mm = 1.0 if random.random() < 0.40 else 0.0
+        label = 1
+
+    elif archetype == "bec_attack":
+        # Business Email Compromise — compromised legit account or convincing lookalike
+        # This is the hardest to detect: often passes auth, normal-looking domain
+        spf = 1.0 if random.random() < 0.65 else 0.0
+        dkim = 1.0 if random.random() < 0.55 else 0.0
+        dmarc = 1.0 if random.random() < 0.45 else 0.0
+        dom_len, dom_ent = _realistic_domain_entropy(True)
+        # BEC often uses display name spoofing
+        display_mm = 1.0 if random.random() < 0.50 else 0.0
+        hops = float(random.choices([2, 3, 4], weights=[40, 40, 20], k=1)[0])
+        reply_mm = 1.0 if random.random() < 0.65 else 0.0  # Key BEC tell: reply-to goes elsewhere
+        label = 1
+
+    elif archetype == "credential_harvest":
+        # Credential harvesting phishing — random domain, aggressive indicators
+        spf = 1.0 if random.random() < 0.12 else 0.0
+        dkim = 1.0 if random.random() < 0.08 else 0.0
+        dmarc = 1.0 if random.random() < 0.05 else 0.0
+        dom_len, dom_ent = _realistic_domain_entropy(True)
+        display_mm = 1.0 if random.random() < 0.75 else 0.0
+        hops = float(random.choices([1, 2], weights=[80, 20], k=1)[0])
+        reply_mm = 1.0 if random.random() < 0.50 else 0.0
+        label = 1
+
+    elif archetype == "compromised_account":
+        # Legitimate account that's been hijacked — passes ALL auth
+        # This tests the model's ability to detect anomalies beyond auth
+        spf = 1.0 if random.random() < 0.90 else 0.0
+        dkim = 1.0 if random.random() < 0.88 else 0.0
+        dmarc = 1.0 if random.random() < 0.85 else 0.0
+        dom_len, dom_ent = _realistic_domain_entropy(False)  # Real domain!
+        display_mm = 0.0  # No display mismatch — it IS the real account
+        hops = float(random.choices([2, 3], weights=[50, 50], k=1)[0])
+        reply_mm = 1.0 if random.random() < 0.60 else 0.0  # Only tell: unusual reply-to
+        label = 1
+
+    else:
+        raise ValueError(f"Unknown archetype: {archetype}")
+
+    # ── Global noise injection ──
+    dom_ent = round(dom_ent + random.gauss(0, 0.12), 4)
+    dom_ent = round(max(0.5, dom_ent), 4)
+    dom_len = max(3.0, dom_len + random.gauss(0, 1.0))
+    dom_len = round(dom_len)
+    hops = max(1.0, hops + random.choices([-1, 0, 0, 0, 1], k=1)[0])
+
+    return {
+        "spf_pass": spf,
+        "dkim_pass": dkim,
+        "dmarc_pass": dmarc,
+        "sender_domain_len": float(dom_len),
+        "display_name_mismatch": display_mm,
+        "hop_count": float(hops),
+        "reply_to_mismatch": reply_mm,
+        "sender_domain_entropy": dom_ent,
+        "label": label,
+    }
+
+
+def _generate_header_training(n: int = 10000) -> None:
+    """Generate realistic header analysis training data using email archetypes."""
     out = BASE / "email_content" / "header_training.csv"
     out.parent.mkdir(parents=True, exist_ok=True)
 
+    # Archetype distribution mirrors real-world email composition
+    benign_archetypes = [
+        ("corporate_legit", 0.30),
+        ("personal_legit", 0.20),
+        ("newsletter_legit", 0.15),
+        ("forwarded_legit", 0.10),
+        ("legacy_server_legit", 0.05),
+    ]
+    phishing_archetypes = [
+        ("mass_phishing", 0.08),
+        ("credential_harvest", 0.05),
+        ("spear_phishing", 0.03),
+        ("bec_attack", 0.02),
+        ("compromised_account", 0.02),
+    ]
+
+    all_archetypes = benign_archetypes + phishing_archetypes
+    names = [a[0] for a in all_archetypes]
+    weights = [a[1] for a in all_archetypes]
+
     rows = []
+    archetype_counts: dict[str, int] = {name: 0 for name in names}
     for _ in range(n):
-        is_phishing = random.random() < 0.45
+        archetype = random.choices(names, weights=weights, k=1)[0]
+        archetype_counts[archetype] += 1
+        rows.append(_generate_archetype_row(archetype))
 
-        if is_phishing:
-            spf = 1.0 if random.random() < 0.25 else 0.0       # mostly fails
-            dkim = 1.0 if random.random() < 0.20 else 0.0
-            dmarc = 1.0 if random.random() < 0.15 else 0.0
-            domain_len = float(random.randint(8, 35))
-            display_mismatch = 1.0 if random.random() < 0.55 else 0.0
-            hops = float(random.randint(1, 3))
-            reply_mismatch = 1.0 if random.random() < 0.45 else 0.0
-            dom_entropy = round(random.uniform(3.2, 4.8), 4)
-        else:
-            spf = 1.0 if random.random() < 0.90 else 0.0       # mostly passes
-            dkim = 1.0 if random.random() < 0.85 else 0.0
-            dmarc = 1.0 if random.random() < 0.80 else 0.0
-            domain_len = float(random.randint(5, 15))
-            display_mismatch = 1.0 if random.random() < 0.05 else 0.0
-            hops = float(random.randint(2, 8))
-            reply_mismatch = 1.0 if random.random() < 0.05 else 0.0
-            dom_entropy = round(random.uniform(2.0, 3.5), 4)
-
-        # Add some noise
-        dom_entropy += random.gauss(0, 0.15)
-        dom_entropy = round(max(0, dom_entropy), 4)
-
-        rows.append({
-            "spf_pass": spf,
-            "dkim_pass": dkim,
-            "dmarc_pass": dmarc,
-            "sender_domain_len": domain_len,
-            "display_name_mismatch": display_mismatch,
-            "hop_count": hops,
-            "reply_to_mismatch": reply_mismatch,
-            "sender_domain_entropy": dom_entropy,
-            "label": 1 if is_phishing else 0,
-        })
+    # Shuffle
+    random.shuffle(rows)
 
     with open(out, "w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"  ✓ Header training: {len(rows)} rows → {out}")
+    benign_count = sum(1 for r in rows if r["label"] == 0)
+    phish_count = sum(1 for r in rows if r["label"] == 1)
+    print(f"  ✓ Header training: {len(rows)} rows ({benign_count} benign, {phish_count} phishing) → {out}")
+    print(f"    Archetypes: {json.dumps(archetype_counts, indent=6)}")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -254,7 +404,6 @@ def _generate_header_training(n: int = 3000) -> None:
 
 def main() -> None:
     print(f"Generating synthetic datasets into: {BASE}\n")
-    _generate_user_behavior()
     _generate_threat_intel()
     _generate_sandbox_logs()
     _generate_header_training()

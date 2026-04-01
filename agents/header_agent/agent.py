@@ -21,13 +21,16 @@ TRUSTED_DOMAINS = {
     "apple.com",
 }
 
-# Pre-load the ML model at module import time
-try:
-    _model = load_model()
-except Exception:
-    _model = None
+_model_cache = None
 
-
+def _get_model():
+    global _model_cache
+    if _model_cache is None:
+        try:
+            _model_cache = load_model()
+        except Exception:
+            _model_cache = False  # Use False to distinguish between None (not loaded) and False (failed to load)
+    return _model_cache if _model_cache is not False else None
 def _clamp(value: float) -> float:
     return max(0.0, min(1.0, round(value, 4)))
 
@@ -70,27 +73,26 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         risk += 0.05
         indicators.append("short_smtp_trace")
 
-    confidence = _clamp(0.65 + min(0.25, len(indicators) * 0.05))
+    heuristic_confidence = _clamp(0.65 + min(0.25, len(indicators) * 0.05))
 
     # 2. ML Prediction
     features = extract_features(data)
-    ml_result = predict(features, _model)
+    ml_result = predict(features, _get_model())
 
-    if ml_result["risk_score"] > 0:
-        # Boost risk if ML model flags an anomaly
-        if ml_result["risk_score"] > 0.5:
-            risk = max(risk, ml_result["risk_score"])
-            indicators.extend(ml_result["indicators"])
-        
-        # Adjust confidence based on ML confidence
-        if ml_result["confidence"] > 0.5:
-            confidence = max(confidence, ml_result["confidence"])
+    if ml_result.get("confidence", 0.0) > 0.0:
+        # Weighted fusion: 60% ML, 40% heuristic (consistent with other agents)
+        final_risk = _clamp((0.6 * ml_result["risk_score"]) + (0.4 * risk))
+        final_confidence = _clamp(max(heuristic_confidence, ml_result.get("confidence", 0.0)))
+        indicators.extend(ml_result.get("indicators", []))
+    else:
+        final_risk = _clamp(risk)
+        final_confidence = heuristic_confidence
 
     result = {
         "agent_name": "header_agent",
-        "risk_score": _clamp(risk),
-        "confidence": _clamp(confidence),
-        "indicators": indicators,
+        "risk_score": final_risk,
+        "confidence": final_confidence,
+        "indicators": indicators[:20],
     }
-    logger.info("Analysis complete", risk_score=result["risk_score"])
+    logger.info("Analysis complete", risk_score=result["risk_score"], used_ml=ml_result.get("confidence", 0.0) > 0)
     return result

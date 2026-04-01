@@ -35,9 +35,6 @@ mkdir -p "$BASE_DIR/threat_intelligence/urls"
 mkdir -p "$BASE_DIR/threat_intelligence/ips"
 mkdir -p "$BASE_DIR/threat_intelligence/hashes"
 
-# User Behavior Agent
-mkdir -p "$BASE_DIR/user_behavior"
-
 echo "======================================================"
 echo "          1. DIRECT DOWNLOADS (AUTOMATED)             "
 echo "======================================================"
@@ -135,16 +132,6 @@ if [ ! -f "$BASE_DIR/url_dataset/benign/benign_urls.csv" ]; then
     touch "$BASE_DIR/url_dataset/benign/benign_urls.csv"
 fi
 
-if [ ! -f "$BASE_DIR/user_behavior/user_email_behavior.csv" ]; then
-cat <<EOF > "$BASE_DIR/user_behavior/user_email_behavior.csv"
-sender_familiarity,subject_urgency,link_count,email_type,user_clicked
-1,1,2,phishing,1
-0,0,1,legitimate,0
-1,0,0,internal,0
-0,1,3,spam,1
-EOF
-fi
-
 echo "======================================================"
 echo "      2. KAGGLE DATASETS (REQUIRES KAGGLE API)        "
 echo "======================================================"
@@ -169,10 +156,6 @@ echo ""
 echo ">> URL Agent (Kaggle Malicious URLs - 651K URLs) - FIXES IMBALANCE:"
 echo "# kaggle datasets download -d sid321axn/malicious-urls-dataset -p '$BASE_DIR/url_dataset/' --unzip"
 echo ""
-echo ">> User Behavior Agent (Phishing Susceptibility):"
-echo "# kaggle datasets download -d davidgarciahz/phishing-susceptibility -p '$BASE_DIR/user_behavior/' --unzip"
-echo ""
-
 echo "======================================================"
 echo "  3. MANUAL REGISTRATION REQUIRED DATASETS (API/FORM) "
 echo "======================================================"

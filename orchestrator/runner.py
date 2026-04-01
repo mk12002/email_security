@@ -31,7 +31,6 @@ EXPECTED_AGENTS = {
     "attachment_agent",
     "sandbox_agent",
     "threat_intel_agent",
-    "user_behavior_agent",
 }
 
 

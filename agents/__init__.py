@@ -5,22 +5,22 @@ Each sub-package contains an independent AI agent that analyzes
 a specific aspect of an email for phishing detection.
 """
 
-from agents.header_agent import analyze as header_analyze
-from agents.content_agent import analyze as content_analyze
-from agents.url_agent import analyze as url_analyze
-from agents.attachment_agent import analyze as attachment_analyze
-from agents.sandbox_agent import analyze as sandbox_analyze
-from agents.threat_intel_agent import analyze as threat_intel_analyze
-from agents.user_behavior_agent import analyze as user_behavior_analyze
+import importlib
+
+def _get_agent_func(module_name: str):
+    def wrapper(*args, **kwargs):
+        module = importlib.import_module(f"agents.{module_name}")
+        return getattr(module, "analyze")(*args, **kwargs)
+    return wrapper
 
 AGENT_REGISTRY = {
-    "header_agent": header_analyze,
-    "content_agent": content_analyze,
-    "url_agent": url_analyze,
-    "attachment_agent": attachment_analyze,
-    "sandbox_agent": sandbox_analyze,
-    "threat_intel_agent": threat_intel_analyze,
-    "user_behavior_agent": user_behavior_analyze,
+    "header_agent": _get_agent_func("header_agent"),
+    "content_agent": _get_agent_func("content_agent"),
+    "url_agent": _get_agent_func("url_agent"),
+    "attachment_agent": _get_agent_func("attachment_agent"),
+    "sandbox_agent": _get_agent_func("sandbox_agent"),
+    "threat_intel_agent": _get_agent_func("threat_intel_agent"),
 }
 
 __all__ = ["AGENT_REGISTRY"]
+

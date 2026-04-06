@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 import pandas as pd
 
-from datasets import DatasetLoader, DatasetStatisticsGenerator
+# Ensure local workspace packages shadow similarly named third-party packages.
+WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+if str(WORKSPACE_ROOT) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_ROOT))
+
+from datasets.dataset_loader import DatasetLoader
+from datasets.dataset_stats import DatasetStatisticsGenerator
 
 @pytest.fixture(scope="module")
 def setup_dummy_data(tmp_path_factory):

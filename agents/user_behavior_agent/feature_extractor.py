@@ -11,7 +11,40 @@ from email_security.preprocessing.user_behavior_feature_contract import extract_
 
 logger = get_agent_logger("user_behavior_agent")
 
-_DB_PATH = Path("data/behavior_graph.db")
+WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
+_DB_PATH = WORKSPACE_ROOT / "data" / "behavior_graph.db"
+
+
+def _ensure_behavior_graph_schema(conn: sqlite3.Connection) -> None:
+    """Create baseline tables used by the feature contract when the DB is empty."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS employees (
+            email_address TEXT PRIMARY KEY,
+            department TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS interactions (
+            recipient_email TEXT NOT NULL,
+            sender_domain TEXT NOT NULL,
+            interaction_count REAL NOT NULL,
+            days_since_last REAL NOT NULL,
+            PRIMARY KEY (recipient_email, sender_domain)
+        )
+        """
+    )
+    # Seed one neutral row so lookups have deterministic defaults in fresh setups.
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO employees (email_address, department)
+        VALUES (?, ?)
+        """,
+        ("unknown@company.internal", "operations"),
+    )
+    conn.commit()
 
 class BehaviorGraphStore:
     def __init__(self, db_path: Path = _DB_PATH):
@@ -20,7 +53,9 @@ class BehaviorGraphStore:
         
     def _get_cursor(self) -> sqlite3.Cursor:
         if self._conn is None:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
             self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+            _ensure_behavior_graph_schema(self._conn)
         return self._conn.cursor()
         
     def close(self):

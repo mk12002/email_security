@@ -1,29 +1,25 @@
-"""
-Train User Behavior Click-Risk Prediction Model.
+#!/usr/bin/env python3
+"""Train runtime-aligned User Behavior XGBoost model.
 
-Pipeline:  4-dim feature vector  →  LogisticRegression
-Input:     datasets_processed/user_behavior_training.csv
-Output:    models/user_behavior_agent/model.joblib
+Input priority:
+1) datasets_processed/user_behavior/user_behavior_training.csv
+2) datasets_processed/user_behavior_training.csv (legacy schema converted when possible)
 
-Features:
-    sender_familiarity, subject_urgency, link_count, email_type (encoded)
-
-Usage:
-    cd /home/LabsKraft/new_work/email_security
-    python scripts/train_user_behavior_model.py
+Output:
+- models/user_behavior_agent/user_behavior_xgb.json
+- models/user_behavior_agent/model_metrics.json
 """
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
-import joblib
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report
+import xgboost as xgb
+from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
@@ -31,68 +27,122 @@ sys.path.insert(0, str(REPO_ROOT))
 PROCESSED_DIR = REPO_ROOT.parent / "datasets_processed"
 MODEL_DIR = REPO_ROOT.parent / "models" / "user_behavior_agent"
 
-NUMERIC_COLS = ["sender_familiarity", "subject_urgency", "link_count"]
-LABEL_COL = "user_clicked"
+FEATURE_COLS = [
+    "contact_count",
+    "days_since_last_contact",
+    "is_internal_domain",
+    "is_business_hours",
+    "urgency_score",
+    "link_count",
+    "dept_risk_tier",
+]
+LABEL_COL = "label"
+
+
+def _resolve_training_csv() -> Path:
+    preferred = PROCESSED_DIR / "user_behavior" / "user_behavior_training.csv"
+    if preferred.exists():
+        return preferred
+    fallback = PROCESSED_DIR / "user_behavior_training.csv"
+    if fallback.exists():
+        return fallback
+    return preferred
+
+
+def _prepare_frame(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize legacy and canonical schemas into FEATURE_COLS + label."""
+    if set(FEATURE_COLS + [LABEL_COL]).issubset(df.columns):
+        out = df[FEATURE_COLS + [LABEL_COL]].copy()
+        out[LABEL_COL] = pd.to_numeric(out[LABEL_COL], errors="coerce")
+        out = out.dropna(subset=[LABEL_COL])
+        out[LABEL_COL] = out[LABEL_COL].astype(int)
+        return out
+
+    # Legacy synthetic schema conversion path.
+    legacy_required = {"sender_familiarity", "subject_urgency", "link_count", "user_clicked"}
+    if legacy_required.issubset(df.columns):
+        out = pd.DataFrame()
+        out["contact_count"] = (pd.to_numeric(df["sender_familiarity"], errors="coerce").fillna(0.0) * 100.0)
+        out["days_since_last_contact"] = (1.0 - pd.to_numeric(df["sender_familiarity"], errors="coerce").fillna(0.0)) * 180.0
+        out["is_internal_domain"] = pd.to_numeric(df["sender_familiarity"], errors="coerce").fillna(0.0)
+        out["is_business_hours"] = 1.0
+        out["urgency_score"] = pd.to_numeric(df["subject_urgency"], errors="coerce").fillna(0.0)
+        out["link_count"] = pd.to_numeric(df["link_count"], errors="coerce").fillna(0.0)
+        out["dept_risk_tier"] = 0.5
+        out[LABEL_COL] = pd.to_numeric(df["user_clicked"], errors="coerce").fillna(0).astype(int)
+        return out
+
+    raise RuntimeError(
+        "Unsupported user behavior training schema. "
+        f"Need columns {FEATURE_COLS + [LABEL_COL]} or legacy {sorted(legacy_required)}."
+    )
 
 
 def main() -> None:
-    csv_path = PROCESSED_DIR / "user_behavior_training.csv"
+    csv_path = _resolve_training_csv()
     if not csv_path.exists():
-        print(f"ERROR: Training data not found at {csv_path}")
-        print("Run:  python scripts/generate_synthetic_datasets.py")
-        print("Then: python -m preprocessing.user_behavior_preprocessing")
-        sys.exit(1)
+        raise SystemExit(f"ERROR: Training data not found at {csv_path}")
 
     print(f"Loading training data from {csv_path} ...")
-    df = pd.read_csv(csv_path)
-    df = df.dropna(subset=NUMERIC_COLS + [LABEL_COL])
+    raw_df = pd.read_csv(csv_path, low_memory=False)
+    df = _prepare_frame(raw_df)
 
-    print(f"  Total samples: {len(df)}")
+    for col in FEATURE_COLS:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+
+    df = df[df[LABEL_COL].isin([0, 1])].reset_index(drop=True)
+    if len(df) < 100:
+        raise SystemExit(f"ERROR: Too few rows after cleanup ({len(df)}).")
+
+    print(f"  Rows: {len(df)}")
     print(f"  Label distribution:\n{df[LABEL_COL].value_counts().to_string()}\n")
 
-    if len(df) < 20:
-        print("ERROR: Too few samples for training.")
-        sys.exit(1)
-
-    # Encode email_type if present
-    feature_cols = list(NUMERIC_COLS)
-    le = None
-    if "email_type" in df.columns:
-        le = LabelEncoder()
-        df["email_type_encoded"] = le.fit_transform(df["email_type"].astype(str))
-        feature_cols.append("email_type_encoded")
-
-    X = df[feature_cols]
+    X = df[FEATURE_COLS]
     y = df[LABEL_COL]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y,
     )
 
-    print("Training LogisticRegression ...")
-    model = LogisticRegression(
-        max_iter=1000,
-        C=1.0,
-        class_weight="balanced",
-        solver="lbfgs",
+    model = xgb.XGBClassifier(
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.06,
+        subsample=0.9,
+        colsample_bytree=0.9,
+        objective="binary:logistic",
+        eval_metric="auc",
         random_state=42,
+        n_jobs=2,
     )
     model.fit(X_train, y_train)
 
-    print("\n── Test Set Evaluation ──")
-    y_pred = model.predict(X_test)
-    print(classification_report(y_test, y_pred))
+    y_prob = model.predict_proba(X_test)[:, 1]
+    y_pred = (y_prob >= 0.5).astype(int)
+    auc = float(roc_auc_score(y_test, y_prob))
+    report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
 
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    bundle = {
-        "model": model,
-        "kind": "sklearn_model",
+    model_path = MODEL_DIR / "user_behavior_xgb.json"
+    model.save_model(str(model_path))
+
+    metrics = {
+        "dataset": str(csv_path),
+        "rows": int(len(df)),
+        "features": FEATURE_COLS,
+        "auc": auc,
+        "classification_report": report,
+        "model_path": str(model_path),
     }
-    if le is not None:
-        bundle["label_encoder"] = le
-    out_path = MODEL_DIR / "model.joblib"
-    joblib.dump(bundle, out_path)
-    print(f"\n✅ Model saved to {out_path}")
+    (MODEL_DIR / "model_metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+
+    print(f"AUC: {auc:.4f}")
+    print(json.dumps(report, indent=2))
+    print(f"Saved model: {model_path}")
 
 
 if __name__ == "__main__":

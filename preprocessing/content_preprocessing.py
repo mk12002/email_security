@@ -19,6 +19,9 @@ RANDOM_SEED = 42
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 TARGET_SAMPLES_PER_CLASS = int(os.getenv("CONTENT_TARGET_SAMPLES_PER_CLASS", "12000"))
 MAX_SAMPLES_PER_CLASS = int(os.getenv("CONTENT_MAX_SAMPLES_PER_CLASS", "60000"))
+SKIP_CSV_SOURCES = os.getenv("CONTENT_SKIP_CSV", "0") == "1"
+MAX_CSV_FILES_PER_CLASS = int(os.getenv("CONTENT_MAX_CSV_FILES_PER_CLASS", "0"))
+MAX_ROWS_PER_CSV = int(os.getenv("CONTENT_MAX_ROWS_PER_CSV", "0"))
 
 # Canonical 3-class labels used by content SLM
 LABEL_LEGIT = 0
@@ -239,7 +242,14 @@ def _collect_text_files(directory: Path, default_label: int) -> list[dict[str, A
 def _collect_csv_rows(csv_path: Path, default_label: int) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     try:
-        frame = pd.read_csv(csv_path, encoding="utf-8", on_bad_lines="skip", low_memory=False)
+        read_kwargs: dict[str, Any] = {
+            "encoding": "utf-8",
+            "on_bad_lines": "skip",
+            "low_memory": False,
+        }
+        if MAX_ROWS_PER_CSV > 0:
+            read_kwargs["nrows"] = MAX_ROWS_PER_CSV
+        frame = pd.read_csv(csv_path, **read_kwargs)
     except Exception:
         return rows
 
@@ -349,7 +359,14 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> s
     all_rows: list[dict[str, Any]] = []
     for class_dir, default_label in class_dirs:
         all_rows.extend(_collect_text_files(class_dir, default_label))
-        for csv_file in class_dir.rglob("*.csv"):
+        if SKIP_CSV_SOURCES:
+            continue
+
+        csv_files = sorted(class_dir.rglob("*.csv"))
+        if MAX_CSV_FILES_PER_CLASS > 0:
+            csv_files = csv_files[:MAX_CSV_FILES_PER_CLASS]
+
+        for csv_file in csv_files:
             all_rows.extend(_collect_csv_rows(csv_file, default_label))
 
     pre_balance_summary = _summarize(all_rows)
@@ -386,6 +403,11 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> s
         "balancing": {
             "target_samples_per_class": TARGET_SAMPLES_PER_CLASS,
             "max_samples_per_class": MAX_SAMPLES_PER_CLASS,
+        },
+        "ingestion_limits": {
+            "skip_csv_sources": SKIP_CSV_SOURCES,
+            "max_csv_files_per_class": MAX_CSV_FILES_PER_CLASS,
+            "max_rows_per_csv": MAX_ROWS_PER_CSV,
         },
         "pre_balance": pre_balance_summary,
         "post_balance": post_balance_summary,

@@ -45,19 +45,19 @@ def extract_behavior_features(payload: dict[str, Any], cursor: sqlite3.Cursor) -
     # 2. Extract string-level metadata
     sender_domain = _calculate_target_domain(sender)
     recipient_domain = _calculate_target_domain(recipient)
-    is_internal = 1.0 if sender_domain == recipient_domain else 0.0
+    is_internal_domain = 1.0 if sender_domain == recipient_domain else 0.0
     link_count = float(len(urls))
     
     urgency_score = float(sum(1 for term in URGENCY_TERMS if term in subject))
 
     # 3. Query the Offline Graph Database
     # Query A: Recipient context (Department)
-    dept_risk = 0.5 # Default medium risk if not found
+    dept_risk_tier = 0.5 # Default medium risk if not found
     try:
         cursor.execute("SELECT department FROM employees WHERE email_address = ?", (recipient,))
         emp_row = cursor.fetchone()
         if emp_row and emp_row[0]:
-            dept_risk = DEPT_RISK_MAP.get(emp_row[0].lower(), 0.5)
+            dept_risk_tier = DEPT_RISK_MAP.get(emp_row[0].lower(), 0.5)
     except Exception:
         pass  # Failsafe if running in tests without populated tables
 
@@ -84,11 +84,11 @@ def extract_behavior_features(payload: dict[str, Any], cursor: sqlite3.Cursor) -
         [
             contact_count,
             days_since_last_contact,
-            is_internal,
+            is_internal_domain,
             is_business_hours,
             urgency_score,
             link_count,
-            dept_risk,
+            dept_risk_tier,
         ],
         dtype=float,
     ).reshape(1, -1)
@@ -98,15 +98,15 @@ def extract_behavior_features(payload: dict[str, Any], cursor: sqlite3.Cursor) -
         "feature_names": [
             "contact_count",
             "days_since_last_contact",
-            "is_internal",
+            "is_internal_domain",
             "is_business_hours",
             "urgency_score",
             "link_count",
-            "dept_risk",
+            "dept_risk_tier",
         ],
         "context": {
             "recipient": recipient,
             "sender_domain": sender_domain,
-            "dept_risk": dept_risk,
+            "dept_risk_tier": dept_risk_tier,
         }
     }

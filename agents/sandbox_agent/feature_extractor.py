@@ -1,30 +1,41 @@
-"""
-Feature extractor for the Sandbox Behavior Agent.
+"""Feature extraction for sandbox behavior model inputs."""
 
-Transforms raw email data into feature vectors for model inference.
-"""
+from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
+
+from email_security.preprocessing.sandbox_feature_contract import (
+    SANDBOX_NUMERIC_FEATURE_COLUMNS,
+    build_numeric_feature_map,
+)
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("sandbox_agent")
 
 
 def extract_features(data: dict[str, Any]) -> dict[str, Any]:
-    """
-    Extract features from raw email data.
-
-    Args:
-        data: Raw email data relevant to this agent.
-
-    Returns:
-        Dictionary of extracted features ready for model inference.
-    """
+    """Convert raw sandbox-style payloads into contract-aligned numeric vectors."""
     logger.debug("Extracting features", agent="sandbox_agent")
 
-    # Placeholder – feature engineering logic will be added in later phases
-    features = {}
+    # `data` can already be a row-like dict (training_row/runtime_observation) or nested.
+    row = data.get("sandbox_features") if isinstance(data.get("sandbox_features"), dict) else data
+    feature_map = build_numeric_feature_map(row or {})
+    numeric_vector = np.array(
+        [[feature_map[column] for column in SANDBOX_NUMERIC_FEATURE_COLUMNS]],
+        dtype=float,
+    )
 
-    logger.debug("Features extracted", feature_count=len(features))
+    features = {
+        "feature_map": feature_map,
+        "numeric_vector": numeric_vector,
+        "metrics": {
+            "executed": feature_map["executed"],
+            "connect_calls": feature_map["connect_calls"],
+            "execve_calls": feature_map["execve_calls"],
+            "critical_chain_detected": feature_map["critical_chain_detected"],
+        },
+    }
+    logger.debug("Features extracted", feature_count=len(feature_map))
     return features

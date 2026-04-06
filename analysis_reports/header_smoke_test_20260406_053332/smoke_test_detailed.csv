@@ -1,0 +1,13 @@
+test_id,name,expected,predicted,risk_score,confidence,indicators,latency_ms,status
+1,"Legitimate corporate email (Google, all auth pass)",safe,safe,0.0503,0.9162,ml_header_model_used,177.9,✅ PASS
+2,"Legitimate newsletter (Substack, all auth pass)",safe,safe,0.0315,0.9475,ml_header_model_used,68.8,✅ PASS
+3,"Internal company email (short domain, 5 hops, all pass)",safe,safe,0.0031,0.9949,ml_header_model_used,85.1,✅ PASS
+4,"Classic phishing: all auth fail, lookalike domain",phishing,phishing,1.0,1.0,spf_failed; dkim_failed; dmarc_failed; lookalike_domain:paypa1.com->paypal.com; short_smtp_trace; reply_to_domain_mismatch; ml_header_model_used,76.1,✅ PASS
+5,"Phishing: SPF softfail, display name spoofs Microsoft",phishing,phishing,0.976,1.0,spf_failed; dkim_failed; dmarc_failed; reply_to_domain_mismatch; ml_header_model_used,72.5,✅ PASS
+6,"Phishing: credential harvester, random long domain",phishing,phishing,0.916,1.0,spf_failed; dmarc_failed; short_smtp_trace; reply_to_domain_mismatch; ml_header_model_used,83.9,✅ PASS
+7,EDGE: Legitimate but SPF softfail (forwarded email),safe,safe,0.1411,0.9315,spf_failed; ml_header_model_used,81.5,✅ PASS
+8,EDGE: Auth passes but reply-to is different domain,suspicious,suspicious,0.42,0.8332,reply_to_domain_mismatch; authenticated_reply_to_anomaly; ml_header_model_used,83.5,✅ PASS
+9,EDGE: Lookalike 'amazom.com' but SPF passes (compromised domain),phishing,phishing,0.6247,0.8412,lookalike_domain:amazom.com->amazon.com; ml_header_model_used,91.3,✅ PASS
+10,EDGE: No auth results at all (legacy mail server),suspicious,suspicious,0.3232,0.7,short_smtp_trace; ml_header_model_used,70.8,✅ PASS
+11,EDGE: Display name says 'Apple' but sender is random domain,phishing,phishing,0.7978,0.9964,spf_failed; dkim_failed; short_smtp_trace; ml_header_model_used,74.1,✅ PASS
+12,EDGE: Everything looks perfect except single hop,suspicious,suspicious,0.42,0.9502,short_smtp_trace; authenticated_single_hop_anomaly; ml_header_model_used,81.7,✅ PASS

@@ -56,6 +56,9 @@ data/
 *.db
 *.sqlite
 *.sqlite3
+!data/
+!data/behavior_graph.db
+!data/ioc_store.db
 
 # ML artifacts
 models/

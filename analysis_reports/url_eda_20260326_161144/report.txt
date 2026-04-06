@@ -1,0 +1,15 @@
+URL Dataset EDA Summary
+=======================
+
+Dataset: D:\Code_stuff\email_stuff\datasets_processed\url_training.csv
+Rows: 596,576
+Unique URLs: 588,181
+Duplicate URLs: 8,395
+Label distribution: {'0': 298288, '1': 298288}
+Missing feature columns: None
+
+Generated plots:
+- class_balance.png
+- feature_distributions.png
+- feature_correlation.png
+- top_tlds_by_class.png

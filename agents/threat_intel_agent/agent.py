@@ -272,23 +272,71 @@ def _clamp(value: float) -> float:
 
 
 def _refresh_ioc_store_if_needed() -> int:
+    return int(refresh_ioc_store(force=False).get("total_iocs", 0))
+
+
+def get_ioc_store_status() -> dict[str, Any]:
+    """Return IOC lifecycle health for monitoring endpoints and alerting."""
     now = int(time.time())
-    last_refresh = _STORE.get_last_refresh_ts()
-    if last_refresh and (now - last_refresh) < max(30, settings.ioc_refresh_seconds):
-        return _STORE.count()
+    last_refresh = int(_STORE.get_last_refresh_ts() or 0)
+    age_seconds = (now - last_refresh) if last_refresh else None
+    stale_after = max(60, int(settings.ioc_stale_seconds))
+    stale = bool(age_seconds is None or age_seconds > stale_after)
+
+    status = {
+        "db_path": str(_STORE.db_path),
+        "total_iocs": int(_STORE.count()),
+        "last_refresh_ts": last_refresh,
+        "last_refresh_age_seconds": age_seconds,
+        "stale_after_seconds": stale_after,
+        "is_stale": stale,
+    }
+
+    if stale:
+        logger.warning(
+            "IOC store appears stale",
+            age_seconds=age_seconds,
+            stale_after_seconds=stale_after,
+            db_path=str(_STORE.db_path),
+        )
+
+    return status
+
+
+def refresh_ioc_store(force: bool = False) -> dict[str, Any]:
+    """Refresh IOC store from feeds with optional force mode."""
+    now = int(time.time())
+    last_refresh = int(_STORE.get_last_refresh_ts() or 0)
+    min_interval = max(30, int(settings.ioc_refresh_seconds))
+    elapsed = (now - last_refresh) if last_refresh else None
+
+    if not force and elapsed is not None and elapsed < min_interval:
+        status = get_ioc_store_status()
+        status["refreshed"] = False
+        status["reason"] = "interval_not_elapsed"
+        return status
 
     harvested = _collect_iocs_from_feeds()
     upserted = _STORE.upsert_many(harvested)
     _STORE._set_last_refresh_ts(now)
-    total = _STORE.count()
+    status = get_ioc_store_status()
+    status.update(
+        {
+            "refreshed": True,
+            "reason": "forced" if force else "interval_elapsed",
+            "harvested": len(harvested),
+            "upserted": int(upserted),
+        }
+    )
     logger.info(
         "IOC store refreshed",
         harvested=len(harvested),
         upserted=upserted,
-        total=total,
+        total=status["total_iocs"],
         db_path=str(_STORE.db_path),
+        force=force,
     )
-    return total
+    return status
 
 
 def _request_timeout() -> float:

@@ -7,6 +7,7 @@ This service will be extended in later phases with full agent orchestration.
 
 import base64
 import binascii
+import asyncio
 import hashlib
 import ipaddress
 import re
@@ -19,6 +20,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI
 from fastapi import File, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse
 from loguru import logger
 import psycopg2
 
@@ -57,8 +59,23 @@ async def lifespan(app: FastAPI):
         host=settings.api_host,
         port=settings.api_port,
     )
+    stop_event = asyncio.Event()
+    app.state._threat_intel_refresh_stop = stop_event
+    app.state._threat_intel_refresh_task = None
+    if settings.threat_intel_auto_refresh_enabled:
+        app.state._threat_intel_refresh_task = asyncio.create_task(
+            _threat_intel_refresh_loop(stop_event)
+        )
     yield
     # --- Shutdown ---
+    stop_event.set()
+    task = getattr(app.state, "_threat_intel_refresh_task", None)
+    if task is not None:
+        task.cancel()
+        try:
+            await task
+        except Exception:
+            pass
     logger.info("Agentic Email Security API shutting down")
 
 
@@ -154,7 +171,6 @@ def _build_attachment_payload(
     hashes: list[str] = []
 
     storage_dir = Path(settings.attachment_volume_dir)
-    storage_dir.mkdir(parents=True, exist_ok=True)
 
     for item in attachments:
         attachment_id = str(uuid.uuid4())
@@ -165,6 +181,7 @@ def _build_attachment_payload(
 
         if item.content_base64:
             try:
+                storage_dir.mkdir(parents=True, exist_ok=True)
                 blob = _decode_base64_content(item.content_base64)
                 size_bytes = len(blob)
                 sha256 = hashlib.sha256(blob).hexdigest()
@@ -195,6 +212,138 @@ def _build_attachment_payload(
     return persisted, hashes
 
 
+def _soc_queue_names() -> list[str]:
+    return [
+        settings.results_queue,
+        settings.garuda_retry_queue,
+        settings.garuda_dead_letter_queue,
+        "header_agent.queue",
+        "content_agent.queue",
+        "url_agent.queue",
+        "attachment_agent.queue",
+        "sandbox_agent.queue",
+        "threat_intel_agent.queue",
+        "user_behavior_agent.queue",
+    ]
+
+
+def _fetch_recent_reports(limit: int = 50) -> list[dict]:
+    rows: list[dict] = []
+    with psycopg2.connect(settings.database_url) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT analysis_id, created_at, overall_risk_score, verdict, report
+                FROM threat_reports
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (max(1, int(limit)),),
+            )
+            for analysis_id, created_at, risk_score, verdict, report in cursor.fetchall():
+                if isinstance(report, dict):
+                    report_dict = report
+                elif isinstance(report, str):
+                    try:
+                        import json
+
+                        report_dict = json.loads(report)
+                    except Exception:
+                        report_dict = {}
+                else:
+                    report_dict = {}
+                rows.append(
+                    {
+                        "analysis_id": analysis_id,
+                        "created_at": created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at),
+                        "overall_risk_score": float(risk_score or 0.0),
+                        "verdict": verdict,
+                        "recommended_actions": report_dict.get("recommended_actions", []) or [],
+                        "agent_results": report_dict.get("agent_results", []) or [],
+                    }
+                )
+    return rows
+
+
+def _build_soc_overview() -> dict:
+    queue_stats: list[dict] = []
+    mq = RabbitMQClient()
+    try:
+        mq.connect()
+        queue_stats = mq.get_multi_queue_stats(_soc_queue_names())
+    except Exception as exc:
+        queue_stats = [{"queue": "_connection", "exists": False, "error": str(exc), "messages_ready": 0, "consumers": 0}]
+    finally:
+        mq.close()
+
+    reports: list[dict] = []
+    reports_error = None
+    try:
+        reports = _fetch_recent_reports(limit=50)
+    except Exception as exc:
+        reports_error = str(exc)
+        logger.warning("SOC overview could not fetch reports", error=reports_error)
+    verdict_counts: dict[str, int] = {}
+    total_risk = 0.0
+    action_counts: dict[str, int] = {}
+    recent_agent_outputs: list[dict] = []
+
+    for report in reports:
+        verdict = str(report.get("verdict") or "unknown")
+        verdict_counts[verdict] = verdict_counts.get(verdict, 0) + 1
+        total_risk += float(report.get("overall_risk_score") or 0.0)
+
+        for action in report.get("recommended_actions", []) or []:
+            key = str(action)
+            action_counts[key] = action_counts.get(key, 0) + 1
+
+        for result in (report.get("agent_results") or [])[:10]:
+            recent_agent_outputs.append(
+                {
+                    "analysis_id": report.get("analysis_id"),
+                    "agent_name": result.get("agent_name"),
+                    "risk_score": float(result.get("risk_score", 0.0) or 0.0),
+                    "confidence": float(result.get("confidence", 0.0) or 0.0),
+                }
+            )
+
+    avg_risk = (total_risk / len(reports)) if reports else 0.0
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "queue_health": queue_stats,
+        "reports": {
+            "count": len(reports),
+            "avg_risk_score": round(avg_risk, 4),
+            "verdict_counts": verdict_counts,
+            "recent": reports[:20],
+            "error": reports_error,
+        },
+        "response_actions": action_counts,
+        "agent_outputs": recent_agent_outputs[:100],
+    }
+
+
+async def _threat_intel_refresh_loop(stop_event: asyncio.Event) -> None:
+    """Periodically refresh IOC store and emit staleness alerts."""
+    from email_security.agents.threat_intel_agent.agent import get_ioc_store_status, refresh_ioc_store
+
+    refresh_every = max(30, int(settings.ioc_refresh_seconds))
+    logger.info("Threat-intel auto-refresh loop started", refresh_every_seconds=refresh_every)
+    while not stop_event.is_set():
+        try:
+            refresh_ioc_store(force=False)
+            status = get_ioc_store_status()
+            if status.get("is_stale"):
+                logger.error("IOC store stale alert", status=status)
+        except Exception as exc:
+            logger.warning("Threat-intel auto-refresh iteration failed", error=str(exc))
+
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=refresh_every)
+        except asyncio.TimeoutError:
+            continue
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -208,6 +357,108 @@ async def health_check():
         version="0.1.0",
         environment=settings.app_env,
     )
+
+
+@app.get("/soc/dashboard", tags=["SOC"], response_class=HTMLResponse)
+async def soc_dashboard():
+        """Simple analyst-facing SOC dashboard for queue health and outcomes."""
+        return HTMLResponse(
+                """
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Email Security SOC Dashboard</title>
+    <style>
+        body{font-family:ui-sans-serif,system-ui,Segoe UI,Arial;margin:0;background:#f5f7fb;color:#13203a}
+        header{padding:16px 20px;background:#102542;color:#fff;display:flex;justify-content:space-between;align-items:center}
+        .wrap{padding:16px;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+        .card{background:#fff;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.08);padding:14px}
+        h2{font-size:16px;margin:0 0 10px}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th,td{border-bottom:1px solid #e8edf5;padding:6px;text-align:left}
+        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+        .row{display:flex;gap:10px;flex-wrap:wrap}
+        .pill{padding:4px 8px;border-radius:999px;background:#eaf1ff;font-size:12px}
+    </style>
+</head>
+<body>
+    <header>
+        <div><strong>SOC Dashboard</strong></div>
+        <div id="ts" class="mono"></div>
+    </header>
+    <div class="wrap">
+        <section class="card"><h2>Queue Health</h2><div id="queue"></div></section>
+        <section class="card"><h2>Verdicts</h2><div id="verdicts" class="row"></div></section>
+        <section class="card"><h2>Response Actions</h2><div id="actions" class="row"></div></section>
+        <section class="card"><h2>Recent Reports</h2><div id="reports"></div></section>
+        <section class="card"><h2>Recent Agent Outputs</h2><div id="agents"></div></section>
+    </div>
+    <script>
+        function table(rows, headers){
+            if(!rows || !rows.length){return '<em>No data</em>'}
+            let h = '<table><thead><tr>'+headers.map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>';
+            for(const r of rows){h += '<tr>'+headers.map(k=>`<td>${(r[k] ?? '')}</td>`).join('')+'</tr>'}
+            return h + '</tbody></table>';
+        }
+        async function refresh(){
+            const res = await fetch('/soc/overview');
+            const data = await res.json();
+            document.getElementById('ts').textContent = new Date(data.generated_at).toLocaleString();
+            document.getElementById('queue').innerHTML = table((data.queue_health||[]).map(q=>({
+                queue:q.queue, exists:q.exists, messages_ready:q.messages_ready, consumers:q.consumers
+            })), ['queue','exists','messages_ready','consumers']);
+
+            const verdicts = data.reports?.verdict_counts || {};
+            document.getElementById('verdicts').innerHTML = Object.entries(verdicts).map(([k,v])=>`<span class='pill'>${k}: ${v}</span>`).join('') || '<em>None</em>';
+            const actions = data.response_actions || {};
+            document.getElementById('actions').innerHTML = Object.entries(actions).map(([k,v])=>`<span class='pill'>${k}: ${v}</span>`).join('') || '<em>None</em>';
+
+            document.getElementById('reports').innerHTML = table((data.reports?.recent||[]).map(r=>({
+                analysis_id:r.analysis_id, created_at:r.created_at, verdict:r.verdict, overall_risk_score:r.overall_risk_score,
+                recommended_actions:(r.recommended_actions||[]).join(',')
+            })), ['analysis_id','created_at','verdict','overall_risk_score','recommended_actions']);
+
+            document.getElementById('agents').innerHTML = table((data.agent_outputs||[]).slice(0,40), ['analysis_id','agent_name','risk_score','confidence']);
+        }
+        refresh();
+        setInterval(refresh, 10000);
+    </script>
+</body>
+</html>
+                """
+        )
+
+
+@app.get("/soc/overview", tags=["SOC"])
+async def soc_overview():
+        """Dashboard backing API for queue health, verdicts, and response actions."""
+        return _build_soc_overview()
+
+
+@app.post("/ops/garuda/process-retries", tags=["Operations"])
+async def process_garuda_retry_queue(max_items: int = 25):
+        """Process pending Garuda retries and return reconciliation stats."""
+        from email_security.garuda_integration.retry_queue import process_garuda_retries
+
+        return process_garuda_retries(max_items=max_items)
+
+
+@app.get("/ops/threat-intel/status", tags=["Operations"])
+async def threat_intel_status():
+        """Return IOC store lifecycle health and staleness information."""
+        from email_security.agents.threat_intel_agent.agent import get_ioc_store_status
+
+        return get_ioc_store_status()
+
+
+@app.post("/ops/threat-intel/refresh", tags=["Operations"])
+async def threat_intel_refresh(force: bool = False):
+        """Trigger IOC feed refresh lifecycle job now."""
+        from email_security.agents.threat_intel_agent.agent import refresh_ioc_store
+
+        return refresh_ioc_store(force=force)
 
 
 @app.post(

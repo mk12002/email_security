@@ -3,7 +3,7 @@ Train Attachment Malware Detection Model on EMBER 2018 features.
 
 Pipeline:  EMBER pre-extracted PE feature vectors  →  LightGBM (or RandomForest fallback)
 Input:     datasets/attachments/malware/ember_features/train_ember_2018_v2_features.parquet
-Output:    models/attachment_agent/model.joblib
+Output:    models/attachment_agent/ember_model.joblib
 
 Notes:
     - EMBER features are 2381-dimensional PE (Portable Executable) feature vectors.
@@ -124,10 +124,12 @@ def main() -> None:
         "feature_source": "ember_2018_v2",
         "n_features": X.shape[1],
     }
-    out_path = MODEL_DIR / "model.joblib"
+    # Keep this artifact separate from the production 6-feature static ensemble.
+    out_path = MODEL_DIR / "ember_model.joblib"
     joblib.dump(bundle, out_path)
     print(f"\n✅ Model saved to {out_path}")
     print(f"   Feature count: {X.shape[1]}")
+    print("   NOTE: Production attachment agent expects 6-feature static schema.")
 
 
 if __name__ == "__main__":

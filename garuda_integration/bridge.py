@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 
 from email_security.configs.settings import settings
+from email_security.garuda_integration.retry_queue import enqueue_garuda_retry
 from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("garuda_bridge")
@@ -41,10 +42,15 @@ def trigger_garuda_investigation(decision: dict[str, Any]) -> dict[str, Any]:
             }
     except Exception as exc:
         logger.warning("Garuda integration unavailable", error=str(exc))
+        queued = enqueue_garuda_retry(decision=decision, error=str(exc), attempt=0)
         return {
-            "status": "degraded",
+            "status": "queued_retry" if queued else "degraded",
             "response": {
-                "message": "Garuda API unavailable; investigation should be queued for retry.",
+                "message": (
+                    "Garuda API unavailable; investigation queued for retry."
+                    if queued
+                    else "Garuda API unavailable; failed to queue retry."
+                ),
                 "error": str(exc),
             },
         }

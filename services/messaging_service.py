@@ -104,3 +104,27 @@ class RabbitMQClient:
         self.channel.basic_consume(queue=queue_name, on_message_callback=_wrapped)
         logger.info("Consuming queue", queue=queue_name)
         self.channel.start_consuming()
+
+    def get_queue_stats(self, queue_name: str) -> dict[str, Any]:
+        """Return queue depth and consumer count for a queue if it exists."""
+        try:
+            queue = self.channel.queue_declare(queue=queue_name, passive=True)
+            method = queue.method
+            return {
+                "queue": queue_name,
+                "exists": True,
+                "messages_ready": int(getattr(method, "message_count", 0) or 0),
+                "consumers": int(getattr(method, "consumer_count", 0) or 0),
+            }
+        except Exception as exc:
+            return {
+                "queue": queue_name,
+                "exists": False,
+                "messages_ready": 0,
+                "consumers": 0,
+                "error": str(exc),
+            }
+
+    def get_multi_queue_stats(self, queue_names: list[str]) -> list[dict[str, Any]]:
+        """Return stats for multiple queues in a single connection lifecycle."""
+        return [self.get_queue_stats(name) for name in queue_names]

@@ -23,7 +23,7 @@ def predict(features: dict[str, Any], model: xgb.XGBClassifier | None = None) ->
         prob = float(model.predict_proba(vec)[0, 1])
 
         indicators = ["ml_user_behavior_anomaly_detected"] if prob > 0.6 else []
-        if features.get("context", {}).get("is_internal") == 1.0 and prob > 0.8:
+        if features.get("context", {}).get("is_internal_domain") == 1.0 and prob > 0.8:
             indicators.append("high_confidence_internal_spoof_or_compromise")
             
         return {

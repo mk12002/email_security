@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from email_security.agents.ml_runtime import predict_with_model
-from email_security.preprocessing.sandbox_feature_contract import build_numeric_feature_map
+from email_security.preprocessing.sandbox_feature_contract import (
+    SANDBOX_NUMERIC_FEATURE_COLUMNS,
+    build_numeric_feature_map,
+)
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("sandbox_agent")
@@ -18,7 +21,7 @@ def predict(features: dict[str, Any], model: Any = None) -> dict[str, Any]:
     prediction = predict_with_model(
         {
             "feature_map": feature_map,
-            "numeric_vector": [[feature_map[k] for k in feature_map]],
+            "numeric_vector": [[feature_map[k] for k in SANDBOX_NUMERIC_FEATURE_COLUMNS]],
         },
         model_bundle=model,
         model_indicator="ml_sandbox_model_used",

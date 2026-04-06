@@ -36,8 +36,12 @@ def extract_behavior_features(payload: dict[str, Any], cursor: sqlite3.Cursor) -
     sender = headers.get("sender", "").lower()
     subject = headers.get("subject", "").lower()
     
-    # We assume 'to' might be a list, take the first recipient as the primary behavioral target
-    recipients = payload.get("to") or ["unknown@company.internal"]
+    # Runtime parser stores recipients under headers.to; keep top-level `to` as backward-compatible fallback.
+    recipients = (
+        payload.get("to")
+        or headers.get("to")
+        or ["unknown@company.internal"]
+    )
     recipient = recipients[0].lower() if len(recipients) > 0 else "unknown@company.internal"
     
     urls = payload.get("urls") or []
@@ -107,6 +111,9 @@ def extract_behavior_features(payload: dict[str, Any], cursor: sqlite3.Cursor) -
         "context": {
             "recipient": recipient,
             "sender_domain": sender_domain,
+            "is_internal_domain": is_internal_domain,
+            # Backward-compatible alias for older inference code paths.
+            "is_internal": is_internal_domain,
             "dept_risk_tier": dept_risk_tier,
         }
     }

@@ -214,6 +214,21 @@ class Settings(BaseSettings):
     garuda_timeout_seconds: int = Field(
         default=15, description="Garuda API request timeout"
     )
+    garuda_retry_queue: str = Field(
+        default="garuda.retry.queue", description="Queue for Garuda investigation retries"
+    )
+    garuda_dead_letter_queue: str = Field(
+        default="garuda.dead.queue", description="Dead-letter queue for exhausted Garuda retries"
+    )
+    garuda_retry_max_attempts: int = Field(
+        default=6, description="Maximum Garuda retry attempts before dead-lettering"
+    )
+    garuda_retry_base_seconds: int = Field(
+        default=30, description="Base exponential-backoff delay in seconds for Garuda retries"
+    )
+    garuda_retry_max_seconds: int = Field(
+        default=1800, description="Maximum backoff delay in seconds for Garuda retries"
+    )
 
     # --- Action Layer Endpoints ---
     quarantine_api_url: Optional[str] = Field(
@@ -233,6 +248,14 @@ class Settings(BaseSettings):
     ioc_refresh_seconds: int = Field(
         default=300,
         description="How often to refresh IOC DB from filesystem feeds",
+    )
+    ioc_stale_seconds: int = Field(
+        default=1800,
+        description="Alert threshold for stale IOC store freshness",
+    )
+    threat_intel_auto_refresh_enabled: bool = Field(
+        default=True,
+        description="Enable periodic IOC store refresh loop in API process",
     )
 
     # --- Sandbox Detonation ---

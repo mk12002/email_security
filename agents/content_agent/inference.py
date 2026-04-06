@@ -19,6 +19,7 @@ from email_security.services.logging_service import get_agent_logger
 logger = get_agent_logger("content_agent")
 
 MAX_WORDS_PER_SAMPLE = 180  # Must match training script default
+MAX_SEQ_LEN = 96  # Must match training tokenization max_length
 
 
 def _clamp(value: float) -> float:
@@ -66,7 +67,7 @@ def predict(features: dict[str, Any], model: Any = None) -> dict[str, Any]:
             # ── CRITICAL: apply the same preprocessing used during training ──
             processed_text = _compact_text(raw_text)
 
-            output = model["model"](processed_text, truncation=True)
+            output = model["model"](processed_text, truncation=True, max_length=MAX_SEQ_LEN)
             row = output[0] if output else {}
             label = str(row.get("label", ""))
             score = float(row.get("score", 0.0))

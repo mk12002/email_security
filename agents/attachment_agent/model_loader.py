@@ -11,6 +11,33 @@ from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
 
+EXPECTED_ATTACHMENT_FEATURES = [
+    "attachment_count",
+    "risky_ext_ratio",
+    "suspicious_import_ratio",
+    "macro_ratio",
+    "avg_entropy",
+    "avg_size_mb",
+]
+
+
+def _is_supported_attachment_bundle(bundle: Any) -> bool:
+    """Accept only runtime-compatible 6-feature static attachment models."""
+    if not isinstance(bundle, dict):
+        return False
+
+    feature_names = bundle.get("features")
+    n_features = bundle.get("n_features")
+
+    if isinstance(feature_names, list) and feature_names:
+        return feature_names == EXPECTED_ATTACHMENT_FEATURES
+
+    # Backward-compatible fallback when older bundles only include n_features.
+    try:
+        return int(n_features) == len(EXPECTED_ATTACHMENT_FEATURES)
+    except Exception:
+        return False
+
 
 class ModelLoader:
     """Loads and caches attachment model artifacts."""
@@ -23,7 +50,17 @@ class ModelLoader:
         if self._model is not None:
             return self._model
         logger.info("Loading model", path=str(self.model_path))
-        self._model = load_model_bundle(self.model_path)
+        loaded = load_model_bundle(self.model_path)
+        if loaded is not None and not _is_supported_attachment_bundle(loaded):
+            logger.error(
+                "Attachment model rejected due to incompatible schema",
+                expected_features=EXPECTED_ATTACHMENT_FEATURES,
+                got_features=loaded.get("features") if isinstance(loaded, dict) else None,
+                got_n_features=loaded.get("n_features") if isinstance(loaded, dict) else None,
+            )
+            loaded = None
+
+        self._model = loaded
         if self._model is None:
             logger.warning("No trained model found; falling back to heuristic mode")
         return self._model

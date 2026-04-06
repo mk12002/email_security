@@ -185,6 +185,30 @@ class Settings(BaseSettings):
     sandbox_timeout_seconds: int = Field(
         default=60, description="Max runtime for each sandbox detonation"
     )
+    sandbox_allow_network: bool = Field(
+        default=False, description="Allow outbound network from detonation containers"
+    )
+    sandbox_non_root_user: str = Field(
+        default="65534:65534", description="UID:GID used inside detonation containers"
+    )
+    sandbox_memory_limit_mb: int = Field(
+        default=256, description="Memory limit in MB for each detonation container"
+    )
+    sandbox_pids_limit: int = Field(
+        default=128, description="PID limit for each detonation container"
+    )
+    sandbox_max_detonations: int = Field(
+        default=5, description="Maximum attachments to detonate per email"
+    )
+    sandbox_cleanup_stale_seconds: int = Field(
+        default=1800, description="Remove stale detonation containers older than this many seconds"
+    )
+    sandbox_enable_benign_bootstrap: bool = Field(
+        default=True, description="Enable benign bootstrap rows during sandbox preprocessing"
+    )
+    sandbox_benign_bootstrap_max_rows: int = Field(
+        default=5000, description="Maximum number of local benign bootstrap rows"
+    )
 
     @property
     def is_production(self) -> bool:

@@ -22,6 +22,12 @@ LABEL_NORMALIZATION = {
     "label_2": "Phishing",
 }
 
+SECURITY_CLASS = {
+    "Legitimate": "benign",
+    "Spam": "malicious",
+    "Phishing": "malicious",
+}
+
 
 def _compact_text(text: str) -> str:
     """Identical to the training preprocessor."""
@@ -34,6 +40,12 @@ def _compact_text(text: str) -> str:
 
 def _normalize_label(label: str) -> str:
     return LABEL_NORMALIZATION.get(str(label).strip().lower(), str(label))
+
+
+def _same_security_class(expected_label: str, predicted_label: str) -> bool:
+    expected_class = SECURITY_CLASS.get(expected_label, "unknown")
+    predicted_class = SECURITY_CLASS.get(predicted_label, "unknown")
+    return expected_class != "unknown" and expected_class == predicted_class
 
 
 def main():
@@ -87,7 +99,8 @@ def main():
         )
         print(f"  Top-3: {top_fmt}")
 
-        # Simple pass/fail check
+        # Security-oriented pass/fail check:
+        # Spam and phishing are both treated as malicious outcomes.
         expected_map = {
             "Legitimate Business Update": "Legitimate",
             "Blatant Spam": "Spam",
@@ -96,7 +109,9 @@ def main():
             "Nigerian Fraud (Phishing)": "Phishing",
         }
         expected = expected_map.get(category, "")
-        status = "✅ PASS" if expected.lower() in label.lower() else "⚠️  MISMATCH"
+        status = "✅ PASS" if _same_security_class(expected, label) else "⚠️  MISMATCH"
+        if status.startswith("✅") and expected != label:
+            status = "✅ PASS (security-class match)"
         print(f"  Status: {status}")
 
 

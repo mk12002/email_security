@@ -102,4 +102,8 @@ def test_derive_training_row_from_behavior(tmp_path: Path) -> None:
     assert row["execve_calls"] == 3
     assert row["connect_calls"] == 1
     assert row["file_write_calls"] == 1
+    assert row["sequence_process_calls"] == 3
+    assert row["sequence_network_calls"] == 1
+    assert row["sequence_filesystem_calls"] == 1
+    assert row["sequence_length"] == 5
     assert row["behavior_risk_score"] >= 0.9

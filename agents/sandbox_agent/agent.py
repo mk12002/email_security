@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import math
 import re
 import shlex
 import tarfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import docker
 from docker.errors import DockerException, ImageNotFound, NotFound
 
+from agents.sandbox_agent.inference import predict
+from agents.sandbox_agent.model_loader import load_model
 from configs.settings import settings
 from services.logging_service import get_agent_logger
 
@@ -34,8 +38,10 @@ RISKY_EXTENSIONS = {
 SHELL_TOKENS = {"/bin/sh", "sh", "/bin/bash", "bash", "cmd.exe", "powershell"}
 NETWORK_TOOL_TOKENS = {"curl", "wget", "powershell", "python", "perl"}
 SENSITIVE_DIRS = ("/etc", "/bin", "/usr", "/root", "/var", "/home")
+SUSPICIOUS_IMPORT_STRINGS = [b"VirtualAlloc", b"WriteProcessMemory", b"CreateRemoteThread", b"powershell"]
 WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
 SANDBOX_RUNTIME_CSV = WORKSPACE_ROOT / "datasets" / "sandbox_behavior" / "runtime_observations.csv"
+SANDBOX_CONTAINER_LABEL = "email_security.sandbox=detonation"
 
 EXECVE_RE = re.compile(r"execve\(\"(?P<exe>[^\"]+)\"(?:,\s*\[(?P<argv>.*?)\])?")
 CONNECT_RE = re.compile(r"sin_addr=inet_addr\(\"(?P<ip>\d+\.\d+\.\d+\.\d+)\"\)", re.IGNORECASE)
@@ -50,14 +56,60 @@ def _clamp(value: float) -> float:
 
 
 def _safe_stop_remove(container: Any) -> None:
+    container_id = getattr(container, "id", "unknown")
     try:
         container.stop(timeout=2)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Container stop ignored", container_id=container_id, error=str(exc))
     try:
         container.remove(force=True)
+    except Exception as exc:
+        logger.warning("Container remove failed", container_id=container_id, error=str(exc))
+
+
+def _parse_docker_timestamp(raw: str | None) -> float | None:
+    if not raw:
+        return None
+    try:
+        # Docker timestamps commonly end with "Z" and may include subsecond precision.
+        return datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
     except Exception:
-        pass
+        return None
+
+
+def _cleanup_stale_detonation_containers(docker_client: Any, stale_seconds: int) -> None:
+    now = time.time()
+    removed = 0
+    scanned = 0
+    try:
+        containers = docker_client.containers.list(all=True, filters={"label": SANDBOX_CONTAINER_LABEL})
+    except Exception as exc:
+        logger.warning("Unable to list stale detonation containers", error=str(exc))
+        return
+
+    for container in containers:
+        scanned += 1
+        try:
+            container.reload()
+            state = (container.attrs or {}).get("State", {})
+            status = str(state.get("Status", "")).lower()
+            started_ts = _parse_docker_timestamp(state.get("StartedAt"))
+            created_ts = _parse_docker_timestamp((container.attrs or {}).get("Created"))
+            ref_ts = started_ts or created_ts
+            age = (now - ref_ts) if ref_ts else (stale_seconds + 1)
+            if status in {"exited", "dead", "created"} or age >= stale_seconds:
+                _safe_stop_remove(container)
+                removed += 1
+        except Exception as exc:
+            logger.debug("Stale container cleanup skip", error=str(exc))
+
+    if removed:
+        logger.info(
+            "Sandbox stale container cleanup complete",
+            scanned=scanned,
+            removed=removed,
+            stale_seconds=stale_seconds,
+        )
 
 
 def _is_private_ip(ip: str) -> bool:
@@ -106,6 +158,31 @@ def _file_entropy(path: Path) -> float:
     return round(entropy, 2)
 
 
+def _static_attachment_score(target: Path) -> float:
+    score = 0.0
+    ext = target.suffix.lower()
+    if ext in RISKY_EXTENSIONS:
+        score += 0.28
+
+    try:
+        blob = target.read_bytes()
+    except OSError:
+        return _clamp(score)
+
+    entropy = _file_entropy(target)
+    if entropy >= 7.1:
+        score += 0.22
+
+    if any(token in blob for token in SUSPICIOUS_IMPORT_STRINGS):
+        score += 0.32
+
+    lower_blob = blob.lower()
+    if ext in {".docm", ".xlsm"} and b"vba" in lower_blob:
+        score += 0.25
+
+    return _clamp(score)
+
+
 def _derive_training_row(
     *,
     target: Path,
@@ -135,10 +212,17 @@ def _derive_training_row(
         "connect_calls": len(signals.get("remote_ips", []) or []),
         "execve_calls": len(exec_chain),
         "file_write_calls": len(signals.get("sensitive_writes", []) or []),
+        "sequence_length": len(exec_chain) + len(signals.get("remote_ips", []) or []) + len(signals.get("sensitive_writes", []) or []),
+        "sequence_process_calls": len(exec_chain),
+        "sequence_network_calls": len(signals.get("remote_ips", []) or []),
+        "sequence_filesystem_calls": len(signals.get("sensitive_writes", []) or []),
+        "sequence_registry_calls": 0,
+        "sequence_memory_calls": 0,
         "critical_chain_detected": int(bool(signals.get("critical_chain_detected"))),
         "behavior_risk_score": _clamp(risk_score),
         # Weak-supervision bootstrap: keep as pseudo-label until SOC verdict is joined.
-        "label": int(risk_score >= 0.86),
+        "pseudo_label": int(risk_score >= 0.86),
+        "label": "",
         "source": "runtime_detonation",
         "filename": target.name,
     }
@@ -160,8 +244,15 @@ def _append_runtime_observation(row: dict[str, Any]) -> None:
         "connect_calls",
         "execve_calls",
         "file_write_calls",
+        "sequence_length",
+        "sequence_process_calls",
+        "sequence_network_calls",
+        "sequence_filesystem_calls",
+        "sequence_registry_calls",
+        "sequence_memory_calls",
         "critical_chain_detected",
         "behavior_risk_score",
+        "pseudo_label",
         "label",
         "source",
     ]
@@ -282,13 +373,42 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
     except ImageNotFound:
         docker_client.images.pull(image)
 
-    container = docker_client.containers.create(
-        image=image,
-        command=["sh", "-lc", "while true; do sleep 1; done"],
-        detach=True,
-        remove=False,
-        working_dir="/sandbox",
-    )
+    sample_hash = hashlib.sha256(str(target).encode("utf-8", errors="ignore")).hexdigest()[:12]
+    container_name = f"sandbox-det-{int(time.time())}-{sample_hash}"
+
+    container_kwargs: dict[str, Any] = {
+        "image": image,
+        "command": ["sh", "-lc", "while true; do sleep 1; done"],
+        "detach": True,
+        "remove": False,
+        "working_dir": "/sandbox",
+        "name": container_name,
+        "read_only": True,
+        "tmpfs": {
+            "/sandbox": "rw,noexec,nosuid,nodev,size=256m",
+            "/tmp": "rw,noexec,nosuid,nodev,size=128m",
+        },
+        "cap_drop": ["ALL"],
+        "security_opt": ["no-new-privileges"],
+        "mem_limit": f"{max(64, int(settings.sandbox_memory_limit_mb))}m",
+        "pids_limit": max(32, int(settings.sandbox_pids_limit)),
+        "user": str(settings.sandbox_non_root_user or "65534:65534"),
+        "labels": {
+            "email_security.sandbox": "detonation",
+            "email_security.component": "sandbox_agent",
+            "email_security.sample": sample_hash,
+        },
+    }
+    if not bool(settings.sandbox_allow_network):
+        container_kwargs["network_disabled"] = True
+
+    try:
+        container = docker_client.containers.create(**container_kwargs)
+    except TypeError:
+        # Compatibility fallback for older daemons that reject one or more hardening args.
+        for key in ("security_opt", "pids_limit", "tmpfs"):
+            container_kwargs.pop(key, None)
+        container = docker_client.containers.create(**container_kwargs)
 
     indicators: list[str] = []
     behavior: dict[str, Any] = {
@@ -305,6 +425,7 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
     exit_code = 0
 
     try:
+        logger.info("Sandbox detonation started", attachment=str(target), image=image, timeout_seconds=timeout_seconds)
         container.start()
         container.exec_run(["mkdir", "-p", "/sandbox/input", "/sandbox/output"], stdout=False, stderr=False)
 
@@ -320,26 +441,22 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
         )
 
         started = time.monotonic()
-        exec_result = container.exec_run(["sh", "-lc", shell_cmd], detach=True)
-        exec_id = exec_result.output.decode("utf-8", errors="ignore") if isinstance(exec_result.output, (bytes, bytearray)) else str(exec_result.output)
+        
+        # Capture exec output directly instead of relying on detached container logs
+        exec_result = container.exec_run(["sh", "-lc", shell_cmd], detach=False)
+        
+        # Since timeout is built into shell_cmd, exec_run will block for at most timeout_seconds
+        exit_code = exec_result.exit_code if exec_result.exit_code is not None else 0
+        nonzero_exit = exit_code != 0
+        raw_logs = exec_result.output.decode("utf-8", errors="replace") if isinstance(exec_result.output, (bytes, bytearray)) else str(exec_result.output)
 
-        # Poll exec status with short sleeps so the monitor loop remains responsive.
-        while True:
-            status = docker_client.api.exec_inspect(exec_id)
-            if not status.get("Running", False):
-                exit_code = int(status.get("ExitCode", 0) or 0)
-                nonzero_exit = exit_code != 0
-                break
-            if time.monotonic() - started > timeout_seconds:
-                timed_out = True
-                try:
-                    container.kill()
-                except Exception:
-                    pass
-                break
-            time.sleep(0.2)
-
-        raw_logs = (container.logs(stdout=True, stderr=True) or b"").decode("utf-8", errors="replace")
+        if exit_code == 124 or time.monotonic() - started > timeout_seconds - 1:
+            timed_out = True
+            try:
+                container.kill()
+            except Exception:
+                pass
+            
         behavior = _extract_behavior_from_strace(raw_logs)
 
         score, score_indicators = _score_behavior_signals(
@@ -358,17 +475,48 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
         )
         _append_runtime_observation(training_row)
 
+        logger.info(
+            "Sandbox detonation complete",
+            attachment=str(target),
+            elapsed_seconds=round(time.monotonic() - started, 3),
+            exit_code=exit_code,
+            timed_out=timed_out,
+            heuristic_score=score,
+            exec_chain_count=len(behavior.get("exec_chain", []) or []),
+            remote_ip_count=len(behavior.get("remote_ips", []) or []),
+            sensitive_write_count=len(behavior.get("sensitive_writes", []) or []),
+            critical_chain_detected=bool(behavior.get("critical_chain_detected")),
+        )
+
         return score, indicators, behavior, training_row
 
     finally:
         _safe_stop_remove(container)
 
 
-def _should_detonate(attachment: dict[str, Any], target: Path) -> bool:
+def _compute_static_score(attachment: dict[str, Any], target: Path) -> float:
     static_score = attachment.get("static_score", attachment.get("static_risk_score"))
-    if isinstance(static_score, (int, float)) and float(static_score) > 0.6:
-        return True
-    return target.suffix.lower() in RISKY_EXTENSIONS
+    if isinstance(static_score, (int, float)):
+        return _clamp(float(static_score))
+    return _static_attachment_score(target)
+
+
+def _should_detonate(attachment: dict[str, Any], target: Path) -> tuple[bool, float, str]:
+    static_score = _compute_static_score(attachment, target)
+    if static_score >= 0.45:
+        return True, static_score, "static_score_threshold"
+    if target.suffix.lower() in RISKY_EXTENSIONS:
+        return True, static_score, "risky_extension"
+    return False, static_score, "low_suspicion"
+
+
+def _attachment_priority_item(attachment: dict[str, Any]) -> tuple[float, int]:
+    target = Path(attachment.get("path", ""))
+    if not target.exists():
+        return -1.0, 0
+    static_score = _compute_static_score(attachment, target)
+    ext_risky = 1 if target.suffix.lower() in RISKY_EXTENSIONS else 0
+    return static_score, ext_risky
 
 
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
@@ -387,24 +535,69 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     risk = 0.0
     indicators: list[str] = []
     behavior_summary: dict[str, Any] = {}
+    model = load_model()
 
     try:
         docker_client = docker.from_env()
-        for attachment in attachments[:3]:
+        _cleanup_stale_detonation_containers(
+            docker_client=docker_client,
+            stale_seconds=max(300, int(settings.sandbox_cleanup_stale_seconds)),
+        )
+
+        max_detonations = max(1, int(settings.sandbox_max_detonations))
+        prioritized = sorted(
+            attachments,
+            key=lambda item: _attachment_priority_item(item),
+            reverse=True,
+        )
+
+        for index, attachment in enumerate(prioritized):
             target = Path(attachment.get("path", ""))
             if not target.exists():
                 indicators.append(f"missing_attachment_path:{attachment.get('filename', 'unknown')}")
                 continue
 
-            if not _should_detonate(attachment, target):
+            if index >= max_detonations:
+                indicators.append(f"sandbox_skipped_budget:{target.name}")
+                continue
+
+            should_detonate, static_score, detonation_reason = _should_detonate(attachment, target)
+            if not should_detonate:
                 indicators.append(f"sandbox_skipped_low_suspicion:{target.name}")
                 continue
 
+            indicators.append(f"sandbox_detonation_reason:{detonation_reason}:{target.name}")
+            indicators.append(f"sandbox_static_score:{static_score:.3f}:{target.name}")
+
             detonation_score, detonation_indicators, behavior, training_row = _detonate_attachment(docker_client, target)
-            risk += detonation_score
+            ml_prediction = predict(training_row, model=model)
+            ml_risk = float(ml_prediction.get("risk_score", 0.0))
+            ml_conf = float(ml_prediction.get("confidence", 0.0))
+
+            if ml_conf > 0.0:
+                fused_score = _clamp((0.65 * ml_risk) + (0.35 * detonation_score))
+                risk += fused_score
+                indicators.extend([f"{tag}:{target.name}" for tag in ml_prediction.get("indicators", [])])
+            else:
+                fused_score = detonation_score
+                risk += detonation_score
+
             indicators.extend([f"{indicator}:{target.name}" for indicator in detonation_indicators])
             behavior_summary[target.name] = behavior
             behavior_summary[target.name]["derived_training_row"] = training_row
+            behavior_summary[target.name]["heuristic_risk_score"] = _clamp(detonation_score)
+            behavior_summary[target.name]["ml_prediction"] = ml_prediction
+            behavior_summary[target.name]["fused_risk_score"] = _clamp(fused_score)
+
+            logger.info(
+                "Sandbox attachment scoring",
+                attachment=target.name,
+                heuristic_score=_clamp(detonation_score),
+                ml_score=_clamp(ml_risk),
+                ml_confidence=_clamp(ml_conf),
+                fused_score=_clamp(fused_score),
+                indicator_count=len(detonation_indicators) + len(ml_prediction.get("indicators", [])),
+            )
 
             if target.suffix.lower() in RISKY_EXTENSIONS:
                 risk += 0.08

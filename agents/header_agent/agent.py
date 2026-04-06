@@ -6,10 +6,10 @@ from typing import Any
 
 from Levenshtein import distance as levenshtein_distance
 
-from agents.header_agent.feature_extractor import extract_features
-from agents.header_agent.inference import predict
-from agents.header_agent.model_loader import load_model
-from services.logging_service import get_agent_logger
+from email_security.agents.header_agent.feature_extractor import extract_features
+from email_security.agents.header_agent.inference import predict
+from email_security.agents.header_agent.model_loader import load_model
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("header_agent")
 
@@ -41,13 +41,25 @@ def _domain_from_sender(sender: str) -> str:
     return sender.split("@")[-1].strip().lower()
 
 
+def _auth_all_pass(auth: str) -> bool:
+    auth_l = (auth or "").lower()
+    return (
+        "spf=pass" in auth_l
+        and "dkim=pass" in auth_l
+        and "dmarc=pass" in auth_l
+    )
+
+
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting analysis", agent="header_agent")
     headers = data.get("headers", {}) or {}
     auth = (headers.get("authentication_results") or "").lower()
     sender = headers.get("sender", "")
+    reply_to = headers.get("reply_to", "") or ""
     sender_domain = _domain_from_sender(sender)
+    reply_to_domain = _domain_from_sender(reply_to)
     received = headers.get("received", []) or []
+    auth_all_pass = _auth_all_pass(auth)
 
     indicators: list[str] = []
     risk = 0.0
@@ -73,6 +85,20 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         risk += 0.05
         indicators.append("short_smtp_trace")
 
+        # Authenticated single-hop traffic can still be suspicious in SOC triage.
+        # Keep these events in review band rather than auto-safe.
+        if auth_all_pass:
+            risk += 0.3
+            indicators.append("authenticated_single_hop_anomaly")
+
+    if reply_to_domain and sender_domain and reply_to_domain != sender_domain:
+        risk += 0.24
+        indicators.append("reply_to_domain_mismatch")
+
+        if auth_all_pass:
+            risk += 0.12
+            indicators.append("authenticated_reply_to_anomaly")
+
     heuristic_confidence = _clamp(0.65 + min(0.25, len(indicators) * 0.05))
 
     # 2. ML Prediction
@@ -87,6 +113,13 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     else:
         final_risk = _clamp(risk)
         final_confidence = heuristic_confidence
+
+    # SOC guardrail: ensure authenticated-but-anomalous headers stay reviewable.
+    if (
+        "authenticated_single_hop_anomaly" in indicators
+        or "authenticated_reply_to_anomaly" in indicators
+    ):
+        final_risk = _clamp(max(final_risk, 0.42))
 
     result = {
         "agent_name": "header_agent",

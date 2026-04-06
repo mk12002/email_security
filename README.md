@@ -6,7 +6,7 @@ Production-grade **Agentic AI Cybersecurity System** for **Phishing Email Detect
 
 ## System Overview
 
-The system uses **6 independent AI agents** that run in parallel to analyze different components of an email and collectively determine whether it is malicious.
+The system uses **7 independent AI agents** that run in parallel to analyze different components of an email and collectively determine whether it is malicious.
 
 ### Agents
 
@@ -18,6 +18,7 @@ The system uses **6 independent AI agents** that run in parallel to analyze diff
 | **Attachment Static Analysis** | Static analysis of attachments for malware signatures |
 | **Sandbox Behavior** | Dynamic behavioral analysis references for attachments |
 | **Threat Intelligence** | Cross-references indicators with threat intelligence feeds |
+| **User Behavior** | Estimates click susceptibility and user-targeting risk context |
 
 ### Architecture
 
@@ -37,7 +38,7 @@ The orchestrator uses a **LangGraph state graph** to execute decisioning nodes i
 This provides explicit state transitions, structured inputs/outputs per node, and auditable decision flow.
 ┌─────────────────────────────────────────────┐
 │              Decision Layer                  │
-│   6 Independent AI Agents (parallel)         │
+│   7 Independent AI Agents (parallel)         │
 ├─────────────────────────────────────────────┤
 │              Analysis Layer                  │
 │   Threat Correlation │ Scoring Engine        │
@@ -60,6 +61,7 @@ email_security/
 │   ├── attachment_agent/          #   Attachment static analysis
 │   ├── sandbox_agent/             #   Sandbox behavior analysis
 │   ├── threat_intel_agent/        #   Threat intelligence lookups
+│   ├── user_behavior_agent/       #   User interaction/click-risk analysis
 │
 ├── orchestrator/                  # Agent coordination & scoring
 │   ├── decision_engine/           #   Final threat determination
@@ -117,7 +119,7 @@ source venv/bin/activate
 nano .env   # Add your API keys and connection strings
 
 # 5. Start the API server
-uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn email_security.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Manual Setup
@@ -189,7 +191,8 @@ Configuration is managed via environment variables with a `.env` file. See `.env
 Key configuration areas:
 
 - **Azure OpenAI** – Endpoint, deployment, API key, and API version
-- **Threat Intelligence** – VirusTotal, AbuseIPDB, URLScan, Shodan API keys
+- **Threat Intelligence** – VirusTotal, Google Safe Browsing, OpenPhish, URLhaus, OTX, AbuseIPDB, MalwareBazaar
+- **External Lookup Controls** – `ENABLE_*` provider toggles, request timeout, and IOC lookup limits
 - **Model Paths** – Per-agent model directory paths
 - **Database** – PostgreSQL connection URL
 - **Redis** – Temporary orchestration state cache

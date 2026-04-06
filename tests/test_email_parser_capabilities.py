@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from configs.settings import settings
-from services.email_parser import EmailParserService
+from email_security.configs.settings import settings
+from email_security.services.email_parser import EmailParserService
 
 
 @pytest.fixture()

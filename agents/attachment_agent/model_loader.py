@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
-from agents.ml_runtime import load_model_bundle
-from configs.settings import settings
-from services.logging_service import get_agent_logger
+from email_security.agents.ml_runtime import load_model_bundle, resolve_model_path
+from email_security.configs.settings import settings
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
 
@@ -16,7 +16,7 @@ class ModelLoader:
     """Loads and caches attachment model artifacts."""
 
     def __init__(self, model_path: str | None = None):
-        self.model_path = Path(model_path or settings.attachment_model_path)
+        self.model_path = resolve_model_path(model_path or settings.attachment_model_path)
         self._model: Optional[Any] = None
 
     def load_model(self) -> Any:

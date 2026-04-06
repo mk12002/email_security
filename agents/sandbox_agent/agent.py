@@ -17,10 +17,10 @@ from typing import Any
 import docker
 from docker.errors import DockerException, ImageNotFound, NotFound
 
-from agents.sandbox_agent.inference import predict
-from agents.sandbox_agent.model_loader import load_model
-from configs.settings import settings
-from services.logging_service import get_agent_logger
+from email_security.agents.sandbox_agent.inference import predict
+from email_security.agents.sandbox_agent.model_loader import load_model
+from email_security.configs.settings import settings
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("sandbox_agent")
 
@@ -436,8 +436,18 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
         shell_cmd = (
             f"set -e; "
             f"chmod +x {shlex.quote(sample_path)} || true; "
-            f"timeout {max(2, timeout_seconds - 2)}s "
-            f"strace -f -tt -s 256 -e trace=process,network,file {detonation_cmd}"
+            f"if ! command -v strace >/dev/null 2>&1; then "
+            f"  if command -v apt-get >/dev/null 2>&1; then "
+            f"    apt-get update >/dev/null 2>&1 && "
+            f"    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends strace >/dev/null 2>&1 || true; "
+            f"  fi; "
+            f"fi; "
+            f"if command -v strace >/dev/null 2>&1; then "
+            f"  timeout {max(2, timeout_seconds - 2)}s strace -f -tt -s 256 -e trace=process,network,file {detonation_cmd}; "
+            f"else "
+            f"  echo '__NO_STRACE__'; "
+            f"  timeout {max(2, timeout_seconds - 2)}s {detonation_cmd}; "
+            f"fi"
         )
 
         started = time.monotonic()
@@ -449,6 +459,9 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
         exit_code = exec_result.exit_code if exec_result.exit_code is not None else 0
         nonzero_exit = exit_code != 0
         raw_logs = exec_result.output.decode("utf-8", errors="replace") if isinstance(exec_result.output, (bytes, bytearray)) else str(exec_result.output)
+        if "__NO_STRACE__" in raw_logs:
+            indicators.append("sandbox_strace_unavailable")
+            raw_logs = raw_logs.replace("__NO_STRACE__", "")
 
         if exit_code == 124 or time.monotonic() - started > timeout_seconds - 1:
             timed_out = True

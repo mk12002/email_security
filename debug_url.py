@@ -1,6 +1,6 @@
 import sys
 import joblib
-from preprocessing.feature_pipeline import URL_FEATURE_COLUMNS, extract_url_lexical_features, normalize_url
+from email_security.preprocessing.feature_pipeline import URL_FEATURE_COLUMNS, extract_url_lexical_features, normalize_url
 import pandas as pd
 
 bundle = joblib.load("models/url_agent/model.joblib")

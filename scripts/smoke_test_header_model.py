@@ -21,9 +21,9 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from agents.header_agent.agent import analyze
-from agents.header_agent.feature_extractor import extract_features
-from agents.header_agent.model_loader import load_model
+from email_security.agents.header_agent.agent import analyze
+from email_security.agents.header_agent.feature_extractor import extract_features
+from email_security.agents.header_agent.model_loader import load_model
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Realistic test scenarios

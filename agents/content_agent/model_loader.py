@@ -8,8 +8,9 @@ from typing import Any, Optional
 
 import joblib
 
-from configs.settings import settings
-from services.logging_service import get_agent_logger
+from email_security.agents.ml_runtime import resolve_model_path
+from email_security.configs.settings import settings
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
 
@@ -18,7 +19,10 @@ class ModelLoader:
     """Loads and caches model artifacts for content analysis."""
 
     def __init__(self, model_path: str | None = None):
-        self.model_path = Path(model_path or settings.content_model_path)
+        self.model_path = resolve_model_path(
+            model_path or settings.content_model_path,
+            required_files=("config.json", "model.joblib", "model.pkl"),
+        )
         self._model: Optional[Any] = None
 
     def _load_transformer_pipeline(self) -> Any:

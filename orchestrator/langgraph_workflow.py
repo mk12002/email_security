@@ -6,12 +6,12 @@ from typing import Any, Callable
 
 from langgraph.graph import END, StateGraph
 
-from garuda_integration.bridge import trigger_garuda_investigation
-from orchestrator.llm_reasoner import generate_reasoning
-from orchestrator.scoring_engine import calculate_threat_score
-from orchestrator.threat_correlation import correlate_threats
-from orchestrator.langgraph_state import OrchestratorState
-from services.logging_service import get_service_logger
+from email_security.garuda_integration.bridge import trigger_garuda_investigation
+from email_security.orchestrator.llm_reasoner import generate_reasoning
+from email_security.orchestrator.scoring_engine import calculate_threat_score
+from email_security.orchestrator.threat_correlation import correlate_threats
+from email_security.orchestrator.langgraph_state import OrchestratorState
+from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("langgraph_orchestrator")
 

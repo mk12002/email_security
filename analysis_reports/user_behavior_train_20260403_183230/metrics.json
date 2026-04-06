@@ -1,0 +1,16 @@
+{
+    "training_time_utc": "2026-04-03T13:02:31.689091",
+    "test_n": 7500,
+    "roc_auc": 0.9970825653750724,
+    "brier_score": 0.050829264379906584,
+    "best_iteration": 19,
+    "features": [
+        "contact_count",
+        "days_since_last_contact",
+        "is_internal_domain",
+        "is_business_hours",
+        "urgency_score",
+        "link_count",
+        "dept_risk_tier"
+    ]
+}

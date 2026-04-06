@@ -1,0 +1,29 @@
+{
+    "training_time_utc": "2026-04-03T07:27:08.616260",
+    "test_n": 7500,
+    "roc_auc": 0.9986575362157528,
+    "brier_score": 0.012490216819099807,
+    "best_iteration": 130,
+    "best_score_val_auc": 0.9986412578680898,
+    "features": [
+        "candidate_domain_count",
+        "candidate_ip_count",
+        "candidate_hash_count",
+        "total_candidate_count",
+        "matched_domain_count",
+        "matched_ip_count",
+        "matched_hash_count",
+        "total_match_count",
+        "domain_match_ratio",
+        "ip_match_ratio",
+        "hash_match_ratio",
+        "overall_match_ratio",
+        "unique_source_count",
+        "multi_source_match_count",
+        "newest_match_age_days",
+        "oldest_match_age_days",
+        "mean_match_age_days",
+        "ioc_freshness_ratio",
+        "matched_type_diversity"
+    ]
+}

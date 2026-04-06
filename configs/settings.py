@@ -81,8 +81,62 @@ class Settings(BaseSettings):
     virustotal_api_key: Optional[str] = Field(
         default=None, description="VirusTotal API key"
     )
+    google_safe_browsing_api_key: Optional[str] = Field(
+        default=None, description="Google Safe Browsing API key"
+    )
+    otx_api_key: Optional[str] = Field(
+        default=None, description="AlienVault OTX API key"
+    )
     abuseipdb_api_key: Optional[str] = Field(
         default=None, description="AbuseIPDB API key"
+    )
+    enable_virustotal_url_lookup: bool = Field(
+        default=False, description="Enable VirusTotal URL lookups in URL agent"
+    )
+    enable_google_safe_browsing_lookup: bool = Field(
+        default=False, description="Enable Google Safe Browsing URL lookups"
+    )
+    enable_openphish_lookup: bool = Field(
+        default=False, description="Enable OpenPhish feed URL lookups"
+    )
+    enable_urlhaus_lookup: bool = Field(
+        default=False, description="Enable URLhaus URL lookups"
+    )
+    enable_otx_lookup: bool = Field(
+        default=False, description="Enable AlienVault OTX IOC lookups"
+    )
+    enable_abuseipdb_lookup: bool = Field(
+        default=False, description="Enable AbuseIPDB IP reputation lookups"
+    )
+    enable_malwarebazaar_lookup: bool = Field(
+        default=False, description="Enable MalwareBazaar hash lookups"
+    )
+    enable_virustotal_hash_lookup: bool = Field(
+        default=False, description="Enable VirusTotal hash lookups in threat intel"
+    )
+    external_lookup_timeout_seconds: float = Field(
+        default=6.0, description="Timeout in seconds for external intel API calls"
+    )
+    external_lookup_max_indicators: int = Field(
+        default=10, description="Max indicators per type for external intel lookups"
+    )
+    openphish_feed_url: str = Field(
+        default="https://openphish.com/feed.txt", description="OpenPhish feed URL"
+    )
+    openphish_cache_ttl_seconds: int = Field(
+        default=900, description="OpenPhish feed cache TTL in seconds"
+    )
+    urlhaus_api_url: str = Field(
+        default="https://urlhaus-api.abuse.ch/v1/url/", description="URLhaus API endpoint"
+    )
+    otx_api_base_url: str = Field(
+        default="https://otx.alienvault.com", description="AlienVault OTX API base URL"
+    )
+    abuseipdb_api_url: str = Field(
+        default="https://api.abuseipdb.com/api/v2/check", description="AbuseIPDB check endpoint"
+    )
+    malwarebazaar_api_url: str = Field(
+        default="https://mb-api.abuse.ch/api/v1/", description="MalwareBazaar API endpoint"
     )
     urlscan_api_key: Optional[str] = Field(
         default=None, description="URLScan.io API key"
@@ -93,22 +147,25 @@ class Settings(BaseSettings):
 
     # --- Model Paths ---
     header_model_path: str = Field(
-        default="../models/header_agent/", description="Header agent model path"
+        default="models/header_agent/", description="Header agent model path"
     )
     content_model_path: str = Field(
-        default="../models/content_agent/", description="Content agent model path"
+        default="models/content_agent/", description="Content agent model path"
     )
     url_model_path: str = Field(
-        default="../models/url_agent/", description="URL agent model path"
+        default="models/url_agent/", description="URL agent model path"
     )
     attachment_model_path: str = Field(
-        default="../models/attachment_agent/", description="Attachment agent model path"
+        default="models/attachment_agent/", description="Attachment agent model path"
     )
     sandbox_model_path: str = Field(
-        default="../models/sandbox_agent/", description="Sandbox agent model path"
+        default="models/sandbox_agent/", description="Sandbox agent model path"
     )
     threat_intel_model_path: str = Field(
-        default="../models/threat_intel_agent/", description="Threat intel model path"
+        default="models/threat_intel_agent/", description="Threat intel model path"
+    )
+    user_behavior_model_path: str = Field(
+        default="models/user_behavior_agent/", description="User behavior agent model path"
     )
 
     # --- Dataset Paths ---
@@ -222,6 +279,20 @@ class Settings(BaseSettings):
         if not log_path.is_absolute():
             log_path = PROJECT_ROOT / log_path
         return log_path
+
+    def validate_production_settings(self) -> list[str]:
+        """Return list of warnings for unsafe production settings."""
+        warnings = []
+        if self.is_production and self.app_secret_key == "change-me-in-production":
+            warnings.append(
+                "CRITICAL: APP_SECRET_KEY is using the default value in production! "
+                "Set a strong, unique secret key via the APP_SECRET_KEY environment variable."
+            )
+        if self.is_production and self.app_debug:
+            warnings.append(
+                "WARNING: APP_DEBUG is enabled in production. Set APP_DEBUG=false."
+            )
+        return warnings
 
 
 @lru_cache()

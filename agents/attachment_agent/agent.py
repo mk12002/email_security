@@ -6,10 +6,10 @@ import math
 from pathlib import Path
 from typing import Any
 
-from agents.attachment_agent.feature_extractor import extract_features
-from agents.attachment_agent.inference import predict
-from agents.attachment_agent.model_loader import load_model
-from services.logging_service import get_agent_logger
+from email_security.agents.attachment_agent.feature_extractor import extract_features
+from email_security.agents.attachment_agent.inference import predict
+from email_security.agents.attachment_agent.model_loader import load_model
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
 

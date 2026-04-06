@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agents.sandbox_agent.agent import (
+from email_security.agents.sandbox_agent.agent import (
     _derive_training_row,
     _extract_behavior_from_strace,
     _score_behavior_signals,

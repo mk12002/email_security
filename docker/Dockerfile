@@ -41,10 +41,12 @@ COPY --from=builder /install /usr/local
 WORKDIR /app
 
 # Copy application code
-COPY . .
+COPY . /app/email_security
+
+ENV PYTHONPATH=/app
 
 # Create required directories
-RUN mkdir -p logs models datasets datasets_processed threat_intelligence \
+RUN mkdir -p /app/email_security/logs /app/email_security/models /app/email_security/datasets /app/email_security/datasets_processed /app/email_security/threat_intelligence /app/models \
     && chown -R appuser:appuser /app
 
 USER appuser
@@ -55,4 +57,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "email_security.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

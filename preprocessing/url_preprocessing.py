@@ -262,26 +262,18 @@ def _collect_source_rows(base: Path, rng: random.Random) -> tuple[list[tuple[str
                 "label": label,
                 "raw_count": 0,
                 "after_cap": 0,
-                "cap_dropped": 0,
                 "normalized_valid": 0,
-                "normalization_dropped": 0,
                 "unique_normalized": 0,
-                "retained_from_raw_rate": 0.0,
-                "unique_from_valid_rate": 0.0,
             }
             continue
 
         extracted = spec["loader"](file_path)
         raw_count = len(extracted)
         capped = _sample_cap(extracted, MAX_SAMPLES_PER_SOURCE, rng)
-        cap_dropped = max(0, raw_count - len(capped))
 
         normalized = [normalize_url(url) for url in capped]
         valid_urls = [url for url in normalized if url]
         unique_urls = sorted(set(valid_urls))
-        normalization_dropped = max(0, len(capped) - len(valid_urls))
-        retained_from_raw_rate = float(len(valid_urls) / raw_count) if raw_count > 0 else 0.0
-        unique_from_valid_rate = float(len(unique_urls) / len(valid_urls)) if valid_urls else 0.0
 
         rows.extend((url, label, source_name) for url in unique_urls)
         audit_sources[source_name] = {
@@ -289,12 +281,8 @@ def _collect_source_rows(base: Path, rng: random.Random) -> tuple[list[tuple[str
             "label": label,
             "raw_count": raw_count,
             "after_cap": len(capped),
-            "cap_dropped": cap_dropped,
             "normalized_valid": len(valid_urls),
-            "normalization_dropped": normalization_dropped,
             "unique_normalized": len(unique_urls),
-            "retained_from_raw_rate": retained_from_raw_rate,
-            "unique_from_valid_rate": unique_from_valid_rate,
         }
 
     return rows, audit_sources
@@ -354,12 +342,6 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> s
     url_df = url_df.sample(frac=1.0, random_state=RANDOM_SEED).reset_index(drop=True)
 
     output_csv = write_processed_dataset(url_df, output / "url_training.csv")
-
-    raw_total = int(sum(int(item.get("raw_count", 0)) for item in source_audit.values()))
-    capped_total = int(sum(int(item.get("after_cap", 0)) for item in source_audit.values()))
-    normalized_total = int(sum(int(item.get("normalized_valid", 0)) for item in source_audit.values()))
-    unique_total = int(sum(int(item.get("unique_normalized", 0)) for item in source_audit.values()))
-
     audit_payload = {
         "config": {
             "random_seed": RANDOM_SEED,
@@ -370,15 +352,6 @@ def run(base_dir: str = "datasets", output_dir: str = "datasets_processed") -> s
             "benign_variant_ratio": BENIGN_VARIANT_RATIO,
         },
         "source_audit": source_audit,
-        "source_quality_summary": {
-            "raw_total": raw_total,
-            "after_cap_total": capped_total,
-            "normalized_valid_total": normalized_total,
-            "unique_normalized_total": unique_total,
-            "cap_retention_rate": float(capped_total / raw_total) if raw_total > 0 else 0.0,
-            "normalization_success_rate": float(normalized_total / capped_total) if capped_total > 0 else 0.0,
-            "uniqueness_rate_post_normalization": float(unique_total / normalized_total) if normalized_total > 0 else 0.0,
-        },
         "merged": {
             "total_unique_urls": len(label_map),
             "malicious_unique": len(malicious),

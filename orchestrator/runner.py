@@ -15,12 +15,12 @@ import psycopg2
 import redis
 from psycopg2.extras import Json
 
-from action_layer.response_engine import execute_actions
-from configs.settings import settings
-from orchestrator.langgraph_state import OrchestratorState
-from orchestrator.langgraph_workflow import LangGraphOrchestrator
-from services.logging_service import get_service_logger, setup_logging
-from services.messaging_service import RabbitMQClient
+from email_security.action_layer.response_engine import execute_actions
+from email_security.configs.settings import settings
+from email_security.orchestrator.langgraph_state import OrchestratorState
+from email_security.orchestrator.langgraph_workflow import LangGraphOrchestrator
+from email_security.services.logging_service import get_service_logger, setup_logging
+from email_security.services.messaging_service import RabbitMQClient
 
 logger = get_service_logger("orchestrator_runner")
 
@@ -31,6 +31,7 @@ EXPECTED_AGENTS = {
     "attachment_agent",
     "sandbox_agent",
     "threat_intel_agent",
+    "user_behavior_agent",
 }
 
 
@@ -196,10 +197,10 @@ class OrchestratorWorker:
         self.messaging.consume(settings.results_queue, self._handle_result)
 
 
-def run() -> None:
+def main() -> None:
     setup_logging(settings.log_dir, settings.app_log_level, settings.log_format)
     OrchestratorWorker().run()
 
 
 if __name__ == "__main__":
-    run()
+    main()

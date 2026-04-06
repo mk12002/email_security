@@ -12,7 +12,7 @@ from typing import Any
 
 import numpy as np
 
-from services.logging_service import get_agent_logger
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("header_agent")
 

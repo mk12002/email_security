@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from agents.content_agent.feature_extractor import extract_features
-from agents.content_agent.inference import predict
-from agents.content_agent.model_loader import load_model
-from services.logging_service import get_agent_logger
+from email_security.agents.content_agent.feature_extractor import extract_features
+from email_security.agents.content_agent.inference import predict
+from email_security.agents.content_agent.model_loader import load_model
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
 

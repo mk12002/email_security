@@ -3,14 +3,53 @@
 from __future__ import annotations
 
 import pickle
+import warnings
+import logging
 from pathlib import Path
 from typing import Any
 
 import joblib
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = PROJECT_ROOT.parent
+logger = logging.getLogger("ml_runtime")
+
+
 def clamp(value: float) -> float:
     return max(0.0, min(1.0, round(float(value), 4)))
+
+
+def resolve_model_path(
+    model_path: str | Path,
+    required_files: tuple[str, ...] | None = None,
+) -> Path:
+    """Resolve model directories without relying on process CWD.
+
+    Resolution order is deterministic:
+    1) Absolute path as provided.
+    2) Under PROJECT_ROOT (email_security/...).
+    3) Under WORKSPACE_ROOT (../models/... in local dev layout).
+    4) Fallback to PROJECT_ROOT-relative target.
+    """
+    raw = Path(model_path)
+    if raw.is_absolute():
+        return raw
+
+    candidates = [PROJECT_ROOT / raw, WORKSPACE_ROOT / raw]
+
+    if required_files:
+        for candidate in candidates:
+            if not candidate.exists():
+                continue
+            if any((candidate / name).exists() for name in required_files):
+                return candidate
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    return PROJECT_ROOT / raw
 
 
 def load_model_bundle(model_path: str | Path) -> Any:
@@ -20,7 +59,10 @@ def load_model_bundle(model_path: str | Path) -> Any:
     - model.joblib / model.pkl containing a model or dict bundle
     - local transformer folder (config.json) for text classification
     """
-    path = Path(model_path)
+    path = resolve_model_path(
+        model_path,
+        required_files=("model.joblib", "model.pkl", "config.json"),
+    )
     if not path.exists():
         return None
 
@@ -29,11 +71,29 @@ def load_model_bundle(model_path: str | Path) -> Any:
         if not artifact.exists():
             continue
 
-        if artifact.suffix == ".joblib":
-            loaded = joblib.load(artifact)
-        else:
-            with open(artifact, "rb") as handle:
-                loaded = pickle.load(handle)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            if artifact.suffix == ".joblib":
+                loaded = joblib.load(artifact)
+            else:
+                with open(artifact, "rb") as handle:
+                    loaded = pickle.load(handle)
+
+        mismatch_messages: dict[str, int] = {}
+        for warning in caught:
+            category_name = getattr(warning.category, "__name__", "")
+            if category_name != "InconsistentVersionWarning":
+                continue
+            msg = str(warning.message)
+            mismatch_messages[msg] = mismatch_messages.get(msg, 0) + 1
+
+        for msg, count in mismatch_messages.items():
+            logger.warning(
+                "Model artifact loaded with sklearn version mismatch: %s (x%d) %s",
+                str(artifact),
+                count,
+                msg,
+            )
 
         if isinstance(loaded, dict) and "model" in loaded:
             loaded.setdefault("kind", "sklearn_bundle")

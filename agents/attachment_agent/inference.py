@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agents.ml_runtime import predict_with_model
-from services.logging_service import get_agent_logger
+from email_security.agents.ml_runtime import predict_with_model
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
 

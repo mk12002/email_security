@@ -6,7 +6,7 @@ Transforms raw email data into feature vectors for model inference.
 
 from typing import Any
 
-from services.logging_service import get_agent_logger
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("sandbox_agent")
 

@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = REPO_ROOT.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from preprocessing.sandbox_feature_contract import (
+from email_security.preprocessing.sandbox_feature_contract import (
     SANDBOX_FEATURE_VERSION,
     SANDBOX_NUMERIC_FEATURE_COLUMNS,
 )

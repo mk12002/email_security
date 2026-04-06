@@ -7,9 +7,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from configs.settings import settings
-from services.logging_service import get_agent_logger
-from services.messaging_service import RabbitMQClient
+from email_security.configs.settings import settings
+from email_security.services.logging_service import get_agent_logger
+from email_security.services.messaging_service import RabbitMQClient
 
 
 class BaseAgent(ABC):

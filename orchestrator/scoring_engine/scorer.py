@@ -6,18 +6,19 @@ Calculates weighted threat scores from individual agent risk assessments.
 
 from typing import Any
 
-from services.logging_service import get_service_logger
+from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("scoring_engine")
 
 # Default agent weights (sum to 1.0)
 DEFAULT_WEIGHTS = {
-    "header_agent": 0.17,
-    "content_agent": 0.23,
-    "url_agent": 0.23,
-    "attachment_agent": 0.17,
+    "header_agent": 0.15,
+    "content_agent": 0.20,
+    "url_agent": 0.20,
+    "attachment_agent": 0.15,
     "sandbox_agent": 0.10,
     "threat_intel_agent": 0.10,
+    "user_behavior_agent": 0.10,
 }
 
 

@@ -24,7 +24,7 @@ x-common-app-env: &common-app-env
   ATTACHMENT_VOLUME_DIR: /mnt/attachments
   QUARANTINE_API_URL: ${QUARANTINE_API_URL:-http://host.docker.internal:8091/quarantine}
   SOC_ALERT_API_URL: ${SOC_ALERT_API_URL:-http://host.docker.internal:8092/alerts}
-  IOC_DB_PATH: ${IOC_DB_PATH:-/app/data/ioc_store.db}
+  IOC_DB_PATH: ${IOC_DB_PATH:-/app/email_security/data/ioc_store.db}
   IOC_REFRESH_SECONDS: ${IOC_REFRESH_SECONDS:-300}
   SANDBOX_DETONATION_IMAGE: ${SANDBOX_DETONATION_IMAGE:-python:3.11-slim}
   SANDBOX_TIMEOUT_SECONDS: ${SANDBOX_TIMEOUT_SECONDS:-60}
@@ -34,6 +34,26 @@ x-common-app-env: &common-app-env
   SANDBOX_PIDS_LIMIT: ${SANDBOX_PIDS_LIMIT:-128}
   SANDBOX_MAX_DETONATIONS: ${SANDBOX_MAX_DETONATIONS:-5}
   SANDBOX_CLEANUP_STALE_SECONDS: ${SANDBOX_CLEANUP_STALE_SECONDS:-1800}
+  VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+  GOOGLE_SAFE_BROWSING_API_KEY: ${GOOGLE_SAFE_BROWSING_API_KEY:-}
+  OTX_API_KEY: ${OTX_API_KEY:-}
+  ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
+  ENABLE_VIRUSTOTAL_URL_LOOKUP: ${ENABLE_VIRUSTOTAL_URL_LOOKUP:-0}
+  ENABLE_GOOGLE_SAFE_BROWSING_LOOKUP: ${ENABLE_GOOGLE_SAFE_BROWSING_LOOKUP:-0}
+  ENABLE_OPENPHISH_LOOKUP: ${ENABLE_OPENPHISH_LOOKUP:-0}
+  ENABLE_URLHAUS_LOOKUP: ${ENABLE_URLHAUS_LOOKUP:-0}
+  ENABLE_OTX_LOOKUP: ${ENABLE_OTX_LOOKUP:-0}
+  ENABLE_ABUSEIPDB_LOOKUP: ${ENABLE_ABUSEIPDB_LOOKUP:-0}
+  ENABLE_MALWAREBAZAAR_LOOKUP: ${ENABLE_MALWAREBAZAAR_LOOKUP:-0}
+  ENABLE_VIRUSTOTAL_HASH_LOOKUP: ${ENABLE_VIRUSTOTAL_HASH_LOOKUP:-0}
+  EXTERNAL_LOOKUP_TIMEOUT_SECONDS: ${EXTERNAL_LOOKUP_TIMEOUT_SECONDS:-6}
+  EXTERNAL_LOOKUP_MAX_INDICATORS: ${EXTERNAL_LOOKUP_MAX_INDICATORS:-10}
+  OPENPHISH_FEED_URL: ${OPENPHISH_FEED_URL:-https://openphish.com/feed.txt}
+  OPENPHISH_CACHE_TTL_SECONDS: ${OPENPHISH_CACHE_TTL_SECONDS:-900}
+  URLHAUS_API_URL: ${URLHAUS_API_URL:-https://urlhaus-api.abuse.ch/v1/url/}
+  OTX_API_BASE_URL: ${OTX_API_BASE_URL:-https://otx.alienvault.com}
+  ABUSEIPDB_API_URL: ${ABUSEIPDB_API_URL:-https://api.abuseipdb.com/api/v2/check}
+  MALWAREBAZAAR_API_URL: ${MALWAREBAZAAR_API_URL:-https://mb-api.abuse.ch/api/v1/}
 
 services:
   api_service:
@@ -48,7 +68,7 @@ services:
       API_HOST: 0.0.0.0
       API_PORT: 8000
     volumes:
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
       - app_models:/app/models
       - attachments_data:/mnt/attachments
       - email_drop:/mnt/email_drop
@@ -68,7 +88,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-parser
-    command: ["python", "-m", "services.parser_worker"]
+    command: ["python", "-m", "email_security.services.parser_worker"]
     environment:
       <<: *common-app-env
       EMAIL_DROP_DIR: /mnt/email_drop
@@ -76,7 +96,7 @@ services:
     volumes:
       - attachments_data:/mnt/attachments
       - email_drop:/mnt/email_drop
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -89,7 +109,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-orchestrator
-    command: ["python", "-m", "orchestrator.runner"]
+    command: ["python", "-m", "email_security.orchestrator.runner"]
     environment:
       <<: *common-app-env
       AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
@@ -99,7 +119,7 @@ services:
       GARUDA_API_BASE_URL: ${GARUDA_API_BASE_URL:-http://garuda-agent:8088}
       GARUDA_TIMEOUT_SECONDS: ${GARUDA_TIMEOUT_SECONDS:-15}
     volumes:
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
       - attachments_data:/mnt/attachments
     depends_on:
       rabbitmq:
@@ -119,13 +139,14 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-header-agent
-    command: ["python", "-m", "agents.service_runner"]
+    command: ["python", "-m", "email_security.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: header_agent
     volumes:
+      - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -138,13 +159,14 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-content-agent
-    command: ["python", "-m", "agents.service_runner"]
+    command: ["python", "-m", "email_security.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: content_agent
     volumes:
+      - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -157,14 +179,14 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-url-agent
-    command: ["python", "-m", "agents.service_runner"]
+    command: ["python", "-m", "email_security.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: url_agent
-      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
     volumes:
+      - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -177,13 +199,14 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-attachment-agent
-    command: ["python", "-m", "agents.service_runner"]
+    command: ["python", "-m", "email_security.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: attachment_agent
     volumes:
+      - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -196,14 +219,15 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-sandbox-agent
-    command: ["python", "-m", "agents.service_runner"]
+    command: ["python", "-m", "email_security.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: sandbox_agent
     volumes:
+      - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
+      - app_logs:/app/email_security/logs
       - /var/run/docker.sock:/var/run/docker.sock
-      - app_logs:/app/logs
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -211,20 +235,47 @@ services:
       - email_security_net
     restart: unless-stopped
 
+  # NOTE:
+  # Sandbox dynamic detonation requires Docker daemon access.
+  # The docker socket is mounted for functional parity in non-production environments.
+  # For production, prefer an isolated detonation control plane.
+
   threat_intel_agent_service:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-threat-intel-agent
-    command: ["python", "-m", "agents.service_runner"]
+    command: ["python", "-m", "email_security.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: threat_intel_agent
     volumes:
+      - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
-      - ioc_data:/app/data
+      - ioc_data:/app/email_security/data
       - ../../datasets:/app/datasets:ro
-      - app_logs:/app/logs
+      - app_logs:/app/email_security/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    restart: unless-stopped
+
+  user_behavior_agent_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-user-behavior-agent
+    command: ["python", "-m", "email_security.agents.service_runner"]
+    environment:
+      <<: *common-app-env
+      AGENT_NAME: user_behavior_agent
+    volumes:
+      - ../../models:/app/models:ro
+      - ../../data:/app/data:ro
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/email_security/logs
     depends_on:
       rabbitmq:
         condition: service_healthy

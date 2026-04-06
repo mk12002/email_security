@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from agents.sandbox_agent.inference import predict
-from preprocessing.sandbox_feature_contract import SANDBOX_NUMERIC_FEATURE_COLUMNS
+from email_security.agents.sandbox_agent.inference import predict
+from email_security.preprocessing.sandbox_feature_contract import SANDBOX_NUMERIC_FEATURE_COLUMNS
 
 
 class _DummyModel:

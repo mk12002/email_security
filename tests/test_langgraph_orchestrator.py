@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from orchestrator.langgraph_workflow import LangGraphOrchestrator
+from email_security.orchestrator.langgraph_workflow import LangGraphOrchestrator
 
 
 def test_langgraph_orchestrator_produces_decision() -> None:

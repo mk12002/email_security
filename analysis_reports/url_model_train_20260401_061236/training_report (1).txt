@@ -1,0 +1,20 @@
+URL Model Training Report
+========================
+
+Timestamp (UTC): 20260401_061236
+Dataset: /home/LabsKraft/new_work/datasets_processed/url_training.csv
+Rows used: 150000
+Selected candidate: hgb_wide
+Decision threshold: 0.4650
+
+Test metrics
+------------
+Accuracy:          0.9492
+Balanced Accuracy: 0.9492
+Precision:         0.9390
+Recall:            0.9608
+F1:                0.9498
+ROC AUC:           0.9903
+PR AUC:            0.9907
+
+Detailed summary: /home/LabsKraft/new_work/email_security/analysis_reports/url_model_train_20260401_061236/summary.json

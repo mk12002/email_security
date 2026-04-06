@@ -5,26 +5,36 @@ Exposes health check and email analysis endpoints.
 This service will be extended in later phases with full agent orchestration.
 """
 
+import base64
+import binascii
+import hashlib
+import ipaddress
+import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
+from urllib.parse import urlparse
 
 from fastapi import FastAPI
 from fastapi import File, HTTPException, UploadFile
 from loguru import logger
 import psycopg2
 
-from api.schemas import (
+from email_security.api.schemas import (
     EmailAnalysisRequest,
     EmailAnalysisResponse,
     HealthResponse,
 )
-from configs.settings import settings
-from services.email_parser import EmailParserService
-from services.logging_service import setup_logging
-from services.messaging_service import RabbitMQClient
+from email_security.configs.settings import settings
+from email_security.services.email_parser import EmailParserService
+from email_security.services.logging_service import setup_logging
+from email_security.services.messaging_service import RabbitMQClient
+
+
+URL_REGEX = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
+IP_REGEX = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +78,123 @@ app = FastAPI(
 )
 
 
+def _safe_filename(filename: str) -> str:
+    candidate = (filename or "attachment.bin").strip()
+    if not candidate:
+        candidate = "attachment.bin"
+    return re.sub(r"[^A-Za-z0-9._-]", "_", candidate)
+
+
+def _decode_base64_content(payload: str) -> bytes:
+    value = (payload or "").strip()
+    if value.lower().startswith("data:") and "," in value:
+        value = value.split(",", 1)[1]
+    try:
+        return base64.b64decode(value, validate=True)
+    except binascii.Error:
+        # Some clients omit base64 padding.
+        padded = value + ("=" * (-len(value) % 4))
+        return base64.b64decode(padded)
+
+
+def _extract_urls_from_text(text: str) -> list[str]:
+    if not text:
+        return []
+    return URL_REGEX.findall(text)
+
+
+def _extract_domains(urls: list[str]) -> list[str]:
+    domains = set()
+    for url in urls:
+        candidate = (url or "").strip()
+        if not candidate:
+            continue
+        if "://" not in candidate:
+            candidate = f"https://{candidate}"
+        try:
+            host = (urlparse(candidate).hostname or "").lower()
+        except Exception:
+            continue
+        if not host:
+            continue
+        try:
+            ipaddress.ip_address(host)
+            continue
+        except ValueError:
+            domains.add(host)
+    return sorted(domains)
+
+
+def _extract_ips(content: str, urls: list[str]) -> list[str]:
+    found = set(IP_REGEX.findall(content or ""))
+    for url in urls:
+        candidate = (url or "").strip()
+        if not candidate:
+            continue
+        if "://" not in candidate:
+            candidate = f"https://{candidate}"
+        try:
+            host = urlparse(candidate).hostname
+            if not host:
+                continue
+            ipaddress.ip_address(host)
+            found.add(host)
+        except ValueError:
+            continue
+        except Exception:
+            continue
+    return sorted(found)
+
+
+def _build_attachment_payload(
+    analysis_id: str,
+    attachments: list,
+) -> tuple[list[dict[str, str | int]], list[str]]:
+    persisted: list[dict[str, str | int]] = []
+    hashes: list[str] = []
+
+    storage_dir = Path(settings.attachment_volume_dir)
+    storage_dir.mkdir(parents=True, exist_ok=True)
+
+    for item in attachments:
+        attachment_id = str(uuid.uuid4())
+        safe_name = _safe_filename(item.filename)
+        size_bytes = int(item.size_bytes or 0)
+        sha256 = ""
+        path = ""
+
+        if item.content_base64:
+            try:
+                blob = _decode_base64_content(item.content_base64)
+                size_bytes = len(blob)
+                sha256 = hashlib.sha256(blob).hexdigest()
+                target_name = f"{analysis_id}_{attachment_id}_{safe_name}"
+                target_path = storage_dir / target_name
+                target_path.write_bytes(blob)
+                path = str(target_path)
+                hashes.append(sha256)
+            except Exception as exc:
+                logger.warning(
+                    "Attachment decode/persist failed",
+                    analysis_id=analysis_id,
+                    filename=item.filename,
+                    error=str(exc),
+                )
+
+        persisted.append(
+            {
+                "attachment_id": attachment_id,
+                "filename": item.filename,
+                "content_type": item.content_type,
+                "size_bytes": size_bytes,
+                "sha256": sha256,
+                "path": path,
+            }
+        )
+
+    return persisted, hashes
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -92,12 +219,27 @@ async def analyze_email(request: EmailAnalysisRequest):
     """
     Accept an email for phishing analysis.
 
-    In later phases this endpoint will dispatch email data to all analysis
-    agents in parallel and return aggregated threat scores.
-
-    Currently returns an acknowledgement placeholder.
+    This endpoint normalizes payload content, persists attachments, extracts
+    IOC candidates, and publishes a NewEmailEvent for downstream agents.
+    Final reports are retrieved asynchronously via GET /reports/{analysis_id}.
     """
     analysis_id = str(uuid.uuid4())
+    body_plain = request.body or ""
+
+    request_urls = [url.strip() for url in request.urls if str(url).strip()]
+    discovered_urls = _extract_urls_from_text(body_plain)
+    all_urls = sorted(set(request_urls + discovered_urls))
+
+    attachments, attachment_hashes = _build_attachment_payload(
+        analysis_id=analysis_id,
+        attachments=request.attachments,
+    )
+
+    ioc_domains = _extract_domains(all_urls)
+    ioc_ips = _extract_ips(
+        content=f"{request.headers.subject}\n{body_plain}",
+        urls=all_urls,
+    )
 
     payload = {
         "event_type": "NewEmailEvent",
@@ -114,25 +256,15 @@ async def analyze_email(request: EmailAnalysisRequest):
             "raw": {},
         },
         "body": {
-            "plain": request.body,
+            "plain": body_plain,
             "html": "",
         },
-        "urls": request.urls,
-        "attachments": [
-            {
-                "attachment_id": str(uuid.uuid4()),
-                "filename": item.filename,
-                "content_type": item.content_type,
-                "size_bytes": item.size_bytes,
-                "sha256": "",
-                "path": "",
-            }
-            for item in request.attachments
-        ],
+        "urls": all_urls,
+        "attachments": attachments,
         "iocs": {
-            "domains": [],
-            "ips": [],
-            "hashes": [],
+            "domains": ioc_domains,
+            "ips": ioc_ips,
+            "hashes": attachment_hashes,
         },
     }
 
@@ -146,8 +278,11 @@ async def analyze_email(request: EmailAnalysisRequest):
         analysis_id=analysis_id,
         sender=request.headers.sender,
         subject=request.headers.subject,
-        url_count=len(request.urls),
-        attachment_count=len(request.attachments),
+        url_count=len(all_urls),
+        attachment_count=len(attachments),
+        ioc_domain_count=len(ioc_domains),
+        ioc_ip_count=len(ioc_ips),
+        attachment_hash_count=len(attachment_hashes),
     )
 
     return EmailAnalysisResponse(

@@ -6,10 +6,10 @@ Aggregates outputs from all agents and makes the final threat determination.
 
 from typing import Any
 
-from orchestrator.llm_reasoner import generate_reasoning
-from orchestrator.scoring_engine import calculate_threat_score
-from orchestrator.threat_correlation import correlate_threats
-from services.logging_service import get_service_logger
+from email_security.orchestrator.llm_reasoner import generate_reasoning
+from email_security.orchestrator.scoring_engine import calculate_threat_score
+from email_security.orchestrator.threat_correlation import correlate_threats
+from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("decision_engine")
 

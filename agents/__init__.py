@@ -9,7 +9,7 @@ import importlib
 
 def _get_agent_func(module_name: str):
     def wrapper(*args, **kwargs):
-        module = importlib.import_module(f"agents.{module_name}")
+        module = importlib.import_module(f"email_security.agents.{module_name}")
         return getattr(module, "analyze")(*args, **kwargs)
     return wrapper
 
@@ -20,6 +20,7 @@ AGENT_REGISTRY = {
     "attachment_agent": _get_agent_func("attachment_agent"),
     "sandbox_agent": _get_agent_func("sandbox_agent"),
     "threat_intel_agent": _get_agent_func("threat_intel_agent"),
+    "user_behavior_agent": _get_agent_func("user_behavior_agent"),
 }
 
 __all__ = ["AGENT_REGISTRY"]

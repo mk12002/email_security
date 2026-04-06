@@ -8,10 +8,17 @@ import sqlite3
 import time
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
-from configs.settings import settings
-from services.logging_service import get_agent_logger
+import httpx
+
+from email_security.configs import settings
+from email_security.services.logging_service import get_agent_logger
+
+# Import the ML Pipeline components
+from email_security.agents.threat_intel_agent.feature_extractor import extract_features
+from email_security.agents.threat_intel_agent.model_loader import load_model
+from email_security.agents.threat_intel_agent.inference import predict
 
 logger = get_agent_logger("threat_intel_agent")
 
@@ -224,18 +231,36 @@ def _read_txt_iocs(file_path: Path) -> list[tuple[str, str, str]]:
 
 
 def _collect_iocs_from_feeds() -> list[tuple[str, str, str]]:
+    """Ingest IOCs from the cleaned, unified dataset rather than raw feeds."""
     rows: list[tuple[str, str, str]] = []
+    
+    # Locate the unified processed CSV
+    unified_path = Path("datasets_processed/threat_intel/unified_ioc_reference.csv")
+    if not unified_path.is_absolute():
+        from email_security.configs.settings import PROJECT_ROOT
+        unified_path = PROJECT_ROOT / unified_path
 
-    for root in [IOC_SOURCE_ROOT, URL_FALLBACK_ROOT]:
-        if not root.exists():
-            continue
-        for csv_file in root.rglob("*.csv"):
-            rows.extend(_read_csv_iocs(csv_file))
-        for json_file in root.rglob("*.json"):
-            rows.extend(_read_json_iocs(json_file))
-        for txt_file in root.rglob("*.txt"):
-            rows.extend(_read_txt_iocs(txt_file))
+    if not unified_path.exists():
+        logger.warning(f"Unified IOC reference not found at {unified_path}. Run preprocessing first.")
+        return rows
 
+    try:
+        with unified_path.open("r", encoding="utf-8", errors="ignore") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                indicator = (row.get("indicator") or "").strip().lower()
+                ioc_type = (row.get("ioc_type") or "").strip().lower()
+                source = (row.get("source") or "unified_reference").strip()
+                
+                if not indicator or not ioc_type:
+                    continue
+                    
+                rows.append((indicator, ioc_type, source))
+                # Note: No need to derive domains from URLs here because the 
+                # preprocessing built-in logic already derived and saved them explicitly.
+    except Exception as e:
+        logger.error(f"Failed to read unified IOC reference: {e}")
+        
     return rows
 
 
@@ -266,27 +291,267 @@ def _refresh_ioc_store_if_needed() -> int:
     return total
 
 
+def _request_timeout() -> float:
+    return max(1.0, float(settings.external_lookup_timeout_seconds))
+
+
+def _limit_indicators(values: list[str]) -> list[str]:
+    max_items = max(1, int(settings.external_lookup_max_indicators))
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        item = str(value).strip().lower()
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+        if len(deduped) >= max_items:
+            break
+    return deduped
+
+
+def _otx_indicator_type(indicator: str) -> str:
+    kind = _ioc_type_for(indicator)
+    if kind == "ip":
+        return "IPv4"
+    if kind == "hash":
+        return "file"
+    return "domain"
+
+
+def _otx_score(candidates: list[str]) -> tuple[float, list[str]]:
+    if not settings.enable_otx_lookup:
+        return 0.0, []
+    if not settings.otx_api_key:
+        return 0.0, ["otx_not_configured"]
+
+    base_url = str(settings.otx_api_base_url).rstrip("/")
+    headers = {"X-OTX-API-KEY": settings.otx_api_key}
+    scores: list[float] = []
+    indicators: list[str] = []
+
+    for indicator in _limit_indicators(candidates):
+        indicator_type = _otx_indicator_type(indicator)
+        endpoint = f"{base_url}/api/v1/indicators/{indicator_type}/{quote(indicator, safe='')}/general"
+        try:
+            with httpx.Client(timeout=_request_timeout()) as client:
+                response = client.get(endpoint, headers=headers)
+                response.raise_for_status()
+                payload = response.json()
+            pulse_count = int((payload.get("pulse_info", {}) or {}).get("count", 0) or 0)
+            if pulse_count > 0:
+                scores.append(min(1.0, 0.3 + (0.1 * pulse_count)))
+                indicators.append(f"otx_hit:{indicator_type.lower()}:{indicator}")
+        except Exception:
+            indicators.append("otx_unavailable")
+            break
+
+    if not scores:
+        return 0.0, indicators
+    return _clamp(max(scores)), indicators
+
+
+def _abuseipdb_score(ips: list[str]) -> tuple[float, list[str]]:
+    if not settings.enable_abuseipdb_lookup:
+        return 0.0, []
+    if not settings.abuseipdb_api_key:
+        return 0.0, ["abuseipdb_not_configured"]
+
+    api_url = str(settings.abuseipdb_api_url).strip()
+    if not api_url:
+        return 0.0, ["abuseipdb_not_configured"]
+
+    headers = {"Key": settings.abuseipdb_api_key, "Accept": "application/json"}
+    scores: list[float] = []
+    indicators: list[str] = []
+
+    for ip in _limit_indicators(ips):
+        params = {"ipAddress": ip, "maxAgeInDays": "90"}
+        try:
+            with httpx.Client(timeout=_request_timeout()) as client:
+                response = client.get(api_url, headers=headers, params=params)
+                response.raise_for_status()
+                payload = response.json().get("data", {}) or {}
+            abuse_score = float(payload.get("abuseConfidenceScore", 0.0) or 0.0)
+            normalized = _clamp(abuse_score / 100.0)
+            if normalized > 0.0:
+                scores.append(normalized)
+            if abuse_score >= 25.0:
+                indicators.append(f"abuseipdb_high_confidence:{ip}:{int(abuse_score)}")
+        except Exception:
+            indicators.append("abuseipdb_unavailable")
+            break
+
+    if not scores:
+        return 0.0, indicators
+    return _clamp(max(scores)), indicators
+
+
+def _malwarebazaar_score(hashes: list[str]) -> tuple[float, list[str]]:
+    if not settings.enable_malwarebazaar_lookup:
+        return 0.0, []
+
+    api_url = str(settings.malwarebazaar_api_url).strip()
+    if not api_url:
+        return 0.0, ["malwarebazaar_not_configured"]
+
+    scores: list[float] = []
+    indicators: list[str] = []
+
+    for file_hash in _limit_indicators(hashes):
+        body = {"query": "get_info", "hash": file_hash}
+        try:
+            with httpx.Client(timeout=_request_timeout()) as client:
+                response = client.post(api_url, data=body)
+                response.raise_for_status()
+                payload = response.json()
+
+            status = str(payload.get("query_status", "")).lower()
+            if status == "ok" and payload.get("data"):
+                scores.append(0.95)
+                indicators.append(f"malwarebazaar_hit:{file_hash[:16]}")
+        except Exception:
+            indicators.append("malwarebazaar_unavailable")
+            break
+
+    if not scores:
+        return 0.0, indicators
+    return _clamp(max(scores)), indicators
+
+
+def _virustotal_hash_score(hashes: list[str]) -> tuple[float, list[str]]:
+    if not settings.enable_virustotal_hash_lookup:
+        return 0.0, []
+    if not settings.virustotal_api_key:
+        return 0.0, ["virustotal_hash_not_configured"]
+
+    headers = {"x-apikey": settings.virustotal_api_key}
+    scores: list[float] = []
+    indicators: list[str] = []
+
+    for file_hash in _limit_indicators(hashes):
+        endpoint = f"https://www.virustotal.com/api/v3/files/{quote(file_hash, safe='')}"
+        try:
+            with httpx.Client(timeout=_request_timeout()) as client:
+                response = client.get(endpoint, headers=headers)
+                response.raise_for_status()
+                stats = response.json().get("data", {}).get("attributes", {}).get("last_analysis_stats", {})
+            malicious = float(stats.get("malicious", 0.0) or 0.0)
+            suspicious = float(stats.get("suspicious", 0.0) or 0.0)
+            total = max(1.0, sum(float(v) for v in stats.values()))
+            score = min(1.0, (malicious + (0.5 * suspicious)) / total)
+            if score > 0.0:
+                scores.append(score)
+                indicators.append(
+                    f"virustotal_hash_hit:{file_hash[:16]}:{int(malicious)}:{int(suspicious)}"
+                )
+        except Exception:
+            indicators.append("virustotal_hash_unavailable")
+            break
+
+    if not scores:
+        return 0.0, indicators
+    return _clamp(max(scores)), indicators
+
+
+def _external_enrichment_score(iocs: dict[str, list[str]]) -> tuple[float, list[str]]:
+    domains = [str(item) for item in (iocs.get("domains") or [])]
+    ips = [str(item) for item in (iocs.get("ips") or [])]
+    hashes = [str(item) for item in (iocs.get("hashes") or [])]
+    provider_scores: list[float] = []
+    indicators: list[str] = []
+
+    otx_score, otx_indicators = _otx_score(domains + ips + hashes)
+    if otx_score > 0.0:
+        provider_scores.append(otx_score)
+    indicators.extend(otx_indicators)
+
+    abuseipdb_score, abuseipdb_indicators = _abuseipdb_score(ips)
+    if abuseipdb_score > 0.0:
+        provider_scores.append(abuseipdb_score)
+    indicators.extend(abuseipdb_indicators)
+
+    malwarebazaar_score, malwarebazaar_indicators = _malwarebazaar_score(hashes)
+    if malwarebazaar_score > 0.0:
+        provider_scores.append(malwarebazaar_score)
+    indicators.extend(malwarebazaar_indicators)
+
+    vt_hash_score, vt_hash_indicators = _virustotal_hash_score(hashes)
+    if vt_hash_score > 0.0:
+        provider_scores.append(vt_hash_score)
+    indicators.extend(vt_hash_indicators)
+
+    if not provider_scores:
+        return 0.0, indicators
+    return _clamp(max(provider_scores)), indicators
+
+
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting analysis", agent="threat_intel_agent")
+    
+    # Ensure offline DB is fresh and loaded
     ioc_count = _refresh_ioc_store_if_needed()
+    
+    # Aggregate candidates
     iocs = data.get("iocs", {}) or {}
     candidates = []
     candidates.extend(iocs.get("domains", []) or [])
     candidates.extend(iocs.get("ips", []) or [])
     candidates.extend(iocs.get("hashes", []) or [])
 
+    # Fast offline SQLite lookup
     matches = _STORE.lookup(candidates)
-    risk = min(1.0, 0.25 * len(matches))
 
+    # ML Inference Pipeline
+    agent_model = load_model()
+    features = extract_features(data, matches, _STORE)
+    prediction = predict(features, agent_model)
+    
+    # Build explanation indicators
+    if matches:
+        # Prefix with highest risk matching indicator (typically limit to 10 for log brevity)
+        report_matches = [f"ioc_match:{m}" for m in matches[:10]]
+    else:
+        report_matches = ["no_local_ioc_hits"]
+
+    external_score, external_indicators = _external_enrichment_score(iocs)
+    total_candidates = len([item for item in candidates if str(item).strip()])
+    local_match_score = _clamp(len(matches) / max(1, total_candidates))
+
+    ml_risk = float(prediction.get("risk_score", 0.0) or 0.0)
+    ml_confidence = float(prediction.get("confidence", 0.0) or 0.0)
+    fused_risk = _clamp((0.55 * ml_risk) + (0.3 * local_match_score) + (0.15 * external_score))
+    confidence_floor = 0.55 + (0.2 if matches else 0.0) + (0.1 if external_score > 0.0 else 0.0)
+    fused_confidence = _clamp(max(ml_confidence, confidence_floor))
+
+    meta_indicators = [
+        f"local_match_score={local_match_score}",
+        f"external_enrichment_score={external_score}",
+    ]
+    if any(
+        (
+            settings.enable_otx_lookup,
+            settings.enable_abuseipdb_lookup,
+            settings.enable_malwarebazaar_lookup,
+            settings.enable_virustotal_hash_lookup,
+        )
+    ):
+        meta_indicators.append("external_threat_enrichment_enabled")
+    else:
+        meta_indicators.append("external_threat_enrichment_disabled")
+
+    # Incorporate context into final response
     result = {
         "agent_name": "threat_intel_agent",
-        "risk_score": _clamp(risk),
-        "confidence": _clamp(0.4 if ioc_count == 0 else 0.85),
-        "indicators": [f"ioc_match:{entry}" for entry in matches[:20]] or ["no_local_ioc_hits"],
+        "risk_score": fused_risk,
+        "confidence": fused_confidence,
+        "indicators": (report_matches + meta_indicators + external_indicators)[:20],
     }
+    
     logger.info(
         "Analysis complete",
         risk_score=result["risk_score"],
+        confidence=result["confidence"],
         matches=len(matches),
         ioc_count=ioc_count,
     )

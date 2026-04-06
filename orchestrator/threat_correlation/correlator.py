@@ -6,7 +6,7 @@ Correlates findings across agents to identify coordinated attack patterns.
 
 from typing import Any
 
-from services.logging_service import get_service_logger
+from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("threat_correlation")
 

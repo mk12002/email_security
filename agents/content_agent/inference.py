@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from services.logging_service import get_agent_logger
+from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
 

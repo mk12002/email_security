@@ -8,8 +8,8 @@ from typing import Any
 
 from openai import AzureOpenAI
 
-from configs.settings import settings
-from services.logging_service import get_service_logger
+from email_security.configs.settings import settings
+from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("llm_reasoner")
 

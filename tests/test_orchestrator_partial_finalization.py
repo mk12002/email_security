@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from configs.settings import settings
-from orchestrator.runner import EXPECTED_AGENTS, OrchestratorWorker
+from email_security.configs.settings import settings
+from email_security.orchestrator.runner import EXPECTED_AGENTS, OrchestratorWorker
 
 
 def _mk_result(agent_name: str) -> dict[str, object]:

@@ -1,0 +1,4 @@
+﻿D:\Code_stuff\email_stuff\datasets_processed_tmp
+D:\Code_stuff\email_stuff\.pytest_cache
+D:\Code_stuff\email_stuff\email_security\.pytest_cache
+D:\Code_stuff\email_stuff\email_security\__pycache__

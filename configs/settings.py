@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     api_host: str = Field(default="0.0.0.0", description="API server host")
     api_port: int = Field(default=8000, description="API server port")
     api_workers: int = Field(default=4, description="Number of API workers")
+    api_auth_enabled: bool = Field(
+        default=False,
+        description="Require X-API-Key header for protected API endpoints",
+    )
+    api_auth_key: Optional[str] = Field(
+        default=None,
+        description="Shared API key used when API auth is enabled",
+    )
 
     # --- RabbitMQ ---
     rabbitmq_host: str = Field(default="rabbitmq", description="RabbitMQ host")
@@ -50,6 +58,14 @@ class Settings(BaseSettings):
     )
     results_queue: str = Field(
         default="email.results.queue", description="Queue for agent results"
+    )
+    rabbitmq_dead_letter_exchange: str = Field(
+        default="email.dead.letter.exchange",
+        description="Dead-letter exchange for failed message processing",
+    )
+    rabbitmq_dead_letter_queue: str = Field(
+        default="email.dead.letter.queue",
+        description="Dead-letter queue for failed messages",
     )
 
     # --- Parser / Ingestion ---
@@ -239,6 +255,10 @@ class Settings(BaseSettings):
         default=None,
         description="Endpoint URL for SOC alert dispatch",
     )
+    action_simulated_mode: bool = Field(
+        default=True,
+        description="If true, action layer logs simulated responses instead of calling external endpoints",
+    )
 
     # --- Threat Intel Local IOC DB ---
     ioc_db_path: str = Field(
@@ -264,6 +284,10 @@ class Settings(BaseSettings):
     )
     sandbox_timeout_seconds: int = Field(
         default=60, description="Max runtime for each sandbox detonation"
+    )
+    sandbox_local_docker_enabled: bool = Field(
+        default=False,
+        description="Allow sandbox agent to run local Docker detonations from this host",
     )
     sandbox_allow_network: bool = Field(
         default=False, description="Allow outbound network from detonation containers"
@@ -314,6 +338,21 @@ class Settings(BaseSettings):
         if self.is_production and self.app_debug:
             warnings.append(
                 "WARNING: APP_DEBUG is enabled in production. Set APP_DEBUG=false."
+            )
+        if self.is_production and (not self.api_auth_enabled or not self.api_auth_key):
+            warnings.append(
+                "WARNING: API auth is disabled or missing API_AUTH_KEY in production. "
+                "Enable API_AUTH_ENABLED=true and set API_AUTH_KEY."
+            )
+        if self.is_production and self.action_simulated_mode:
+            warnings.append(
+                "WARNING: ACTION_SIMULATED_MODE is enabled in production. "
+                "Set ACTION_SIMULATED_MODE=false for live action dispatch."
+            )
+        if self.is_production and self.sandbox_local_docker_enabled:
+            warnings.append(
+                "WARNING: SANDBOX_LOCAL_DOCKER_ENABLED is true in production. "
+                "Prefer isolated detonation executor hosts/VMs."
             )
         return warnings
 

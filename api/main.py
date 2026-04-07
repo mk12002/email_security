@@ -19,7 +19,7 @@ import tempfile
 from urllib.parse import urlparse
 
 from fastapi import FastAPI
-from fastapi import File, HTTPException, UploadFile
+from fastapi import Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from loguru import logger
 import psycopg2
@@ -93,6 +93,19 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+def _require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    """Enforce shared-key auth when enabled via configuration."""
+    if not settings.api_auth_enabled:
+        return
+
+    configured = (settings.api_auth_key or "").strip()
+    provided = (x_api_key or "").strip()
+    if not configured:
+        raise HTTPException(status_code=503, detail="API auth is enabled but API_AUTH_KEY is not configured")
+    if provided != configured:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 def _safe_filename(filename: str) -> str:
@@ -432,13 +445,13 @@ async def soc_dashboard():
 
 
 @app.get("/soc/overview", tags=["SOC"])
-async def soc_overview():
+async def soc_overview(_auth: None = Depends(_require_api_key)):
         """Dashboard backing API for queue health, verdicts, and response actions."""
         return _build_soc_overview()
 
 
 @app.post("/ops/garuda/process-retries", tags=["Operations"])
-async def process_garuda_retry_queue(max_items: int = 25):
+async def process_garuda_retry_queue(max_items: int = 25, _auth: None = Depends(_require_api_key)):
         """Process pending Garuda retries and return reconciliation stats."""
         from email_security.garuda_integration.retry_queue import process_garuda_retries
 
@@ -446,7 +459,7 @@ async def process_garuda_retry_queue(max_items: int = 25):
 
 
 @app.get("/ops/threat-intel/status", tags=["Operations"])
-async def threat_intel_status():
+async def threat_intel_status(_auth: None = Depends(_require_api_key)):
         """Return IOC store lifecycle health and staleness information."""
         from email_security.agents.threat_intel_agent.agent import get_ioc_store_status
 
@@ -454,7 +467,7 @@ async def threat_intel_status():
 
 
 @app.post("/ops/threat-intel/refresh", tags=["Operations"])
-async def threat_intel_refresh(force: bool = False):
+async def threat_intel_refresh(force: bool = False, _auth: None = Depends(_require_api_key)):
         """Trigger IOC feed refresh lifecycle job now."""
         from email_security.agents.threat_intel_agent.agent import refresh_ioc_store
 
@@ -466,7 +479,7 @@ async def threat_intel_refresh(force: bool = False):
     response_model=EmailAnalysisResponse,
     tags=["Analysis"],
 )
-async def analyze_email(request: EmailAnalysisRequest):
+async def analyze_email(request: EmailAnalysisRequest, _auth: None = Depends(_require_api_key)):
     """
     Accept an email for phishing analysis.
 
@@ -548,7 +561,7 @@ async def analyze_email(request: EmailAnalysisRequest):
 
 
 @app.post("/ingest-raw-email", response_model=EmailAnalysisResponse, tags=["Analysis"])
-async def ingest_raw_email(file: UploadFile = File(...)):
+async def ingest_raw_email(file: UploadFile = File(...), _auth: None = Depends(_require_api_key)):
     """Accept raw .eml/.txt file, parse it fully, and publish NewEmailEvent."""
     suffix = Path(file.filename or "email.eml").suffix.lower()
     parser = EmailParserService()
@@ -582,7 +595,7 @@ async def ingest_raw_email(file: UploadFile = File(...)):
 
 
 @app.get("/reports/{analysis_id}", tags=["Analysis"])
-async def get_report(analysis_id: str):
+async def get_report(analysis_id: str, _auth: None = Depends(_require_api_key)):
     """Return final orchestrator report for an analysis id."""
     try:
         with psycopg2.connect(settings.database_url) as conn:

@@ -36,8 +36,37 @@ class ResponseEngine:
         self.azure_openai_deployment = settings.azure_openai_deployment
         self.azure_openai_api_version = settings.azure_openai_api_version
         
-        # Simulated mode flag. Since we don't have external API access, this is always True for now.
-        self.simulated_mode = True
+        # Simulated mode defaults to safe behavior unless explicitly disabled.
+        self.simulated_mode = bool(settings.action_simulated_mode)
+
+    @staticmethod
+    def _iter_agent_risks(agent_results: Any) -> list[tuple[str, float]]:
+        """Normalize heterogeneous agent_results payloads into (agent_name, risk_score)."""
+        normalized: list[tuple[str, float]] = []
+
+        if isinstance(agent_results, dict):
+            for agent_name, result in agent_results.items():
+                if not isinstance(result, dict):
+                    continue
+                try:
+                    risk = float(result.get("risk_score", 0.0) or 0.0)
+                except Exception:
+                    risk = 0.0
+                normalized.append((str(agent_name), risk))
+            return normalized
+
+        if isinstance(agent_results, list):
+            for entry in agent_results:
+                if not isinstance(entry, dict):
+                    continue
+                agent_name = str(entry.get("agent_name") or entry.get("agent") or "unknown_agent")
+                try:
+                    risk = float(entry.get("risk_score", 0.0) or 0.0)
+                except Exception:
+                    risk = 0.0
+                normalized.append((agent_name, risk))
+
+        return normalized
 
     def _generate_ai_response_summary(self, decision: dict[str, Any]) -> str:
         """
@@ -62,16 +91,9 @@ class ResponseEngine:
         if not reasons:
             # Try to build reasons from the decision payload
             reasons = [f"Verdict is {verdict} with a risk score of {score:.2f}"]
-            agent_results = decision.get("agent_results", {})
-            if isinstance(agent_results, dict):
-                for agent, result in agent_results.items():
-                    if isinstance(result, dict) and result.get("risk_score", 0) > 0.6:
-                        reasons.append(f"{agent} reported high risk ({result.get('risk_score', 0):.2f})")
-            elif isinstance(agent_results, list):
-                for res in agent_results:
-                    if isinstance(res, dict) and res.get("risk_score", 0) > 0.6:
-                        agent_name = res.get("agent", "Unknown agent")
-                        reasons.append(f"{agent_name} reported high risk ({res.get('risk_score', 0):.2f})")
+            for agent_name, risk in self._iter_agent_risks(decision.get("agent_results", {})):
+                if risk > 0.6:
+                    reasons.append(f"{agent_name} reported high risk ({risk:.2f})")
 
         payload = {
             "analysis_id": analysis_id,

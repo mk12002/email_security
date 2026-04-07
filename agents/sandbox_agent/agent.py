@@ -550,6 +550,30 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     behavior_summary: dict[str, Any] = {}
     model = load_model()
 
+    if not bool(settings.sandbox_local_docker_enabled):
+        indicators.append("sandbox_local_docker_disabled")
+        logger.info(
+            "Sandbox local Docker detonation disabled; applying static fallback scoring",
+            setting="sandbox_local_docker_enabled",
+        )
+        for attachment in attachments[:5]:
+            filename = str(attachment.get("filename") or "").lower()
+            if any(token in filename for token in ["invoice", "payment", "urgent", "update"]):
+                risk += 0.08
+                indicators.append(f"suspicious_attachment_name:{filename}")
+
+        final_risk = _clamp(risk)
+        result = {
+            "agent_name": "sandbox_agent",
+            "risk_score": final_risk,
+            "behavior_risk_score": final_risk,
+            "confidence": _clamp(0.45),
+            "indicators": indicators[:30],
+            "behavior_summary": behavior_summary,
+        }
+        logger.info("Analysis complete", risk_score=result["risk_score"])
+        return result
+
     try:
         docker_client = docker.from_env()
         _cleanup_stale_detonation_containers(

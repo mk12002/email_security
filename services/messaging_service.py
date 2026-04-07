@@ -40,7 +40,27 @@ class RabbitMQClient:
         )
         self._connection = pika.BlockingConnection(parameters)
         self._channel = self._connection.channel()
+        self._declare_dead_letter_topology()
         logger.info("RabbitMQ connected", host=settings.rabbitmq_host, port=settings.rabbitmq_port)
+
+    def _declare_dead_letter_topology(self) -> None:
+        self.channel.exchange_declare(
+            exchange=settings.rabbitmq_dead_letter_exchange,
+            exchange_type="direct",
+            durable=True,
+        )
+        self.channel.queue_declare(queue=settings.rabbitmq_dead_letter_queue, durable=True)
+        self.channel.queue_bind(
+            queue=settings.rabbitmq_dead_letter_queue,
+            exchange=settings.rabbitmq_dead_letter_exchange,
+            routing_key=settings.rabbitmq_dead_letter_queue,
+        )
+
+    def _queue_arguments(self) -> dict[str, str]:
+        return {
+            "x-dead-letter-exchange": settings.rabbitmq_dead_letter_exchange,
+            "x-dead-letter-routing-key": settings.rabbitmq_dead_letter_queue,
+        }
 
     def close(self) -> None:
         if self._connection and self._connection.is_open:
@@ -53,12 +73,12 @@ class RabbitMQClient:
             exchange_type="fanout",
             durable=True,
         )
-        self.channel.queue_declare(queue=queue_name, durable=True)
+        self.channel.queue_declare(queue=queue_name, durable=True, arguments=self._queue_arguments())
         self.channel.queue_bind(queue=queue_name, exchange=settings.new_email_exchange)
 
     def declare_results_queue(self, queue_name: str | None = None) -> str:
         queue_name = queue_name or settings.results_queue
-        self.channel.queue_declare(queue=queue_name, durable=True)
+        self.channel.queue_declare(queue=queue_name, durable=True, arguments=self._queue_arguments())
         return queue_name
 
     def publish_new_email(self, payload: dict[str, Any]) -> None:
@@ -75,7 +95,7 @@ class RabbitMQClient:
         )
 
     def publish_to_queue(self, queue_name: str, payload: dict[str, Any]) -> None:
-        self.channel.queue_declare(queue=queue_name, durable=True)
+        self.channel.queue_declare(queue=queue_name, durable=True, arguments=self._queue_arguments())
         self.channel.basic_publish(
             exchange="",
             routing_key=queue_name,
@@ -89,7 +109,7 @@ class RabbitMQClient:
         callback: Callable[[dict[str, Any]], None],
         prefetch_count: int = 1,
     ) -> None:
-        self.channel.queue_declare(queue=queue_name, durable=True)
+        self.channel.queue_declare(queue=queue_name, durable=True, arguments=self._queue_arguments())
         self.channel.basic_qos(prefetch_count=prefetch_count)
 
         def _wrapped(ch, method, _properties, body):

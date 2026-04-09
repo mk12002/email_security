@@ -11,6 +11,8 @@ from email_security.orchestrator.llm_reasoner import generate_reasoning
 from email_security.orchestrator.scoring_engine import calculate_threat_score
 from email_security.orchestrator.threat_correlation import correlate_threats
 from email_security.orchestrator.langgraph_state import OrchestratorState
+from email_security.orchestrator.counterfactual_engine import calculate_counterfactual, threshold_for_verdict
+from email_security.orchestrator.storyline_engine import generate_storyline
 from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("langgraph_orchestrator")
@@ -34,7 +36,9 @@ class LangGraphOrchestrator:
         graph.add_node("score", self._score_node)
         graph.add_node("correlate", self._correlate_node)
         graph.add_node("decide", self._decide_node)
+        graph.add_node("counterfactual", self._counterfactual_node)
         graph.add_node("reason", self._reason_node)
+        graph.add_node("storyline", self._storyline_node)
         graph.add_node("garuda", self._garuda_node)
         graph.add_node("persist", self._persist_node)
         graph.add_node("act", self._act_node)
@@ -43,9 +47,11 @@ class LangGraphOrchestrator:
         graph.set_entry_point("score")
         graph.add_edge("score", "correlate")
         graph.add_edge("correlate", "decide")
-        graph.add_edge("decide", "reason")
+        graph.add_edge("decide", "counterfactual")
+        graph.add_edge("counterfactual", "reason")
+        graph.add_edge("reason", "storyline")
         graph.add_conditional_edges(
-            "reason",
+            "storyline",
             self._needs_garuda,
             {
                 "garuda": "garuda",
@@ -104,13 +110,55 @@ class LangGraphOrchestrator:
             "threat_level": score_data.get("threat_level", "unknown"),
         }
 
+    def _counterfactual_node(self, state: OrchestratorState) -> OrchestratorState:
+        normalized_score = float(state.get("normalized_score", 0.0))
+        agent_results = state.get("agent_results", [])
+        correlation = state.get("correlation", {})
+        verdict = str(state.get("verdict", "")).strip().lower()
+        threshold = threshold_for_verdict(verdict)
+
+        if threshold is None:
+            logger.info(
+                "LangGraph node complete",
+                node="counterfactual",
+                analysis_id=state.get("analysis_id"),
+                note="verdict_has_no_blocking_boundary",
+            )
+            return {
+                "counterfactual_result": {
+                    "is_counterfactual": False,
+                    "verdict": verdict,
+                    "reason": "no_counterfactual_for_non_blocking_verdict",
+                }
+            }
+        
+        counterfactual = calculate_counterfactual(
+            agent_results=agent_results,
+            correlation=correlation,
+            current_normalized_score=normalized_score,
+            threshold=threshold,
+        )
+        counterfactual["verdict"] = verdict
+        logger.info("LangGraph node complete", node="counterfactual", analysis_id=state.get("analysis_id"))
+        return {"counterfactual_result": counterfactual}
+
     def _reason_node(self, state: OrchestratorState) -> OrchestratorState:
         explanation = generate_reasoning(
             state.get("agent_results", []),
             float(state.get("normalized_score", 0.0)),
+            state.get("counterfactual_result", {})
         )
         logger.info("LangGraph node complete", node="reason", analysis_id=state.get("analysis_id"))
         return {"llm_explanation": explanation}
+
+    def _storyline_node(self, state: OrchestratorState) -> OrchestratorState:
+        storyline = generate_storyline(
+            agent_results=state.get("agent_results", []),
+            verdict=state.get("verdict", "unknown"),
+            recommended_actions=state.get("recommended_actions", [])
+        )
+        logger.info("LangGraph node complete", node="storyline", analysis_id=state.get("analysis_id"))
+        return {"threat_storyline": storyline}
 
     def _needs_garuda(self, state: OrchestratorState) -> str:
         return "garuda" if float(state.get("overall_risk_score", 0.0)) > 0.7 else "persist"
@@ -150,6 +198,8 @@ class LangGraphOrchestrator:
             "recommended_actions": state.get("recommended_actions", []),
             "threat_level": state.get("threat_level", "unknown"),
             "llm_explanation": state.get("llm_explanation", ""),
+            "threat_storyline": state.get("threat_storyline", []),
+            "counterfactual_result": state.get("counterfactual_result", {}),
             "agent_results": state.get("agent_results", []),
             "correlation": state.get("correlation", {}),
             "score_data": state.get("score_data", {}),

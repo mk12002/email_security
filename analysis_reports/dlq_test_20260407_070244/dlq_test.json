@@ -1,0 +1,13 @@
+{
+  "timestamp_utc": "2026-04-07T07:02:44.873026+00:00",
+  "test_queue": "dlq.test.queue.20260407_070244",
+  "dead_letter_queue": "email.dead.letter.queue",
+  "published": false,
+  "nacked": false,
+  "dlq_received": false,
+  "delivery_payload": null,
+  "errors": [
+    "[Errno -3] Temporary failure in name resolution"
+  ],
+  "overall_passed": false
+}

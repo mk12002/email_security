@@ -273,6 +273,18 @@ class Settings(BaseSettings):
         default=1800,
         description="Alert threshold for stale IOC store freshness",
     )
+    ioc_warning_age_seconds: int = Field(
+        default=900,
+        description="Warning threshold for IOC store age in seconds",
+    )
+    ioc_critical_age_seconds: int = Field(
+        default=1800,
+        description="Critical threshold for IOC store age in seconds",
+    )
+    ioc_min_records: int = Field(
+        default=100,
+        description="Minimum IOC records expected for healthy local IOC store",
+    )
     threat_intel_auto_refresh_enabled: bool = Field(
         default=True,
         description="Enable periodic IOC store refresh loop in API process",
@@ -288,6 +300,22 @@ class Settings(BaseSettings):
     sandbox_local_docker_enabled: bool = Field(
         default=False,
         description="Allow sandbox agent to run local Docker detonations from this host",
+    )
+    sandbox_executor_url: Optional[str] = Field(
+        default=None,
+        description="Optional isolated sandbox executor base URL",
+    )
+    sandbox_executor_shared_token: Optional[str] = Field(
+        default=None,
+        description="Shared token used between sandbox agent and isolated executor",
+    )
+    sandbox_executor_timeout_seconds: int = Field(
+        default=30,
+        description="Timeout for isolated sandbox executor API calls",
+    )
+    sandbox_executor_attachment_root: str = Field(
+        default="/mnt/attachments",
+        description="Attachment root path allowed for isolated executor detonation requests",
     )
     sandbox_allow_network: bool = Field(
         default=False, description="Allow outbound network from detonation containers"
@@ -353,6 +381,11 @@ class Settings(BaseSettings):
             warnings.append(
                 "WARNING: SANDBOX_LOCAL_DOCKER_ENABLED is true in production. "
                 "Prefer isolated detonation executor hosts/VMs."
+            )
+        if self.sandbox_executor_url and not self.sandbox_executor_shared_token:
+            warnings.append(
+                "WARNING: SANDBOX_EXECUTOR_URL is configured without SANDBOX_EXECUTOR_SHARED_TOKEN. "
+                "Set a shared token to prevent unauthorized detonation calls."
             )
         return warnings
 

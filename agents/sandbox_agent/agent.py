@@ -16,6 +16,7 @@ from typing import Any
 
 import docker
 from docker.errors import DockerException, ImageNotFound, NotFound
+import httpx
 
 from email_security.agents.sandbox_agent.inference import predict
 from email_security.agents.sandbox_agent.model_loader import load_model
@@ -532,6 +533,31 @@ def _attachment_priority_item(attachment: dict[str, Any]) -> tuple[float, int]:
     return static_score, ext_risky
 
 
+def _detonate_via_executor(target: Path) -> tuple[float, list[str], dict[str, Any], dict[str, Any]]:
+    base_url = str(settings.sandbox_executor_url or "").strip().rstrip("/")
+    if not base_url:
+        raise RuntimeError("sandbox_executor_url_not_configured")
+
+    headers: dict[str, str] = {}
+    token = str(settings.sandbox_executor_shared_token or "").strip()
+    if token:
+        headers["X-Sandbox-Token"] = token
+
+    payload = {"attachment_path": str(target)}
+    timeout = max(2.0, float(settings.sandbox_executor_timeout_seconds))
+    with httpx.Client(timeout=timeout) as client:
+        response = client.post(f"{base_url}/detonate", json=payload, headers=headers)
+        response.raise_for_status()
+        body = response.json()
+
+    return (
+        _clamp(float(body.get("heuristic_score", 0.0))),
+        [str(item) for item in (body.get("indicators") or [])],
+        body.get("behavior") or {},
+        body.get("training_row") or {},
+    )
+
+
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting analysis", agent="sandbox_agent")
     attachments = data.get("attachments", []) or []
@@ -549,6 +575,96 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     indicators: list[str] = []
     behavior_summary: dict[str, Any] = {}
     model = load_model()
+    use_executor = bool(str(settings.sandbox_executor_url or "").strip())
+
+    if use_executor:
+        indicators.append("sandbox_executor_mode")
+        logger.info("Sandbox detonation routed through isolated executor", url=settings.sandbox_executor_url)
+
+        max_detonations = max(1, int(settings.sandbox_max_detonations))
+        prioritized = sorted(
+            attachments,
+            key=lambda item: _attachment_priority_item(item),
+            reverse=True,
+        )
+
+        for index, attachment in enumerate(prioritized):
+            target = Path(attachment.get("path", ""))
+            if not target.exists():
+                indicators.append(f"missing_attachment_path:{attachment.get('filename', 'unknown')}")
+                continue
+            if index >= max_detonations:
+                indicators.append(f"sandbox_skipped_budget:{target.name}")
+                continue
+
+            should_detonate, static_score, detonation_reason = _should_detonate(attachment, target)
+            if not should_detonate:
+                indicators.append(f"sandbox_skipped_low_suspicion:{target.name}")
+                continue
+
+            indicators.append(f"sandbox_detonation_reason:{detonation_reason}:{target.name}")
+            indicators.append(f"sandbox_static_score:{static_score:.3f}:{target.name}")
+
+            try:
+                detonation_score, detonation_indicators, behavior, training_row = _detonate_via_executor(target)
+            except Exception as exc:
+                indicators.append(f"sandbox_executor_unavailable:{target.name}")
+                logger.warning("Sandbox executor unavailable; using static fallback", error=str(exc), attachment=target.name)
+                detonation_score = static_score
+                detonation_indicators = ["sandbox_executor_fallback_static"]
+                behavior = {}
+                training_row = {
+                    "file_extension": target.suffix.lower() or "unknown",
+                    "executed": 0,
+                    "return_code": 0,
+                    "timed_out": 0,
+                    "spawned_processes": 0,
+                    "suspicious_process_count": 0,
+                    "file_entropy": _file_entropy(target),
+                    "connect_calls": 0,
+                    "execve_calls": 0,
+                    "file_write_calls": 0,
+                    "sequence_length": 0,
+                    "sequence_process_calls": 0,
+                    "sequence_network_calls": 0,
+                    "sequence_filesystem_calls": 0,
+                    "sequence_registry_calls": 0,
+                    "sequence_memory_calls": 0,
+                    "critical_chain_detected": 0,
+                    "behavior_risk_score": _clamp(detonation_score),
+                }
+
+            ml_prediction = predict(training_row, model=model)
+            ml_risk = float(ml_prediction.get("risk_score", 0.0))
+            ml_conf = float(ml_prediction.get("confidence", 0.0))
+
+            if ml_conf > 0.0:
+                fused_score = _clamp((0.65 * ml_risk) + (0.35 * detonation_score))
+                risk += fused_score
+                indicators.extend([f"{tag}:{target.name}" for tag in ml_prediction.get("indicators", [])])
+            else:
+                fused_score = _clamp(detonation_score)
+                risk += fused_score
+
+            indicators.extend([f"{indicator}:{target.name}" for indicator in detonation_indicators])
+            behavior_summary[target.name] = behavior
+            behavior_summary[target.name]["derived_training_row"] = training_row
+            behavior_summary[target.name]["heuristic_risk_score"] = _clamp(detonation_score)
+            behavior_summary[target.name]["ml_prediction"] = ml_prediction
+            behavior_summary[target.name]["fused_risk_score"] = _clamp(fused_score)
+
+        executor_fallback_used = any(item.startswith("sandbox_executor_unavailable") for item in indicators)
+        final_risk = _clamp(risk)
+        result = {
+            "agent_name": "sandbox_agent",
+            "risk_score": final_risk,
+            "behavior_risk_score": final_risk,
+            "confidence": _clamp(0.86 if not executor_fallback_used else 0.55),
+            "indicators": indicators[:30],
+            "behavior_summary": behavior_summary,
+        }
+        logger.info("Analysis complete", risk_score=result["risk_score"])
+        return result
 
     if not bool(settings.sandbox_local_docker_enabled):
         indicators.append("sandbox_local_docker_disabled")

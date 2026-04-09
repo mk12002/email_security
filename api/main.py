@@ -557,6 +557,16 @@ async def analyze_email(request: EmailAnalysisRequest, _auth: None = Depends(_re
         overall_risk_score=None,
         verdict=None,
         llm_explanation=None,
+        report_endpoint=f"/reports/{analysis_id}",
+        final_report_features=[
+            "agent_results",
+            "overall_risk_score",
+            "verdict",
+            "llm_explanation",
+            "counterfactual_result",
+            "threat_storyline",
+            "recommended_actions",
+        ],
     )
 
 
@@ -591,6 +601,16 @@ async def ingest_raw_email(file: UploadFile = File(...), _auth: None = Depends(_
         overall_risk_score=None,
         verdict=None,
         llm_explanation=None,
+        report_endpoint=f"/reports/{event['analysis_id']}",
+        final_report_features=[
+            "agent_results",
+            "overall_risk_score",
+            "verdict",
+            "llm_explanation",
+            "counterfactual_result",
+            "threat_storyline",
+            "recommended_actions",
+        ],
     )
 
 

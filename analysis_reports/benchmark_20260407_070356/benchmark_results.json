@@ -1,0 +1,33 @@
+{
+  "timestamp_utc": "2026-04-07T07:03:57.070544+00:00",
+  "endpoint": "http://127.0.0.1:8000/analyze-email",
+  "requests": 20,
+  "concurrency": 5,
+  "success": 0,
+  "failed": 20,
+  "status_codes": [
+    0
+  ],
+  "latency_ms": {
+    "min": 2.11,
+    "avg": 5.96,
+    "p50": 2.98,
+    "p95": 4.2,
+    "p99": 63.36,
+    "max": 63.36
+  },
+  "p95_sla_ms": 1200.0,
+  "sla_passed": false,
+  "error_samples": [
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed",
+    "All connection attempts failed"
+  ]
+}

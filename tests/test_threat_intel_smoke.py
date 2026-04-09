@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from email_security.agents.threat_intel_agent.agent import analyze
+from email_security.agents.threat_intel_agent.agent import analyze, get_ioc_store_status
 
 
 def _ioc_db_candidates() -> list[Path]:
@@ -85,6 +85,7 @@ def test_threat_intel_smoke_ordering_and_signal() -> None:
     benign_result = analyze(benign_payload)
     malicious_result = analyze(malicious_payload)
     mixed_result = analyze(mixed_payload)
+    ioc_status = get_ioc_store_status()
 
     benign_risk = float(benign_result["risk_score"])
     malicious_risk = float(malicious_result["risk_score"])
@@ -93,3 +94,5 @@ def test_threat_intel_smoke_ordering_and_signal() -> None:
     assert malicious_risk >= mixed_risk >= benign_risk
     assert _has_ioc_match(malicious_result)
     assert not _has_ioc_match(benign_result)
+    assert ioc_status["health_level"] in {"healthy", "warning", "critical"}
+    assert isinstance(ioc_status["policy_violations"], list)

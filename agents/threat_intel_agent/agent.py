@@ -30,10 +30,25 @@ class IOCStore:
     """Persistent local IOC database backed by SQLite for fast membership checks."""
 
     def __init__(self, db_path: str):
-        self.db_path = Path(db_path)
-        if not self.db_path.is_absolute():
-            self.db_path = Path(".") / self.db_path
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        requested_path = Path(db_path)
+        if not requested_path.is_absolute():
+            requested_path = Path(".") / requested_path
+
+        self.db_path = requested_path
+        try:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            # Local test/dev runs can inherit container-only paths like /app/...
+            # from .env. Fall back to a writable workspace-local DB path.
+            fallback = Path(__file__).resolve().parents[2] / "data" / "ioc_store_local.db"
+            fallback.parent.mkdir(parents=True, exist_ok=True)
+            logger.warning(
+                "IOC DB path is not writable; using local fallback",
+                requested=str(requested_path),
+                fallback=str(fallback),
+                error=str(exc),
+            )
+            self.db_path = fallback
         self._ensure_schema()
 
     def _connect(self) -> sqlite3.Connection:
@@ -275,6 +290,36 @@ def _refresh_ioc_store_if_needed() -> int:
     return int(refresh_ioc_store(force=False).get("total_iocs", 0))
 
 
+def _evaluate_ioc_health(age_seconds: int | None, total_iocs: int) -> tuple[str, list[str]]:
+    warning_age = max(60, int(settings.ioc_warning_age_seconds))
+    critical_age = max(warning_age, int(settings.ioc_critical_age_seconds))
+    min_records = max(1, int(settings.ioc_min_records))
+
+    violations: list[str] = []
+    level = "healthy"
+
+    if age_seconds is None:
+        level = "critical"
+        violations.append("ioc_refresh_never_recorded")
+    else:
+        if age_seconds > critical_age:
+            level = "critical"
+            violations.append(f"ioc_age_exceeds_critical:{age_seconds}>{critical_age}")
+        elif age_seconds > warning_age:
+            if level != "critical":
+                level = "warning"
+            violations.append(f"ioc_age_exceeds_warning:{age_seconds}>{warning_age}")
+
+    if total_iocs < min_records:
+        if total_iocs == 0:
+            level = "critical"
+        elif level != "critical":
+            level = "warning"
+        violations.append(f"ioc_record_count_low:{total_iocs}<{min_records}")
+
+    return level, violations
+
+
 def get_ioc_store_status() -> dict[str, Any]:
     """Return IOC lifecycle health for monitoring endpoints and alerting."""
     now = int(time.time())
@@ -292,12 +337,18 @@ def get_ioc_store_status() -> dict[str, Any]:
         "is_stale": stale,
     }
 
+    health_level, policy_violations = _evaluate_ioc_health(status["last_refresh_age_seconds"], status["total_iocs"])
+    status["health_level"] = health_level
+    status["policy_violations"] = policy_violations
+
     if stale:
         logger.warning(
             "IOC store appears stale",
             age_seconds=age_seconds,
             stale_after_seconds=stale_after,
             db_path=str(_STORE.db_path),
+            health_level=health_level,
+            violations=policy_violations,
         )
 
     return status

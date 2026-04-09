@@ -18,6 +18,7 @@ class OrchestratorState(TypedDict, total=False):
     score_data: dict[str, Any]
     correlation: dict[str, Any]
     normalized_score: float
+    counterfactual_result: dict[str, Any]
 
     # Decision outputs
     overall_risk_score: float
@@ -25,6 +26,7 @@ class OrchestratorState(TypedDict, total=False):
     recommended_actions: list[str]
     threat_level: str
     llm_explanation: str
+    threat_storyline: list[dict[str, Any]]
 
     # Side-effect outputs
     garuda_feedback: dict[str, Any]

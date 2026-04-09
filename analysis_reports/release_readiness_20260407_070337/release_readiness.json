@@ -1,0 +1,89 @@
+{
+  "timestamp_utc": "2026-04-07T07:03:38.011227+00:00",
+  "app_env": "development",
+  "production_warnings": [],
+  "ioc_status": {
+    "db_path": "/home/LabsKraft/new_work/email_security/data/ioc_store_ci_local.db",
+    "total_iocs": 0,
+    "last_refresh_ts": 0,
+    "last_refresh_age_seconds": null,
+    "stale_after_seconds": 1800,
+    "is_stale": true,
+    "health_level": "critical",
+    "policy_violations": [
+      "ioc_refresh_never_recorded",
+      "ioc_record_count_low:0<100"
+    ]
+  },
+  "model_artifacts": {
+    "ok": true,
+    "details": {
+      "header": {
+        "path": "/home/LabsKraft/new_work/models/header_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "content": {
+        "path": "/home/LabsKraft/new_work/models/content_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "url": {
+        "path": "/home/LabsKraft/new_work/models/url_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "attachment": {
+        "path": "/home/LabsKraft/new_work/models/attachment_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "sandbox": {
+        "path": "/home/LabsKraft/new_work/models/sandbox_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "threat_intel": {
+        "path": "/home/LabsKraft/new_work/models/threat_intel_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "user_behavior": {
+        "path": "/home/LabsKraft/new_work/models/user_behavior_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      }
+    }
+  },
+  "rabbitmq": {
+    "ok": false,
+    "queues": [
+      {
+        "queue": "email.results.queue",
+        "exists": false,
+        "messages_ready": 0,
+        "consumers": 0,
+        "error": "[Errno -3] Temporary failure in name resolution"
+      },
+      {
+        "queue": "email.dead.letter.queue",
+        "exists": false,
+        "messages_ready": 0,
+        "consumers": 0,
+        "error": "[Errno -3] Temporary failure in name resolution"
+      }
+    ]
+  },
+  "critical_failures": [
+    "rabbitmq",
+    "ioc_health"
+  ],
+  "overall_passed": false
+}

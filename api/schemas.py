@@ -75,6 +75,26 @@ class EmailAnalysisRequest(BaseModel):
 # Email analysis response
 # ---------------------------------------------------------------------------
 
+class StorylineIndicator(BaseModel):
+    """Normalized indicator with ATT&CK-like tactic mapping and confidence metadata."""
+
+    value: str = Field(..., description="Observable indicator detail")
+    severity: str = Field(..., description="Normalized indicator severity (low/medium/high)")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Indicator confidence from contributing agents")
+    tactic: str = Field(..., description="ATT&CK-like tactic label associated with this indicator")
+
+
+class StorylineEvent(BaseModel):
+    """A chronologically mapped component of an email attack."""
+
+    phase: str = Field(..., description="The stage of the attack (Delivery, Lure, Weaponization, Containment)")
+    description: str = Field(..., description="High level description of what happened in this phase")
+    severity: str = Field(..., description="Normalized phase severity (low/medium/high)")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Aggregated phase confidence")
+    tactics: list[str] = Field(default_factory=list, description="ATT&CK-like tactics relevant to the phase")
+    indicators: list[StorylineIndicator] = Field(default_factory=list, description="Extracted threat observables triggering this phase")
+
+
 class EmailAnalysisResponse(BaseModel):
     """Response body for the /analyze-email endpoint."""
 
@@ -92,6 +112,20 @@ class EmailAnalysisResponse(BaseModel):
     verdict: Optional[str] = Field(default=None, description="Final decision verdict")
     llm_explanation: Optional[str] = Field(
         default=None, description="LLM-generated explanation for SOC analysts"
+    )
+    threat_storyline: Optional[list[StorylineEvent]] = Field(
+        default=None, description="Chronological timeline of the attack flow"
+    )
+    counterfactual_result: Optional[dict] = Field(
+        default=None, description="Decision boundary perturbation result explaining what minimum change is needed to make the email safe"
+    )
+    report_endpoint: Optional[str] = Field(
+        default=None,
+        description="Endpoint to poll for the final orchestration report",
+    )
+    final_report_features: Optional[list[str]] = Field(
+        default=None,
+        description="Fields that are available in final report payloads from /reports/{analysis_id}",
     )
 
 

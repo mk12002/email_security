@@ -1,0 +1,28 @@
+{
+  "timestamp_utc": "2026-04-07T07:03:47.181122+00:00",
+  "strict": false,
+  "checks": [
+    {
+      "name": "api_health",
+      "url": "http://127.0.0.1:8000/health",
+      "ok": false,
+      "status_code": 0,
+      "error": "[Errno 111] Connection refused"
+    },
+    {
+      "name": "prometheus_ready",
+      "url": "http://127.0.0.1:9090/-/ready",
+      "ok": false,
+      "status_code": 0,
+      "error": "[Errno 111] Connection refused"
+    },
+    {
+      "name": "alertmanager_ready",
+      "url": "http://127.0.0.1:9093/-/ready",
+      "ok": false,
+      "status_code": 0,
+      "error": "[Errno 111] Connection refused"
+    }
+  ],
+  "overall_passed": false
+}

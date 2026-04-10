@@ -619,7 +619,8 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
 
     ml_risk = float(prediction.get("risk_score", 0.0) or 0.0)
     ml_confidence = float(prediction.get("confidence", 0.0) or 0.0)
-    fused_risk = _clamp((0.55 * ml_risk) + (0.3 * local_match_score) + (0.15 * external_score))
+    blended_risk = (0.55 * ml_risk) + (0.3 * local_match_score) + (0.15 * external_score)
+    fused_risk = _clamp(max(ml_risk, local_match_score, external_score, blended_risk))
     confidence_floor = 0.55 + (0.2 if matches else 0.0) + (0.1 if external_score > 0.0 else 0.0)
     fused_confidence = _clamp(max(ml_confidence, confidence_floor))
 

@@ -5,6 +5,7 @@ Defines request and response models for all API endpoints.
 """
 
 from typing import Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -135,3 +136,36 @@ class HealthResponse(BaseModel):
     status: str = Field(default="healthy")
     version: str = Field(default="0.1.0")
     environment: str = Field(default="development")
+
+
+class AgentDirectTestRequest(BaseModel):
+    """Request body for direct per-agent testing endpoints."""
+
+    payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Agent-specific payload to test directly without using the event pipeline",
+    )
+    inject_analysis_id: bool = Field(
+        default=True,
+        description="If true, add a generated analysis_id when missing from payload",
+    )
+    print_output: bool = Field(
+        default=True,
+        description="If true, print agent output to API process stdout for quick local inspection",
+    )
+
+
+class AgentDirectTestResponse(BaseModel):
+    """Response body for direct per-agent testing endpoints."""
+
+    status: str = Field(..., description="Execution status")
+    agent_name: str = Field(..., description="Tested agent name")
+    message: str = Field(..., description="Human-readable execution summary")
+    input_payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Payload submitted to the agent",
+    )
+    output: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Raw output emitted by the agent",
+    )

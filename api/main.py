@@ -16,15 +16,19 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
+from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import FastAPI
 from fastapi import Depends, File, Header, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 import psycopg2
 
 from email_security.api.schemas import (
+    AgentDirectTestRequest,
+    AgentDirectTestResponse,
     EmailAnalysisRequest,
     EmailAnalysisResponse,
     HealthResponse,
@@ -37,6 +41,80 @@ from email_security.services.messaging_service import RabbitMQClient
 
 URL_REGEX = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
 IP_REGEX = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
+
+SUPPORTED_AGENT_TESTS = [
+    "header_agent",
+    "content_agent",
+    "url_agent",
+    "attachment_agent",
+    "sandbox_agent",
+    "threat_intel_agent",
+    "user_behavior_agent",
+]
+
+AGENT_TEST_EXAMPLES: dict[str, dict[str, Any]] = {
+    "header_agent": {
+        "headers": {
+            "sender": "alerts-security@paypa1-security.example",
+            "reply_to": "support@evil.example",
+            "subject": "Urgent: verify your account",
+            "received": ["from smtp-unknown by victim-mx"],
+            "message_id": "<m-header-1>",
+            "authentication_results": "spf=fail; dkim=fail; dmarc=fail",
+        }
+    },
+    "content_agent": {
+        "headers": {"subject": "Invoice overdue"},
+        "body": "Urgent action required. Confirm your password now to avoid account lock.",
+    },
+    "url_agent": {
+        "urls": [
+            "http://secure-login-paypa1.example/verify",
+            "https://microsoft.com-security-login.example/reset",
+        ]
+    },
+    "attachment_agent": {
+        "attachments": [
+            {
+                "filename": "invoice_urgent.exe",
+                "content_type": "application/octet-stream",
+                "size_bytes": 24576,
+                "path": "/tmp/invoice_urgent.exe",
+            }
+        ]
+    },
+    "sandbox_agent": {
+        "attachments": [
+            {
+                "filename": "payload.docm",
+                "content_type": "application/vnd.ms-word",
+                "size_bytes": 40960,
+                "path": "/tmp/payload.docm",
+            }
+        ]
+    },
+    "threat_intel_agent": {
+        "headers": {"sender": "attacker@evil.example"},
+        "urls": ["http://known-bad.example/phish"],
+        "iocs": {
+            "domains": ["evil.example"],
+            "ips": ["185.100.87.202"],
+            "hashes": ["44d88612fea8a8f36de82e1278abb02f"],
+        },
+    },
+    "user_behavior_agent": {
+        "headers": {
+            "sender": "finance-team@example.com",
+            "subject": "Payroll details update",
+        },
+        "body": "Please review payroll changes immediately and confirm via this link.",
+        "recipient_context": {
+            "department": "finance",
+            "role": "analyst",
+            "historical_click_rate": 0.35,
+        },
+    },
+}
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +171,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+FRONTEND_DIR = Path(__file__).resolve().parent / "frontend"
+app.mount("/ui-assets", StaticFiles(directory=str(FRONTEND_DIR)), name="ui-assets")
 
 
 def _require_api_key(x_api_key: str | None = Header(default=None)) -> None:
@@ -174,6 +255,20 @@ def _extract_ips(content: str, urls: list[str]) -> list[str]:
         except Exception:
             continue
     return sorted(found)
+
+
+def _get_agent_test_function(agent_name: str):
+    from email_security.agents.service_runner import AGENT_FUNCTIONS
+
+    if agent_name not in AGENT_FUNCTIONS:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Unsupported agent '{agent_name}'. "
+                f"Expected one of: {sorted(AGENT_FUNCTIONS)}"
+            ),
+        )
+    return AGENT_FUNCTIONS[agent_name]
 
 
 def _build_attachment_payload(
@@ -369,6 +464,108 @@ async def health_check():
         status="healthy",
         version="0.1.0",
         environment=settings.app_env,
+    )
+
+
+@app.get("/ui", tags=["Frontend"])
+async def ui_home() -> FileResponse:
+    """Serve SOC frontend home page."""
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/ui/analyze", tags=["Frontend"])
+async def ui_analyze() -> FileResponse:
+    """Serve file upload analysis page."""
+    return FileResponse(FRONTEND_DIR / "analyze.html")
+
+
+@app.get("/ui/agents", tags=["Frontend"])
+async def ui_agents() -> FileResponse:
+    """Serve individual agent testing page."""
+    return FileResponse(FRONTEND_DIR / "agents.html")
+
+
+@app.get("/agent-test/agents", tags=["Agent Testing"])
+async def list_testable_agents(_auth: None = Depends(_require_api_key)):
+    """List agents that can be tested directly with custom payloads."""
+    return {
+        "supported_agents": SUPPORTED_AGENT_TESTS,
+        "usage": "POST /agent-test/{agent_name}",
+        "note": "Direct test path bypasses RabbitMQ/orchestrator and does not alter production async flow.",
+    }
+
+
+@app.get("/agent-test/examples", tags=["Agent Testing"])
+async def get_agent_test_examples(_auth: None = Depends(_require_api_key)):
+    """Return copy-paste sample payloads for each direct agent test endpoint."""
+    return {
+        "usage": {
+            "endpoint": "POST /agent-test/{agent_name}",
+            "body": {
+                "payload": "<agent-specific JSON payload>",
+                "inject_analysis_id": True,
+                "print_output": True,
+            },
+        },
+        "examples": AGENT_TEST_EXAMPLES,
+        "result_location": {
+            "api_response": "Returned immediately in response.output",
+            "stdout": "Printed in API service logs when print_output=true",
+        },
+    }
+
+
+@app.post(
+    "/agent-test/{agent_name}",
+    response_model=AgentDirectTestResponse,
+    tags=["Agent Testing"],
+)
+async def direct_agent_test(
+    agent_name: str,
+    request: AgentDirectTestRequest,
+    _auth: None = Depends(_require_api_key),
+):
+    """
+    Run one agent directly against caller-provided payload.
+
+    This endpoint is isolated for manual testing and does not publish events,
+    consume queues, or invoke orchestrator/action-layer workflows.
+    """
+    payload: dict[str, Any] = dict(request.payload or {})
+    if request.inject_analysis_id and not payload.get("analysis_id"):
+        payload["analysis_id"] = f"manual-agent-test-{uuid.uuid4()}"
+
+    analyze_fn = _get_agent_test_function(agent_name)
+    try:
+        output = analyze_fn(payload)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Direct agent test failed", agent_name=agent_name)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Direct test for {agent_name} failed: {exc}",
+        ) from exc
+
+    if request.print_output:
+        print(f"[AGENT-TEST][{agent_name}] INPUT: {payload}")
+        print(f"[AGENT-TEST][{agent_name}] OUTPUT: {output}")
+
+    logger.info(
+        "Direct agent test completed",
+        agent_name=agent_name,
+        payload_keys=sorted(payload.keys()),
+    )
+
+    return AgentDirectTestResponse(
+        status="completed",
+        agent_name=agent_name,
+        message=(
+            "Agent tested in isolated direct mode. "
+            "No RabbitMQ publish and no orchestrator/action dispatch occurred."
+        ),
+        input_payload=payload,
+        output=output if isinstance(output, dict) else {"raw_output": output},
     )
 
 

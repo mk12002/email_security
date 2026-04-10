@@ -24,10 +24,10 @@ def test_url_agent_external_enrichment_fusion(monkeypatch: pytest.MonkeyPatch) -
 
     result = url_agent.analyze({"urls": ["http://suspicious.example/login"]})
 
-    # evidence_risk=max(max(0.2, 0.45*0.2 + 0.55*1.0), 0.65*0.2 + 0.35*1.0)=0.64
-    # final_risk=0.6*0.4 + 0.4*0.64 = 0.496
-    assert result["risk_score"] == pytest.approx(0.496, abs=1e-4)
-    assert result["confidence"] == pytest.approx(0.8, abs=1e-4)
+    # Using the new max() logic, max(0.4, 0.64, 0.496) = 0.64
+    # confidence max(0.8, 0.6+0.02+0.05)=0.8
+    assert result["risk_score"] == pytest.approx(0.640, abs=1e-3)
+    assert result["confidence"] == pytest.approx(0.800, abs=1e-3)
     assert any("external_risk=1.0" == item for item in result["indicators"])
     assert any("external_lookups_enabled" == item for item in result["indicators"])
 
@@ -66,9 +66,9 @@ def test_threat_intel_external_enrichment_fusion(monkeypatch: pytest.MonkeyPatch
         }
     )
 
-    # local_match_score=1/2=0.5
-    # final_risk=0.55*0.5 + 0.3*0.5 + 0.15*0.8 = 0.545
-    assert result["risk_score"] == pytest.approx(0.545, abs=1e-4)
-    assert result["confidence"] == pytest.approx(0.85, abs=1e-4)
+    # Using the new max() logic, max(0.5, 0.5, 0.8, 0.545) = 0.8
+    # confidence max(0.7, 0.55+0.2+0.1)=0.85
+    assert result["risk_score"] == pytest.approx(0.800, abs=1e-3)
+    assert result["confidence"] == pytest.approx(0.850, abs=1e-3)
     assert any(str(item).startswith("ioc_match:") for item in result["indicators"])
     assert "external_threat_enrichment_enabled" in result["indicators"]

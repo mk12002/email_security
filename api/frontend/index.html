@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOC Analysis Hub — Control Center</title>
+  <meta name="description" content="Agentic AI Email Security System — Multi-agent phishing defense with parallel analysis, counterfactual explainability, and threat storyline timelines." />
+  <link rel="stylesheet" href="/ui-assets/styles.css" />
+</head>
+<body>
+  <main class="shell" id="app"></main>
+
+  <script src="/ui-assets/app.js"></script>
+  <script>
+    AgentUI.onReady(() => {
+      const app = document.getElementById("app");
+      app.innerHTML = `
+        ${AgentUI.topbarHTML("overview")}
+
+        <!-- Hero -->
+        <section class="hero animate-in">
+          <div class="panel">
+            <h1 class="hero-title">Agentic Email Security<br/>Control Center</h1>
+            <p class="hero-subtitle">Production-grade, multi-agent phishing defense powered by LangGraph orchestration, 7 parallel AI agents, counterfactual explainability, and chronological attack storyline timelines.</p>
+            <div class="hero-actions">
+              <a href="/ui/analyze" class="btn btn-primary" style="text-decoration:none;color:#fff">📤 Analyze Email</a>
+              <a href="/ui/agents" class="btn btn-outline" style="text-decoration:none">🧪 Test Agents</a>
+              <a href="/docs" target="_blank" rel="noreferrer" class="btn btn-ghost" style="text-decoration:none">📄 Swagger Docs</a>
+            </div>
+            <div class="tech-row">
+              <span class="tech-badge"><span class="pulse-dot"></span> FastAPI</span>
+              <span class="tech-badge"><span class="pulse-dot"></span> LangGraph</span>
+              <span class="tech-badge"><span class="pulse-dot"></span> RabbitMQ</span>
+              <span class="tech-badge"><span class="pulse-dot"></span> Azure OpenAI</span>
+              <span class="tech-badge"><span class="pulse-dot"></span> TinyBERT SLM</span>
+              <span class="tech-badge"><span class="pulse-dot"></span> Docker</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Pipeline Visualization -->
+        <section class="panel animate-in-d1 mb-md">
+          <h2 class="section-title"><span class="icon">⚡</span> LangGraph Decision Pipeline</h2>
+          <div class="pipeline-flow">
+            <span class="pipeline-node">7 Agents</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node">Score</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node">Correlate</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node">Decide</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node highlight">Counterfactual</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node">LLM Reason</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node highlight">Storyline</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node">Garuda XDR</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-node">Enforce</span>
+          </div>
+        </section>
+
+        <!-- Analysis Agents -->
+        <section class="animate-in-d2 mb-md">
+          <h2 class="section-title"><span class="icon">🛡️</span> Analysis Agents</h2>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <span class="card-icon">📧</span>
+              <h3>Header Security</h3>
+              <p>SPF, DKIM, DMARC validation with sender spoofing and routing anomaly detection.</p>
+              <span class="card-tag rule">Deterministic</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">🧠</span>
+              <h3>Content SLM</h3>
+              <p>TinyBERT NLP model trained on sanitized email bodies — detects phishing intent and social engineering.</p>
+              <span class="card-tag ml">ML / TinyBERT</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">🔗</span>
+              <h3>URL Detection</h3>
+              <p>Lexical heuristics + XGBoost/Random Forest ML scoring with optional reputation lookups.</p>
+              <span class="card-tag ml">ML / XGBoost</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">📎</span>
+              <h3>Attachment Static</h3>
+              <p>Metadata and signature-based inspection of email attachments without detonation.</p>
+              <span class="card-tag rule">Static Analysis</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">💣</span>
+              <h3>Sandbox Behavior</h3>
+              <p>Dynamic detonation analysis via Docker executor isolation with safe fallback paths.</p>
+              <span class="card-tag rule">Dynamic</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">🌐</span>
+              <h3>Threat Intelligence</h3>
+              <p>IOC correlation against VirusTotal, OTX, URLhaus, AbuseIPDB, Google Safe Browsing, and more.</p>
+              <span class="card-tag api">External APIs</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">👤</span>
+              <h3>User Behavior</h3>
+              <p>Recipient susceptibility scoring with context-aware target risk amplification.</p>
+              <span class="card-tag rule">Contextual</span>
+            </article>
+          </div>
+        </section>
+
+        <!-- Unique Features -->
+        <section class="animate-in-d3 mb-md">
+          <h2 class="section-title"><span class="icon">✨</span> Differentiating Features</h2>
+          <div class="feature-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+            <article class="feature-card">
+              <span class="card-icon">🔀</span>
+              <h3>Counterfactual Explainability</h3>
+              <p>Calculates the exact mathematical decision boundary — "If URL wasn't a shortener, the email would be safe."</p>
+              <span class="card-tag new">Unique</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">📖</span>
+              <h3>Threat Storyline Timeline</h3>
+              <p>Chronological Delivery → Lure → Weaponization → Containment attack narrative for SOC analysts.</p>
+              <span class="card-tag new">Unique</span>
+            </article>
+            <article class="feature-card">
+              <span class="card-icon">🤖</span>
+              <h3>GenAI SOC Explanations</h3>
+              <p>Azure OpenAI generates analyst-readable investigation summaries with deterministic fallback.</p>
+              <span class="card-tag ai">GenAI</span>
+            </article>
+          </div>
+        </section>
+
+        <!-- Architecture -->
+        <section class="panel animate-in-d3 mb-md">
+          <h2 class="section-title"><span class="icon">🏗️</span> Three-Layer Architecture</h2>
+          <div class="three-col">
+            <div class="feature-card" style="text-align:center">
+              <span class="card-icon">🔬</span>
+              <h3>Analysis Layer</h3>
+              <p>7 parallel agents evaluate different dimensions of the email simultaneously via RabbitMQ.</p>
+            </div>
+            <div class="feature-card" style="text-align:center">
+              <span class="card-icon">⚖️</span>
+              <h3>Decision Layer</h3>
+              <p>LangGraph orchestrator scores, correlates, reasons, and produces final verdict with explainability.</p>
+            </div>
+            <div class="feature-card" style="text-align:center">
+              <span class="card-icon">🚀</span>
+              <h3>Action Layer</h3>
+              <p>Enforces policy: quarantine, SOC alert, block sender, or Garuda endpoint threat hunting.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Live SOC Snapshot -->
+        <section class="panel animate-in-d4">
+          <h2 class="section-title"><span class="icon">📊</span> Live SOC Snapshot</h2>
+          <div id="metricsGrid" class="metrics-grid mb-md"></div>
+          <div id="overviewStatus" class="status-msg mt-sm"></div>
+          <pre id="overviewData" style="margin-top:14px">Loading /soc/overview …</pre>
+        </section>
+      `;
+
+      AgentUI.initSettingsDropdown();
+      loadOverview();
+    });
+
+    async function loadOverview() {
+      const statusEl = document.getElementById("overviewStatus");
+      const pre = document.getElementById("overviewData");
+      const grid = document.getElementById("metricsGrid");
+      try {
+        const res = await AgentUI.apiFetch("/soc/overview");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "HTTP " + res.status);
+
+        pre.textContent = AgentUI.jsonPretty(data);
+        AgentUI.showStatus(statusEl, "✅ SOC overview loaded successfully.", "ok");
+
+        const count = data?.reports?.count || 0;
+        const avg = (data?.reports?.avg_risk_score ?? 0).toFixed(3);
+        const v = data?.reports?.verdict_counts || {};
+        const queues = (data?.queue_health || []).filter(x => x.exists).length;
+
+        grid.innerHTML = `
+          <div class="metric-card"><div class="metric-label">Reports</div><div class="metric-value">${count}</div></div>
+          <div class="metric-card"><div class="metric-label">Avg Risk</div><div class="metric-value">${avg}</div></div>
+          <div class="metric-card"><div class="metric-label">Active Queues</div><div class="metric-value">${queues}</div></div>
+          <div class="metric-card"><div class="metric-label">Malicious</div><div class="metric-value" style="color:var(--accent-red)">${v.malicious || 0}</div></div>
+          <div class="metric-card"><div class="metric-label">High Risk</div><div class="metric-value" style="color:var(--accent-amber)">${v.high_risk || 0}</div></div>
+          <div class="metric-card"><div class="metric-label">Suspicious</div><div class="metric-value" style="color:var(--accent-amber)">${v.suspicious || 0}</div></div>
+          <div class="metric-card"><div class="metric-label">Safe</div><div class="metric-value" style="color:var(--accent-green)">${v.safe || 0}</div></div>
+        `;
+      } catch (err) {
+        AgentUI.showStatus(statusEl, "⚠ Could not load SOC overview — server may be offline.", "warn");
+        grid.innerHTML = `<div class="metric-card"><div class="metric-label">Status</div><div class="metric-value" style="font-size:0.9rem;color:var(--ink-muted)">Offline</div></div>`;
+      }
+    }
+  </script>
+</body>
+</html>

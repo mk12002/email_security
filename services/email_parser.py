@@ -23,6 +23,7 @@ except Exception:  # pragma: no cover
 from email_security.configs.settings import settings
 from email_security.services.logging_service import get_service_logger
 from email_security.services.messaging_service import RabbitMQClient
+from email_security.services.ocr_service import extract_urls_from_attachments
 
 logger = get_service_logger("email_parser")
 
@@ -72,6 +73,20 @@ class EmailParserService:
 
         urls = self._extract_urls(body_plain, body_html)
 
+        # OCR: extract hidden URLs from image/PDF attachments
+        ocr_urls: list[str] = []
+        try:
+            ocr_urls = extract_urls_from_attachments(attachments)
+            if ocr_urls:
+                logger.info(
+                    "OCR discovered hidden URLs in attachments",
+                    analysis_id=analysis_id,
+                    ocr_url_count=len(ocr_urls),
+                )
+                urls = sorted(set(urls + ocr_urls))
+        except Exception as exc:
+            logger.warning("OCR extraction failed gracefully", error=str(exc))
+
         payload = {
             "event_type": "NewEmailEvent",
             "analysis_id": analysis_id,
@@ -82,6 +97,7 @@ class EmailParserService:
                 "html": body_html,
             },
             "urls": urls,
+            "ocr_extracted_urls": ocr_urls,
             "attachments": attachments,
             "iocs": {
                 "domains": self._extract_domains(urls),

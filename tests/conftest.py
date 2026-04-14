@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from pathlib import Path
 import importlib
+
+# --- IOC_DB_PATH override for local development ---
+# The .env file sets IOC_DB_PATH=/app/data/ioc_store.db (Docker path).
+# When running tests locally, /app/ doesn't exist and can't be created.
+# Override BEFORE any agent modules are imported (they trigger module-level init).
+if not os.environ.get("IOC_DB_PATH"):
+    _ioc_test_dir = Path(tempfile.gettempdir()) / "email_security_test"
+    _ioc_test_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["IOC_DB_PATH"] = str(_ioc_test_dir / "ioc_store.db")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EMAIL_SECURITY_ROOT = Path(__file__).resolve().parents[1]

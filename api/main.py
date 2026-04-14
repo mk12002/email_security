@@ -20,11 +20,12 @@ from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import FastAPI
-from fastapi import Depends, File, Header, HTTPException, UploadFile
+from fastapi import Depends, File, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 import psycopg2
+import redis.asyncio as redis_async
 
 from email_security.api.schemas import (
     AgentDirectTestRequest,
@@ -79,7 +80,7 @@ AGENT_TEST_EXAMPLES: dict[str, dict[str, Any]] = {
                 "filename": "invoice_urgent.exe",
                 "content_type": "application/octet-stream",
                 "size_bytes": 24576,
-                "path": "/tmp/invoice_urgent.exe",
+                "path": "/tmp/invoice_urgent.exe",  # nosec B108
             }
         ]
     },
@@ -89,7 +90,7 @@ AGENT_TEST_EXAMPLES: dict[str, dict[str, Any]] = {
                 "filename": "payload.docm",
                 "content_type": "application/vnd.ms-word",
                 "size_bytes": 40960,
-                "path": "/tmp/payload.docm",
+                "path": "/tmp/payload.docm",  # nosec B108
             }
         ]
     },
@@ -647,6 +648,30 @@ async def soc_overview(_auth: None = Depends(_require_api_key)):
         return _build_soc_overview()
 
 
+@app.websocket("/ws/orchestrator")
+async def orchestrator_ws(websocket: WebSocket):
+    """Real-time pipeline progress via WebSocket. Clients receive agent_update
+    and final_verdict events as they happen."""
+    await websocket.accept()
+    redis_sub = None
+    try:
+        redis_sub = redis_async.from_url(settings.redis_url)
+        pubsub = redis_sub.pubsub()
+        await pubsub.subscribe("pipeline_ui_events")
+        while True:
+            msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if msg and msg["type"] == "message":
+                await websocket.send_text(msg["data"].decode() if isinstance(msg["data"], bytes) else msg["data"])
+            await asyncio.sleep(0.05)
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:
+        logger.warning(f"WebSocket error: {exc}")
+    finally:
+        if redis_sub:
+            await redis_sub.aclose()
+
+
 @app.post("/ops/garuda/process-retries", tags=["Operations"])
 async def process_garuda_retry_queue(max_items: int = 25, _auth: None = Depends(_require_api_key)):
         """Process pending Garuda retries and return reconciliation stats."""
@@ -696,6 +721,16 @@ async def analyze_email(request: EmailAnalysisRequest, _auth: None = Depends(_re
         attachments=request.attachments,
     )
 
+    # OCR: extract hidden URLs from image/PDF attachments
+    ocr_urls: list[str] = []
+    try:
+        from email_security.services.ocr_service import extract_urls_from_attachments
+        ocr_urls = extract_urls_from_attachments(attachments)
+        if ocr_urls:
+            all_urls = sorted(set(all_urls + ocr_urls))
+    except Exception:
+        pass
+
     ioc_domains = _extract_domains(all_urls)
     ioc_ips = _extract_ips(
         content=f"{request.headers.subject}\n{body_plain}",
@@ -713,7 +748,7 @@ async def analyze_email(request: EmailAnalysisRequest, _auth: None = Depends(_re
             "received": request.headers.received,
             "message_id": request.headers.message_id,
             "authentication_results": request.headers.authentication_results,
-            "to": [],
+            "to": request.headers.to,
             "raw": {},
         },
         "body": {

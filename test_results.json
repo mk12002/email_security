@@ -1,0 +1,663 @@
+{
+  "header_agent": {
+    "positive": {
+      "status": "completed",
+      "agent_name": "header_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "alerts-security@paypa1-security.example",
+          "reply_to": "support@evil.example",
+          "subject": "Urgent: verify your account",
+          "received": [
+            "from smtp-unknown by victim-mx"
+          ],
+          "message_id": "<m-header-1>",
+          "authentication_results": "spf=fail; dkim=fail; dmarc=fail"
+        },
+        "analysis_id": "manual-agent-test-d127ea10-c19d-49a2-b698-d240250a31f9"
+      },
+      "output": {
+        "agent_name": "header_agent",
+        "risk_score": 0.9932,
+        "confidence": 0.9954,
+        "indicators": [
+          "spf_failed",
+          "dkim_failed",
+          "dmarc_failed",
+          "short_smtp_trace",
+          "reply_to_domain_mismatch",
+          "ml_header_model_used"
+        ]
+      }
+    },
+    "negative": {
+      "status": "completed",
+      "agent_name": "header_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "trusted@company.com",
+          "reply_to": "support@evil.example",
+          "subject": "Urgent: verify your account",
+          "received": [
+            "from smtp-unknown by victim-mx"
+          ],
+          "message_id": "<m-header-1>",
+          "authentication_results": "spf=pass dkim=pass dmarc=pass"
+        },
+        "analysis_id": "manual-agent-test-480ad125-420d-488d-8b68-b9611941820b"
+      },
+      "output": {
+        "agent_name": "header_agent",
+        "risk_score": 0.7651,
+        "confidence": 0.85,
+        "indicators": [
+          "short_smtp_trace",
+          "authenticated_single_hop_anomaly",
+          "reply_to_domain_mismatch",
+          "authenticated_reply_to_anomaly",
+          "ml_header_model_used"
+        ]
+      }
+    },
+    "edge": {
+      "status": "completed",
+      "agent_name": "header_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "",
+          "to": [],
+          "authentication_results": ""
+        },
+        "urls": [],
+        "body": {
+          "plain": "",
+          "html": ""
+        },
+        "attachments": [],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-4f7d53b2-39d5-48ab-bf81-98b8fdce484c"
+      },
+      "output": {
+        "agent_name": "header_agent",
+        "risk_score": 0.4771,
+        "confidence": 0.7619,
+        "indicators": [
+          "short_smtp_trace",
+          "ml_header_model_used"
+        ]
+      }
+    }
+  },
+  "content_agent": {
+    "positive": {
+      "status": "completed",
+      "agent_name": "content_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "subject": "Invoice overdue"
+        },
+        "body": {
+          "plain": "Urgent action required. Confirm your password now to avoid account lock.",
+          "html": ""
+        },
+        "analysis_id": "manual-agent-test-946d65b8-3433-4f78-83a0-61faf86ba2ad"
+      },
+      "output": {
+        "agent_name": "content_agent",
+        "risk_score": 0.6973,
+        "confidence": 0.9988,
+        "indicators": [
+          "urgency_signals:urgent,action required",
+          "credential_signals:password",
+          "financial_signals:invoice",
+          "ml_slm_label:Phishing",
+          "ml_slm_confidence:0.9988"
+        ]
+      }
+    },
+    "negative": {
+      "status": "completed",
+      "agent_name": "content_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "subject": "Invoice overdue",
+          "sender": "trusted@company.com",
+          "authentication_results": "spf=pass dkim=pass dmarc=pass"
+        },
+        "body": {
+          "plain": "Hey Bob, let's catch up for lunch today. Best, Alice.",
+          "html": "<p>Hey Bob, let's catch up for lunch today. Best, Alice.</p>"
+        },
+        "analysis_id": "manual-agent-test-fe799cc8-0383-4c9d-b67c-2b764e9e90dd"
+      },
+      "output": {
+        "agent_name": "content_agent",
+        "risk_score": 0.032,
+        "confidence": 0.9993,
+        "indicators": [
+          "financial_signals:invoice",
+          "ml_slm_label:Legitimate",
+          "ml_slm_confidence:0.9993"
+        ]
+      }
+    },
+    "edge": {
+      "status": "completed",
+      "agent_name": "content_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "",
+          "to": [],
+          "authentication_results": ""
+        },
+        "urls": [],
+        "body": {
+          "plain": "",
+          "html": ""
+        },
+        "attachments": [],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-2a732bf5-3735-422a-80ba-516be72db566"
+      },
+      "output": {
+        "agent_name": "content_agent",
+        "risk_score": 0.0,
+        "confidence": 0.9858,
+        "indicators": [
+          "ml_slm_label:Legitimate",
+          "ml_slm_confidence:0.9858"
+        ]
+      }
+    }
+  },
+  "url_agent": {
+    "positive": {
+      "status": "completed",
+      "agent_name": "url_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "urls": [
+          "http://secure-login-paypa1.example/verify",
+          "https://microsoft.com-security-login.example/reset"
+        ],
+        "analysis_id": "manual-agent-test-8932b256-b99f-4718-b419-a69670c179a1"
+      },
+      "output": {
+        "agent_name": "url_agent",
+        "risk_score": 0.7965,
+        "confidence": 0.7965,
+        "indicators": [
+          "urls_analyzed=2",
+          "heuristic_risk=0.44",
+          "external_risk=0.0",
+          "external_lookups_enabled",
+          "ml_url_model_used",
+          "http://secure-login-paypa1.example/verify::credential_bait_terms",
+          "http://secure-login-paypa1.example/verify::high_subdomain_entropy",
+          "http://secure-login-paypa1.example/verify::non_https_url",
+          "http://secure-login-paypa1.example/verify::openphish_unavailable",
+          "http://secure-login-paypa1.example/verify::urlhaus_unavailable",
+          "http://secure-login-paypa1.example/verify::virustotal_unavailable",
+          "https://microsoft.com-security-login.example/reset::credential_bait_terms",
+          "https://microsoft.com-security-login.example/reset::high_subdomain_entropy",
+          "https://microsoft.com-security-login.example/reset::openphish_unavailable",
+          "https://microsoft.com-security-login.example/reset::urlhaus_unavailable",
+          "https://microsoft.com-security-login.example/reset::virustotal_unavailable"
+        ]
+      }
+    },
+    "negative": {
+      "status": "completed",
+      "agent_name": "url_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "urls": [
+          "https://www.google.com",
+          "https://github.com/login"
+        ],
+        "analysis_id": "manual-agent-test-48c5ad71-592d-4d87-8bff-c5cf4f0ea771"
+      },
+      "output": {
+        "agent_name": "url_agent",
+        "risk_score": 0.8003,
+        "confidence": 0.8003,
+        "indicators": [
+          "urls_analyzed=2",
+          "heuristic_risk=0.1",
+          "external_risk=0.0",
+          "external_lookups_enabled",
+          "ml_url_model_used",
+          "https://www.google.com::openphish_unavailable",
+          "https://www.google.com::urlhaus_unavailable",
+          "https://github.com/login::credential_bait_terms",
+          "https://github.com/login::openphish_unavailable",
+          "https://github.com/login::urlhaus_unavailable"
+        ]
+      }
+    },
+    "edge": {
+      "status": "completed",
+      "agent_name": "url_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "",
+          "to": [],
+          "authentication_results": ""
+        },
+        "urls": [],
+        "body": {
+          "plain": "",
+          "html": ""
+        },
+        "attachments": [],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-e4d45eb7-904e-4e3d-a4c7-103913ba1433"
+      },
+      "output": {
+        "agent_name": "url_agent",
+        "risk_score": 0.0,
+        "confidence": 0.7,
+        "indicators": [
+          "no_urls_detected"
+        ]
+      }
+    }
+  },
+  "attachment_agent": {
+    "positive": {
+      "status": "completed",
+      "agent_name": "attachment_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "attachments": [
+          {
+            "filename": "invoice_urgent.exe",
+            "content_type": "application/octet-stream",
+            "size_bytes": 24576,
+            "path": "/tmp/invoice_urgent.exe"
+          }
+        ],
+        "analysis_id": "manual-agent-test-ffef6652-5bc1-4b03-98ed-3b5729909c67"
+      },
+      "output": {
+        "agent_name": "attachment_agent",
+        "risk_score": 0.167,
+        "confidence": 0.8938,
+        "indicators": [
+          "suspicious_extension:invoice_urgent.exe",
+          "missing_attachment_path:invoice_urgent.exe",
+          "ml_attachment_model_used_ensemble_10"
+        ]
+      }
+    },
+    "negative": {
+      "status": "completed",
+      "agent_name": "attachment_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "attachments": [
+          {
+            "filename": "meeting_notes.txt",
+            "content_type": "application/octet-stream",
+            "size_bytes": 400,
+            "path": "/tmp/invoice_urgent.exe"
+          }
+        ],
+        "analysis_id": "manual-agent-test-e259903e-4213-42e3-9e3b-9e41449bab54"
+      },
+      "output": {
+        "agent_name": "attachment_agent",
+        "risk_score": 0.167,
+        "confidence": 0.8938,
+        "indicators": [
+          "suspicious_extension:invoice_urgent.exe",
+          "missing_attachment_path:meeting_notes.txt",
+          "ml_attachment_model_used_ensemble_10"
+        ]
+      }
+    },
+    "edge": {
+      "status": "completed",
+      "agent_name": "attachment_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "",
+          "to": [],
+          "authentication_results": ""
+        },
+        "urls": [],
+        "body": {
+          "plain": "",
+          "html": ""
+        },
+        "attachments": [],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-a6996e51-e7ca-49b3-ab4d-548ee5234b7e"
+      },
+      "output": {
+        "agent_name": "attachment_agent",
+        "risk_score": 0.0,
+        "confidence": 0.8,
+        "indicators": [
+          "no_attachments"
+        ]
+      }
+    }
+  },
+  "sandbox_agent": {
+    "positive": {
+      "status": "completed",
+      "agent_name": "sandbox_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "attachments": [
+          {
+            "filename": "payload.docm",
+            "content_type": "application/vnd.ms-word",
+            "size_bytes": 40960,
+            "path": "/tmp/payload.docm"
+          }
+        ],
+        "analysis_id": "manual-agent-test-19c5c7a7-2500-4c19-bace-73fa75ed5936"
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.86,
+        "indicators": [
+          "sandbox_executor_mode",
+          "missing_attachment_path:payload.docm"
+        ],
+        "behavior_summary": {}
+      }
+    },
+    "negative": {
+      "status": "completed",
+      "agent_name": "sandbox_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "attachments": [
+          {
+            "filename": "meeting_notes.txt",
+            "content_type": "application/vnd.ms-word",
+            "size_bytes": 400,
+            "path": "/tmp/payload.docm"
+          }
+        ],
+        "analysis_id": "manual-agent-test-fac23978-38f0-4159-bdec-fb42658abf3d"
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.86,
+        "indicators": [
+          "sandbox_executor_mode",
+          "missing_attachment_path:meeting_notes.txt"
+        ],
+        "behavior_summary": {}
+      }
+    },
+    "edge": {
+      "status": "completed",
+      "agent_name": "sandbox_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "",
+          "to": [],
+          "authentication_results": ""
+        },
+        "urls": [],
+        "body": {
+          "plain": "",
+          "html": ""
+        },
+        "attachments": [],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-60d00638-2a06-413c-ba1d-7d95aafd0f66"
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.75,
+        "indicators": [
+          "no_attachments_for_sandbox"
+        ],
+        "behavior_summary": {}
+      }
+    }
+  },
+  "threat_intel_agent": {
+    "positive": {
+      "status": "completed",
+      "agent_name": "threat_intel_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "attacker@evil.example"
+        },
+        "urls": [
+          "http://known-bad.example/phish"
+        ],
+        "iocs": {
+          "domains": [
+            "evil.example"
+          ],
+          "ips": [
+            "185.100.87.202"
+          ],
+          "hashes": [
+            "44d88612fea8a8f36de82e1278abb02f"
+          ]
+        },
+        "analysis_id": "manual-agent-test-a1c5980b-a3a2-4d40-b244-78a7fa202d6d"
+      },
+      "output": {
+        "agent_name": "threat_intel_agent",
+        "risk_score": 0.8816,
+        "confidence": 0.65,
+        "indicators": [
+          "no_local_ioc_hits",
+          "local_match_score=0.0",
+          "external_enrichment_score=0.8816",
+          "external_threat_enrichment_enabled",
+          "malwarebazaar_unavailable",
+          "virustotal_hash_hit:44d88612fea8a8f3:67:0"
+        ]
+      }
+    },
+    "negative": {
+      "status": "completed",
+      "agent_name": "threat_intel_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "trusted@company.com",
+          "authentication_results": "spf=pass dkim=pass dmarc=pass"
+        },
+        "urls": [
+          "https://www.google.com",
+          "https://github.com/login"
+        ],
+        "iocs": {
+          "domains": [
+            "google.com"
+          ],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-3e72e84a-62a6-4e55-b9f7-74a7804f60d1"
+      },
+      "output": {
+        "agent_name": "threat_intel_agent",
+        "risk_score": 0.0004,
+        "confidence": 0.65,
+        "indicators": [
+          "no_local_ioc_hits",
+          "local_match_score=0.0",
+          "external_enrichment_score=0.0",
+          "external_threat_enrichment_enabled"
+        ]
+      }
+    },
+    "edge": {
+      "status": "completed",
+      "agent_name": "threat_intel_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "",
+          "to": [],
+          "authentication_results": ""
+        },
+        "urls": [],
+        "body": {
+          "plain": "",
+          "html": ""
+        },
+        "attachments": [],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-ff3ded44-0157-4d6e-a137-7b9e9de6132f"
+      },
+      "output": {
+        "agent_name": "threat_intel_agent",
+        "risk_score": 0.0004,
+        "confidence": 0.65,
+        "indicators": [
+          "no_local_ioc_hits",
+          "local_match_score=0.0",
+          "external_enrichment_score=0.0",
+          "external_threat_enrichment_enabled"
+        ]
+      }
+    }
+  },
+  "user_behavior_agent": {
+    "positive": {
+      "status": "completed",
+      "agent_name": "user_behavior_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "finance-team@example.com",
+          "subject": "Payroll details update"
+        },
+        "body": {
+          "plain": "Please review payroll changes immediately and confirm via this link.",
+          "html": ""
+        },
+        "recipient_context": {
+          "department": "finance",
+          "role": "analyst",
+          "historical_click_rate": 0.35
+        },
+        "analysis_id": "manual-agent-test-7009fd79-da9e-419c-9c3c-8426a9878bc5"
+      },
+      "output": {
+        "agent_name": "user_behavior_agent",
+        "risk_score": 0.06,
+        "confidence": 0.85,
+        "indicators": [
+          "unfamiliar_sender_domain"
+        ]
+      }
+    },
+    "negative": {
+      "status": "completed",
+      "agent_name": "user_behavior_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "trusted@company.com",
+          "subject": "Payroll details update",
+          "authentication_results": "spf=pass dkim=pass dmarc=pass"
+        },
+        "body": {
+          "plain": "Hey Bob, let's catch up for lunch today. Best, Alice.",
+          "html": "<p>Hey Bob, let's catch up for lunch today. Best, Alice.</p>"
+        },
+        "recipient_context": {
+          "department": "finance",
+          "role": "analyst",
+          "historical_click_rate": 0.35
+        },
+        "analysis_id": "manual-agent-test-27bcdd80-b87a-41ff-89eb-910933d1e09c"
+      },
+      "output": {
+        "agent_name": "user_behavior_agent",
+        "risk_score": 0.03,
+        "confidence": 0.85,
+        "indicators": [
+          "low_click_likelihood"
+        ]
+      }
+    },
+    "edge": {
+      "status": "completed",
+      "agent_name": "user_behavior_agent",
+      "message": "Agent tested in isolated direct mode. No RabbitMQ publish and no orchestrator/action dispatch occurred.",
+      "input_payload": {
+        "headers": {
+          "sender": "",
+          "to": [],
+          "authentication_results": ""
+        },
+        "urls": [],
+        "body": {
+          "plain": "",
+          "html": ""
+        },
+        "attachments": [],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": []
+        },
+        "analysis_id": "manual-agent-test-cead54d7-ecbc-4c0f-8914-53d630b13ebb"
+      },
+      "output": {
+        "agent_name": "user_behavior_agent",
+        "risk_score": 0.06,
+        "confidence": 0.85,
+        "indicators": [
+          "unfamiliar_sender_domain"
+        ]
+      }
+    }
+  }
+}

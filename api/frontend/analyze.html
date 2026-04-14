@@ -71,6 +71,16 @@
           <div class="progress-step" id="step3"><span class="step-num">3</span> Report Ready</div>
         </div>
 
+        <!-- Real-time Agent Pipeline Tracker -->
+        <section class="panel animate-in-d2 mt-md" id="pipelinePanel" style="display:none">
+          <h2 class="section-title"><span class="icon">⚡</span> Live Agent Pipeline</h2>
+          <p style="font-size:0.82rem;color:var(--ink-soft);margin-bottom:14px">
+            Real-time WebSocket feed from the orchestrator. Each agent lights up as it completes.
+          </p>
+          <div id="agentGrid" class="agent-grid"></div>
+          <div id="wsStatus" style="font-size:0.75rem;color:var(--ink-muted);margin-top:10px">WebSocket: connecting…</div>
+        </section>
+
         <!-- Ingest Response -->
         <section class="panel animate-in-d2 mt-md">
           <div class="result-header">
@@ -229,12 +239,85 @@
           AgentUI.showStatus(statusEl, `✅ Ingested — Analysis ID: ${activeAnalysisId}`, "ok");
           setStep(2);
 
+          // Show pipeline panel and connect WebSocket
+          initPipelineTracker(activeAnalysisId);
+
           if (pollTimer) clearInterval(pollTimer);
           pollTimer = setInterval(pollReport, 4000);
         } catch (err) {
           AgentUI.showStatus(statusEl, "❌ Upload failed: " + err.message, "err");
         }
       });
+
+      // ---- WebSocket Real-Time Pipeline ----
+      const ALL_AGENTS = [
+        "header_agent", "content_agent", "url_agent",
+        "attachment_agent", "sandbox_agent",
+        "threat_intel_agent", "user_behavior_agent"
+      ];
+      const AGENT_ICONS = {
+        header_agent: "📧", content_agent: "🧠", url_agent: "🔗",
+        attachment_agent: "📎", sandbox_agent: "💣",
+        threat_intel_agent: "🌐", user_behavior_agent: "👤"
+      };
+      let agentStates = {};
+      let ws = null;
+
+      function renderAgentGrid() {
+        const grid = document.getElementById("agentGrid");
+        if (!grid) return;
+        grid.innerHTML = ALL_AGENTS.map(name => {
+          const s = agentStates[name];
+          const icon = AGENT_ICONS[name] || "🔹";
+          const label = name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+          if (!s) {
+            return `<div class="agent-card pending"><span class="agent-icon">${icon}</span><div class="agent-label">${label}</div><div class="agent-score">Pending…</div><div class="agent-pulse"></div></div>`;
+          }
+          const scoreVal = typeof s.risk_score === "number" ? s.risk_score.toFixed(4) : "—";
+          const cls = (s.risk_score ?? 0) >= 0.5 ? "danger" : "safe";
+          return `<div class="agent-card ${cls}"><span class="agent-icon">${icon}</span><div class="agent-label">${label}</div><div class="agent-score">${scoreVal}</div></div>`;
+        }).join("");
+      }
+
+      function initPipelineTracker(analysisId) {
+        agentStates = {};
+        const panel = document.getElementById("pipelinePanel");
+        if (panel) panel.style.display = "block";
+        renderAgentGrid();
+
+        // Close existing WS
+        if (ws) { try { ws.close(); } catch(_){} }
+
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        ws = new WebSocket(`${proto}://${location.host}/ws/orchestrator`);
+        const wsStatus = document.getElementById("wsStatus");
+
+        ws.onopen = () => {
+          if (wsStatus) wsStatus.textContent = "WebSocket: connected ✅";
+        };
+        ws.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data);
+            if (msg.analysis_id !== analysisId) return;
+
+            if (msg.event_type === "agent_update" && msg.agent_name) {
+              agentStates[msg.agent_name] = { risk_score: msg.risk_score, confidence: msg.confidence };
+              renderAgentGrid();
+            }
+            if (msg.event_type === "final_verdict") {
+              if (wsStatus) wsStatus.textContent = `WebSocket: verdict received — ${msg.verdict} ✅`;
+              // Auto-trigger poll to load full report
+              pollReport();
+            }
+          } catch(_) {}
+        };
+        ws.onerror = () => {
+          if (wsStatus) wsStatus.textContent = "WebSocket: error ⚠️ (falling back to polling)";
+        };
+        ws.onclose = () => {
+          if (wsStatus) wsStatus.textContent = "WebSocket: disconnected";
+        };
+      }
     }
   </script>
 </body>

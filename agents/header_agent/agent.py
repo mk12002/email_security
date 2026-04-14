@@ -9,6 +9,7 @@ from Levenshtein import distance as levenshtein_distance
 from email_security.agents.header_agent.feature_extractor import extract_features
 from email_security.agents.header_agent.inference import predict
 from email_security.agents.header_agent.model_loader import load_model
+from email_security.agents.ml_runtime import clamp as _clamp
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("header_agent")
@@ -31,8 +32,7 @@ def _get_model():
         except Exception:
             _model_cache = False  # Use False to distinguish between None (not loaded) and False (failed to load)
     return _model_cache if _model_cache is not False else None
-def _clamp(value: float) -> float:
-    return max(0.0, min(1.0, round(value, 4)))
+
 
 
 def _domain_from_sender(sender: str) -> str:

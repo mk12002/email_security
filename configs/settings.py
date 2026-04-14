@@ -40,12 +40,10 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, description="API server port")
     api_workers: int = Field(default=4, description="Number of API workers")
     api_auth_enabled: bool = Field(
-        default=False,
-        description="Require X-API-Key header for protected API endpoints",
+        default=False, description="Enable shared API key authentication for protected endpoints"
     )
     api_auth_key: Optional[str] = Field(
-        default=None,
-        description="Shared API key used when API auth is enabled",
+        default=None, description="Shared API key required when API auth is enabled"
     )
 
     # --- RabbitMQ ---
@@ -65,7 +63,7 @@ class Settings(BaseSettings):
     )
     rabbitmq_dead_letter_queue: str = Field(
         default="email.dead.letter.queue",
-        description="Dead-letter queue for failed messages",
+        description="Dead-letter queue for failed message processing",
     )
 
     # --- Parser / Ingestion ---
@@ -77,6 +75,23 @@ class Settings(BaseSettings):
     )
     parser_poll_seconds: int = Field(
         default=2, description="Polling interval for parser worker"
+    )
+
+    # --- OCR / Attachment Text Extraction ---
+    ocr_space_api_key: Optional[str] = Field(
+        default=None, description="OCR.Space API key"
+    )
+    ocr_space_api_url: str = Field(
+        default="https://api.ocr.space/parse/image", description="OCR.Space API endpoint"
+    )
+    enable_ocr_extraction: bool = Field(
+        default=False, description="Enable OCR extraction for image/PDF attachments"
+    )
+    ocr_max_file_size_mb: float = Field(
+        default=1.0, description="Maximum attachment size in MB for OCR extraction"
+    )
+    ocr_timeout_seconds: float = Field(
+        default=15.0, description="Timeout in seconds for OCR requests"
     )
 
     # --- Azure OpenAI ---
@@ -231,22 +246,26 @@ class Settings(BaseSettings):
         default=15, description="Garuda API request timeout"
     )
     garuda_retry_queue: str = Field(
-        default="garuda.retry.queue", description="Queue for Garuda investigation retries"
+        default="garuda.retry.queue", description="Queue storing Garuda retry events"
     )
     garuda_dead_letter_queue: str = Field(
-        default="garuda.dead.queue", description="Dead-letter queue for exhausted Garuda retries"
+        default="garuda.dead.queue", description="Garuda dead-letter queue"
     )
     garuda_retry_max_attempts: int = Field(
-        default=6, description="Maximum Garuda retry attempts before dead-lettering"
+        default=6, description="Maximum retry attempts for Garuda delivery"
     )
     garuda_retry_base_seconds: int = Field(
-        default=30, description="Base exponential-backoff delay in seconds for Garuda retries"
+        default=30, description="Base retry backoff in seconds for Garuda events"
     )
     garuda_retry_max_seconds: int = Field(
-        default=1800, description="Maximum backoff delay in seconds for Garuda retries"
+        default=1800, description="Maximum retry backoff in seconds for Garuda events"
     )
 
     # --- Action Layer Endpoints ---
+    action_simulated_mode: bool = Field(
+        default=True,
+        description="If true, do not call external action endpoints; only simulate actions",
+    )
     quarantine_api_url: Optional[str] = Field(
         default=None,
         description="Endpoint URL for quarantine action dispatch",
@@ -254,10 +273,6 @@ class Settings(BaseSettings):
     soc_alert_api_url: Optional[str] = Field(
         default=None,
         description="Endpoint URL for SOC alert dispatch",
-    )
-    action_simulated_mode: bool = Field(
-        default=True,
-        description="If true, action layer logs simulated responses instead of calling external endpoints",
     )
 
     # --- Threat Intel Local IOC DB ---
@@ -271,23 +286,23 @@ class Settings(BaseSettings):
     )
     ioc_stale_seconds: int = Field(
         default=1800,
-        description="Alert threshold for stale IOC store freshness",
+        description="IOC store is considered stale after this many seconds",
     )
     ioc_warning_age_seconds: int = Field(
         default=900,
-        description="Warning threshold for IOC store age in seconds",
+        description="IOC age threshold in seconds for warning health",
     )
     ioc_critical_age_seconds: int = Field(
         default=1800,
-        description="Critical threshold for IOC store age in seconds",
+        description="IOC age threshold in seconds for critical health",
     )
     ioc_min_records: int = Field(
         default=100,
-        description="Minimum IOC records expected for healthy local IOC store",
+        description="Minimum IOC record count expected for healthy operation",
     )
     threat_intel_auto_refresh_enabled: bool = Field(
         default=True,
-        description="Enable periodic IOC store refresh loop in API process",
+        description="Enable periodic IOC auto-refresh loop in API service",
     )
 
     # --- Sandbox Detonation ---
@@ -299,23 +314,23 @@ class Settings(BaseSettings):
     )
     sandbox_local_docker_enabled: bool = Field(
         default=False,
-        description="Allow sandbox agent to run local Docker detonations from this host",
+        description="Enable local Docker detonation mode in sandbox agent",
     )
     sandbox_executor_url: Optional[str] = Field(
         default=None,
-        description="Optional isolated sandbox executor base URL",
+        description="Remote sandbox executor service URL",
+    )
+    sandbox_executor_timeout_seconds: float = Field(
+        default=30.0,
+        description="Timeout in seconds for remote sandbox executor requests",
     )
     sandbox_executor_shared_token: Optional[str] = Field(
         default=None,
-        description="Shared token used between sandbox agent and isolated executor",
-    )
-    sandbox_executor_timeout_seconds: int = Field(
-        default=30,
-        description="Timeout for isolated sandbox executor API calls",
+        description="Shared token for sandbox executor service authentication",
     )
     sandbox_executor_attachment_root: str = Field(
         default="/mnt/attachments",
-        description="Attachment root path allowed for isolated executor detonation requests",
+        description="Allowed attachment root for sandbox executor path validation",
     )
     sandbox_allow_network: bool = Field(
         default=False, description="Allow outbound network from detonation containers"
@@ -367,26 +382,19 @@ class Settings(BaseSettings):
             warnings.append(
                 "WARNING: APP_DEBUG is enabled in production. Set APP_DEBUG=false."
             )
-        if self.is_production and (not self.api_auth_enabled or not self.api_auth_key):
-            warnings.append(
-                "WARNING: API auth is disabled or missing API_AUTH_KEY in production. "
-                "Enable API_AUTH_ENABLED=true and set API_AUTH_KEY."
-            )
-        if self.is_production and self.action_simulated_mode:
-            warnings.append(
-                "WARNING: ACTION_SIMULATED_MODE is enabled in production. "
-                "Set ACTION_SIMULATED_MODE=false for live action dispatch."
-            )
+
         if self.is_production and self.sandbox_local_docker_enabled:
             warnings.append(
-                "WARNING: SANDBOX_LOCAL_DOCKER_ENABLED is true in production. "
-                "Prefer isolated detonation executor hosts/VMs."
+                "WARNING: SANDBOX_LOCAL_DOCKER_ENABLED=true in production. "
+                "Prefer isolated sandbox executor mode and disable local Docker detonation."
             )
-        if self.sandbox_executor_url and not self.sandbox_executor_shared_token:
+
+        if self.sandbox_executor_url and not (self.sandbox_executor_shared_token or "").strip():
             warnings.append(
                 "WARNING: SANDBOX_EXECUTOR_URL is configured without SANDBOX_EXECUTOR_SHARED_TOKEN. "
-                "Set a shared token to prevent unauthorized detonation calls."
+                "Set a shared token to protect executor access."
             )
+
         return warnings
 
 

@@ -9,6 +9,7 @@ from typing import Any
 from email_security.agents.attachment_agent.feature_extractor import extract_features
 from email_security.agents.attachment_agent.inference import predict
 from email_security.agents.attachment_agent.model_loader import load_model
+from email_security.agents.ml_runtime import clamp as _clamp
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
@@ -17,8 +18,7 @@ SUSPICIOUS_IMPORT_STRINGS = [b"VirtualAlloc", b"WriteProcessMemory", b"CreateRem
 SUSPICIOUS_EXTENSIONS = {".exe", ".dll", ".scr", ".js", ".vbs", ".hta", ".ps1", ".docm", ".xlsm"}
 
 
-def _clamp(value: float) -> float:
-    return max(0.0, min(1.0, round(value, 4)))
+
 
 
 def _entropy(data: bytes) -> float:

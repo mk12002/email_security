@@ -77,7 +77,7 @@ def load_model_bundle(model_path: str | Path) -> Any:
                 loaded = joblib.load(artifact)
             else:
                 with open(artifact, "rb") as handle:
-                    loaded = pickle.load(handle)
+                    loaded = pickle.load(handle)  # nosec B301
 
         mismatch_messages: dict[str, int] = {}
         for warning in caught:

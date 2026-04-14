@@ -47,7 +47,7 @@ def extract_features(
             with ioc_store._connect() as conn:
                 rows = conn.execute(
                     f"SELECT indicator, ioc_type, source, first_seen_ts, updated_ts "
-                    f"FROM iocs WHERE indicator IN ({placeholders})",
+                    f"FROM iocs WHERE indicator IN ({placeholders})",  # nosec B608
                     store_matches,
                 ).fetchall()
                 

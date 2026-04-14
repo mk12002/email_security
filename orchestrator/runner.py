@@ -163,6 +163,20 @@ class OrchestratorWorker:
         merged, first_seen_ts = self._merge_results(analysis_id, payload)
         logger.info("Result received", analysis_id=analysis_id, count=len(merged))
 
+        try:
+            self.redis_client.publish(
+                "pipeline_ui_events",
+                json.dumps({
+                    "analysis_id": analysis_id,
+                    "event_type": "agent_update",
+                    "agent_name": payload.get("agent_name"),
+                    "risk_score": payload.get("risk_score"),
+                    "confidence": payload.get("confidence")
+                })
+            )
+        except Exception as e:
+            logger.warning("Failed to publish UI event", error=str(e))
+
         finalize, reason = self._should_finalize(merged, first_seen_ts)
         if not finalize:
             return
@@ -189,6 +203,20 @@ class OrchestratorWorker:
             score=decision.get("overall_risk_score"),
             reason=reason,
         )
+
+        try:
+            self.redis_client.publish(
+                "pipeline_ui_events",
+                json.dumps({
+                    "analysis_id": analysis_id,
+                    "event_type": "final_verdict",
+                    "verdict": decision.get("verdict"),
+                    "overall_risk_score": decision.get("overall_risk_score"),
+                    "recommended_actions": decision.get("recommended_actions")
+                })
+            )
+        except Exception as e:
+            logger.warning("Failed to publish final UI verdict", error=str(e))
 
     def run(self) -> None:
         self._ensure_schema()

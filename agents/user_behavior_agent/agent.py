@@ -7,6 +7,7 @@ from typing import Any
 from email_security.agents.user_behavior_agent.feature_extractor import extract_features
 from email_security.agents.user_behavior_agent.inference import predict
 from email_security.agents.user_behavior_agent.model_loader import load_model
+from email_security.agents.ml_runtime import clamp as _clamp
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("user_behavior_agent")
@@ -14,8 +15,7 @@ logger = get_agent_logger("user_behavior_agent")
 FAMILIAR_DOMAINS = {"company.com", "microsoft.com", "google.com", "github.com"}
 URGENCY_TERMS = {"urgent", "immediately", "verify", "final notice", "action required"}
 
-def _clamp(value: float) -> float:
-    return max(0.0, min(1.0, round(value, 4)))
+
 
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting analysis", agent="user_behavior_agent")

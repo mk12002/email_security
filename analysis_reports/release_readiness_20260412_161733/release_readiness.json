@@ -1,0 +1,94 @@
+{
+  "timestamp_utc": "2026-04-12T16:17:38.207862+00:00",
+  "app_env": "development",
+  "production_warnings": [
+    "WARNING: SANDBOX_EXECUTOR_URL is configured without SANDBOX_EXECUTOR_SHARED_TOKEN. Set a shared token to protect executor access."
+  ],
+  "ioc_status": {
+    "db_path": "D:\\Code_stuff\\email_stuff\\email_security\\data\\ioc_store.db",
+    "total_iocs": 89695,
+    "last_refresh_ts": 1776010645,
+    "last_refresh_age_seconds": 8,
+    "stale_after_seconds": 1800,
+    "is_stale": false,
+    "health_level": "healthy",
+    "policy_violations": []
+  },
+  "model_artifacts": {
+    "ok": true,
+    "details": {
+      "header": {
+        "path": "D:\\Code_stuff\\email_stuff\\models\\header_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "content": {
+        "path": "D:\\Code_stuff\\email_stuff\\models\\content_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "url": {
+        "path": "D:\\Code_stuff\\email_stuff\\models\\url_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "attachment": {
+        "path": "D:\\Code_stuff\\email_stuff\\models\\attachment_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "sandbox": {
+        "path": "D:\\Code_stuff\\email_stuff\\models\\sandbox_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "threat_intel": {
+        "path": "D:\\Code_stuff\\email_stuff\\models\\threat_intel_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "user_behavior": {
+        "path": "D:\\Code_stuff\\email_stuff\\models\\user_behavior_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      }
+    }
+  },
+  "rabbitmq": {
+    "ok": false,
+    "queues": [
+      {
+        "queue": "email.results.queue",
+        "exists": false,
+        "messages_ready": 0,
+        "consumers": 0,
+        "error": "[Errno 11001] getaddrinfo failed"
+      },
+      {
+        "queue": "email.dead.letter.queue",
+        "exists": false,
+        "messages_ready": 0,
+        "consumers": 0,
+        "error": "[Errno 11001] getaddrinfo failed"
+      }
+    ]
+  },
+  "quality_gate": {
+    "command": "D:\\Code_stuff\\email_stuff\\.venv\\Scripts\\python.exe scripts/run_quality_gate.py",
+    "exit_code": 0,
+    "passed": true,
+    "stdout_tail": "Quality gate report written to: D:\\Code_stuff\\email_stuff\\email_security\\analysis_reports\\quality_gate_20260412_161738",
+    "stderr_tail": ""
+  },
+  "critical_failures": [
+    "rabbitmq"
+  ],
+  "overall_passed": false
+}

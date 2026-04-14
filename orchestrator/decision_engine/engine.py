@@ -1,7 +1,14 @@
 """
 Decision Engine for the Agentic Email Security System.
 
-Aggregates outputs from all agents and makes the final threat determination.
+LEGACY CONVENIENCE MODULE — The production runtime uses the LangGraph
+orchestrator workflow (langgraph_workflow.py) which encapsulates scoring,
+correlation, counterfactual, reasoning, storyline, and action dispatch in
+a unified graph.
+
+This module is retained as a convenience wrapper for direct testing and
+external callers that want a single-call decision without standing up the
+full LangGraph pipeline.
 """
 
 from typing import Any
@@ -9,6 +16,8 @@ from typing import Any
 from email_security.orchestrator.llm_reasoner import generate_reasoning
 from email_security.orchestrator.scoring_engine import calculate_threat_score
 from email_security.orchestrator.threat_correlation import correlate_threats
+from email_security.orchestrator.counterfactual_engine import calculate_counterfactual, threshold_for_verdict
+from email_security.orchestrator.storyline_engine import generate_storyline
 from email_security.services.logging_service import get_service_logger
 
 logger = get_service_logger("decision_engine")
@@ -17,6 +26,9 @@ logger = get_service_logger("decision_engine")
 def make_decision(agent_results: list[dict[str, Any]]) -> dict[str, Any]:
     """
     Aggregate agent results and produce a final threat decision.
+
+    This is a standalone convenience function that mirrors the LangGraph
+    workflow logic.  For production use, prefer :class:`LangGraphOrchestrator`.
 
     Args:
         agent_results: List of standardized agent result dictionaries.
@@ -43,13 +55,33 @@ def make_decision(agent_results: list[dict[str, Any]]) -> dict[str, Any]:
         verdict = "likely_safe"
         actions = ["deliver_with_banner"]
 
+    # Counterfactual analysis
+    threshold = threshold_for_verdict(verdict)
+    if threshold is not None:
+        counterfactual = calculate_counterfactual(
+            agent_results=agent_results,
+            correlation=correlation,
+            current_normalized_score=normalized_score,
+            threshold=threshold,
+        )
+    else:
+        counterfactual = {"is_counterfactual": False, "reason": "no_blocking_boundary"}
+
+    # LLM reasoning (falls back to deterministic if Azure OpenAI is unavailable)
+    llm_explanation = generate_reasoning(agent_results, normalized_score, counterfactual)
+
+    # Threat storyline
+    storyline = generate_storyline(agent_results, verdict, actions)
+
     decision = {
         "overall_risk_score": round(normalized_score, 4),
         "verdict": verdict,
         "recommended_actions": actions,
         "threat_level": score_data["threat_level"],
         "correlation": correlation,
-        "llm_explanation": generate_reasoning(agent_results, normalized_score),
+        "counterfactual_result": counterfactual,
+        "threat_storyline": storyline,
+        "llm_explanation": llm_explanation,
         "agent_results": agent_results,
     }
 

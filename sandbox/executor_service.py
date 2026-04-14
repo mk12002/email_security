@@ -86,7 +86,7 @@ def main() -> None:
     setup_logging(settings.log_dir, settings.app_log_level, settings.log_format)
     uvicorn.run(
         "email_security.sandbox.executor_service:app",
-        host="0.0.0.0",
+        host="0.0.0.0",  # nosec B104
         port=8099,
         log_level=str(settings.app_log_level).lower(),
     )

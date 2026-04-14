@@ -46,6 +46,7 @@ class EmailHeaders(BaseModel):
     authentication_results: Optional[str] = Field(
         default=None, description="SPF/DKIM/DMARC results"
     )
+    to: list[str] = Field(default_factory=list, description="Recipient email addresses")
 
 
 class AttachmentInfo(BaseModel):

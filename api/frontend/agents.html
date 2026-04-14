@@ -55,7 +55,7 @@
         ],
         build: (vals) => ({
           headers: { subject: vals.subject || "" },
-          body: vals.body || "",
+          body: { plain: vals.body || "", html: "" },
         }),
       },
       url_agent: {

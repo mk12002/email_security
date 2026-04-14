@@ -7,6 +7,7 @@ from typing import Any
 from email_security.agents.content_agent.feature_extractor import extract_features
 from email_security.agents.content_agent.inference import predict
 from email_security.agents.content_agent.model_loader import load_model
+from email_security.agents.ml_runtime import clamp as _clamp
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
@@ -18,8 +19,7 @@ PHISHING_PATTERNS = {
 }
 
 
-def _clamp(value: float) -> float:
-    return max(0.0, min(1.0, round(value, 4)))
+
 
 
 def analyze(data: dict[str, Any]) -> dict[str, Any]:

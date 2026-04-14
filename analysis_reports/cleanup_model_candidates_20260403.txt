@@ -1,0 +1,8 @@
+﻿D:\Code_stuff\email_stuff\models\content_agent_slm_checkpoints
+D:\Code_stuff\email_stuff\models\content_agent\run_logs
+D:\Code_stuff\email_stuff\models\content_agent_slm_checkpoints\checkpoint-2241
+D:\Code_stuff\email_stuff\models\content_agent_slm_checkpoints\checkpoint-2490
+D:\Code_stuff\email_stuff\models\content_agent_slm_checkpoints\checkpoint-7011
+D:\Code_stuff\email_stuff\models\content_agent_slm_checkpoints\checkpoint-7790
+D:\Code_stuff\email_stuff\models\header_agent\run_logs
+D:\Code_stuff\email_stuff\models\url_agent\run_logs

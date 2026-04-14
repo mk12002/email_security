@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from email_security.agents.ml_runtime import clamp as _clamp
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
@@ -22,8 +23,7 @@ MAX_WORDS_PER_SAMPLE = 180  # Must match training script default
 MAX_SEQ_LEN = 96  # Must match training tokenization max_length
 
 
-def _clamp(value: float) -> float:
-    return max(0.0, min(1.0, round(value, 4)))
+
 
 
 def _from_proba(value: Any) -> float:

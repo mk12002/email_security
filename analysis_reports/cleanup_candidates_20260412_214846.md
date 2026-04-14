@@ -1,0 +1,225 @@
+﻿# Cleanup Candidates (Approval Required)
+
+Generated at: 2026-04-12 21:48:46
+
+## 1) Older Timestamped Analysis Run Directories (keep latest per prefix)
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\attachment_ensemble_20260403_133626
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\attachment_ensemble_20260326_082453
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\benchmark_20260407_070356
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\dlq_test_20260407_070244
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\full_system_audit_20260402_104938
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\header_model_train_20260331_095429
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260406_061913
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260402_104609
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260402_104209
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_063342
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_051114
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260331_095508
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\monitoring_check_20260407_070346
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\quality_gate_20260412_161738
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\quality_gate_20260412_161633
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\quality_gate_20260407_070255
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\quality_gate_20260407_063913
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\release_readiness_20260412_161733
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\release_readiness_20260412_161628
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\release_readiness_20260412_161400
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\release_readiness_20260412_161337
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\release_readiness_20260407_070337
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\sandbox_consistency_20260402_094800
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\sandbox_model_train_20260402_100408
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\sandbox_model_train_20260402_094630
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\threat_intel_train_20260403_125703
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\url_eda_20260326_161144
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_eda_20260326_012031
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_eda_20260326_011621
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_eda_20260326_011559
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260403_102155
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260326_164514
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260326_100448
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260326_100249
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260326_090404
+- KEEP D:\Code_stuff\email_stuff\email_security\analysis_reports\user_behavior_train_20260403_184055
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\user_behavior_train_20260403_183230
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\user_behavior_train_20260403_183202
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\user_behavior_train_20260403_183133
+
+## 2) Duplicate-Copy Files with (1)/(2)/... suffix
+- Total duplicate-suffixed files: 154
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\.pytest_cache\v\cache\lastfailed (1)
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\.pytest_cache\v\cache\lastfailed (2)
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\.pytest_cache\v\cache\lastfailed (3)
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\.pytest_cache\v\cache\lastfailed (4)
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\.pytest_cache\v\cache\lastfailed(1)
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_051114\smoke_test_detailed (1).csv
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_051114\smoke_test_detailed (2).csv
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_051114\smoke_test_detailed(1).csv
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_051114\smoke_test_results (1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_051114\smoke_test_results (2).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_051114\smoke_test_results(1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_063342\smoke_test_detailed (1).csv
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_063342\smoke_test_detailed (2).csv
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_063342\smoke_test_detailed(1).csv
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_063342\smoke_test_results (1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_063342\smoke_test_results (2).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\header_smoke_test_20260401_063342\smoke_test_results(1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\candidate_comparison (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\candidate_comparison (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\candidate_comparison(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\confusion_matrix (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\confusion_matrix (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\confusion_matrix(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\dataset_audit (1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\dataset_audit (2).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\dataset_audit(1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\precision_recall_curve (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\precision_recall_curve (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\precision_recall_curve(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\roc_curve (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\roc_curve (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\roc_curve(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\score_histogram (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\score_histogram (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\score_histogram(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\threshold_sweep (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\threshold_sweep (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\threshold_sweep(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\training (1).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\training (2).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260331_105448\training(1).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\candidate_comparison (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\candidate_comparison (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\candidate_comparison(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\confusion_matrix (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\confusion_matrix (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\confusion_matrix(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\dataset_audit (1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\dataset_audit (2).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\dataset_audit(1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\precision_recall_curve (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\precision_recall_curve (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\precision_recall_curve(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\roc_curve (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\roc_curve (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\roc_curve(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\score_histogram (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\score_histogram (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\score_histogram(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\threshold_sweep (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\threshold_sweep (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\threshold_sweep(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\training (1).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\training (2).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_051637\training(1).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\candidate_comparison (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\candidate_comparison (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\candidate_comparison(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\confusion_matrix (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\confusion_matrix (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\confusion_matrix(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\dataset_audit (1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\dataset_audit (2).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\dataset_audit(1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\feature_importance (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\feature_importance (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\feature_importance(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\learning_curve (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\learning_curve (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\learning_curve(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\precision_recall_curve (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\precision_recall_curve (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\precision_recall_curve(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\roc_curve (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\roc_curve (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\roc_curve(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\score_histogram (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\score_histogram (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\score_histogram(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\summary (1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\summary (2).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\summary(1).json
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\threshold_sweep (1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\threshold_sweep (2).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\threshold_sweep(1).png
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\training (1).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\training (2).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\training(1).log
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\training_report (1).txt
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\training_report (2).txt
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\analysis_reports\url_model_train_20260401_061236\training_report(1).txt
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312 (1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312 (2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312 (5).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312 (7).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312 (8).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312(1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312(2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\preprocessing\__pycache__\sandbox_preprocessing.cpython-312(3).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\__pycache__\test_orchestrator.cpython-312-pytest-9.0.2 (1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\__pycache__\test_orchestrator.cpython-312-pytest-9.0.2 (2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\__pycache__\test_orchestrator.cpython-312-pytest-9.0.2 (3).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\__pycache__\test_orchestrator.cpython-312-pytest-9.0.2 (5).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\__pycache__\test_orchestrator.cpython-312-pytest-9.0.2 (6).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\__pycache__\test_orchestrator.cpython-312-pytest-9.0.2(1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\__pycache__\test_orchestrator.cpython-312-pytest-9.0.2(2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\debug_url (1).py
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\debug_url (2).py
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\debug_url (3).py
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\debug_url (4).py
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\debug_url (5).py
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\scripts\debug_url(1).py
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2 (1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2 (2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2 (3).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2 (4).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2 (5).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2(1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2(2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_content_preprocessing.cpython-312-pytest-9.0.2(3).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2 (1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2 (2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2 (4).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2 (5).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2 (6).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2(1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2(2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_agent_behavior.cpython-312-pytest-9.0.2(3).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2 (1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2 (2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2 (5).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2 (7).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2 (8).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2(1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2(2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_sandbox_preprocessing.cpython-312-pytest-9.0.2(3).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2 (1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2 (2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2 (4).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2 (5).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2 (7).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2(1).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2(2).pyc
+- DELETE_CANDIDATE D:\Code_stuff\email_stuff\email_security\tests\__pycache__\test_url_model_smoke.cpython-312-pytest-9.0.2(3).pyc
+
+## 3) Script duplicates / debug copies
+- REVIEW_SCRIPT D:\Code_stuff\email_stuff\email_security\scripts\debug_url (1).py
+- REVIEW_SCRIPT D:\Code_stuff\email_stuff\email_security\scripts\debug_url (2).py
+- REVIEW_SCRIPT D:\Code_stuff\email_stuff\email_security\scripts\debug_url (3).py
+- REVIEW_SCRIPT D:\Code_stuff\email_stuff\email_security\scripts\debug_url (4).py
+- REVIEW_SCRIPT D:\Code_stuff\email_stuff\email_security\scripts\debug_url (5).py
+- REVIEW_SCRIPT D:\Code_stuff\email_stuff\email_security\scripts\debug_url(1).py
+- REVIEW_SCRIPT D:\Code_stuff\email_stuff\email_security\scripts\debug_url.py
+
+## 4) One-off root test/debug artifacts (manual review)
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\bandit_results.json
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\bandit_results2.json
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\pytest_output.txt
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\test_results.json
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\dummy.eml
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\parse_bandit.py
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\parse_script.py
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\test_agents.py
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\test_parser.py
+- REVIEW_FILE D:\Code_stuff\email_stuff\email_security\test_websocket.py

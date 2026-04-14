@@ -103,46 +103,46 @@ class ResponseEngine:
         }
 
         print("\n" + "="*60)
-        print(f"🔒 ACTION LAYER INVOKED FOR ANALYSIS: {analysis_id}")
-        print(f"📊 Verdict: {verdict.upper()} | Risk Score: {score:.2f}")
+        print(f"[LOCK] ACTION LAYER INVOKED FOR ANALYSIS: {analysis_id}")
+        print(f"[SCORE] Verdict: {verdict.upper()} | Risk Score: {score:.2f}")
         print("-" * 60)
         
         if reasons:
-            print("🛑 REASONS FOR ACTIONS:")
+            print("[!] REASONS FOR ACTIONS:")
             for r in reasons:
                 print(f"   - {r}")
         print("-" * 60)
 
         if not actions:
-            print("✅ No specific actions recommended.")
+            print("[OK] No specific actions recommended.")
             print("="*60 + "\n")
             return
 
-        print("⚡ EXECUTING ACTIONS (SIMULATED MODE):")
+        print("[>>] EXECUTING ACTIONS (SIMULATED MODE):")
 
         if "quarantine" in actions:
-            print("   -> [ACTION TAKEN] 📦 Email Moved to Quarantine")
+            print("   -> [ACTION TAKEN] [QUARANTINE] Email Moved to Quarantine")
             # External API logic kept but disabled conditionally if simulated_mode is active
             if not self.simulated_mode and settings.quarantine_api_url:
                 _safe_call(settings.quarantine_api_url, payload)
                 logger.info("Quarantine action emitted", analysis_id=analysis_id)
 
         if "soc_alert" in actions or "trigger_garuda" in actions:
-            print("   -> [ACTION TAKEN] 🚨 Alert Sent to SOC Team / Garuda Agent")
+            print("   -> [ACTION TAKEN] [ALERT] Alert Sent to SOC Team / Garuda Agent")
             if not self.simulated_mode and settings.soc_alert_api_url:
                 _safe_call(settings.soc_alert_api_url, payload)
                 logger.info("SOC alert action emitted", analysis_id=analysis_id)
                 
         if "block_sender" in actions:
-            print("   -> [ACTION TAKEN] 🚫 Sender Email / Domain Blocked Locally")
+            print("   -> [ACTION TAKEN] [BLOCK] Sender Email / Domain Blocked Locally")
             
         if "reset_credentials" in actions:
-            print("   -> [ACTION TAKEN] 🔑 Forced Password Reset for Target User")
+            print("   -> [ACTION TAKEN] [CREDS] Forced Password Reset for Target User")
 
         # Generate and print the AI summary
         ai_summary = self._generate_ai_response_summary(decision)
         print("-" * 60)
-        print(f"🤖 AI Response Summary: {ai_summary}")
+        print(f"[AI] Response Summary: {ai_summary}")
         print("="*60 + "\n")
 
 

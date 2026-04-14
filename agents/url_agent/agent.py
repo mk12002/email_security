@@ -37,20 +37,20 @@ def _heuristic_score(url: str) -> tuple[float, list[str]]:
     indicators: list[str] = []
     score = 0.0
 
-    if len(url) > 75:
+    if len(url) > 90:
         score += 0.18
         indicators.append("url_length_high")
-    if host.count(".") >= 2:
-        score += 0.25
+    if host.count(".") >= 3:
+        score += 0.15
         indicators.append("many_subdomains")
-    if any(token in url for token in ["@", "%40", "login", "verify", "secure", "reset", "auth", "signin", "account"]):
-        score += 0.4
+    if any(token in url for token in ["@", "%40", "login", "verify", "secure"]):
+        score += 0.2
         indicators.append("credential_bait_terms")
     if _entropy(host) > 3.5:
-        score += 0.25
+        score += 0.2
         indicators.append("high_subdomain_entropy")
     if parsed.scheme != "https":
-        score += 0.15
+        score += 0.08
         indicators.append("non_https_url")
     return _clamp(score), indicators
 
@@ -285,8 +285,10 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     ml_prediction = predict(features, model=model)
 
     if ml_prediction.get("confidence", 0.0) > 0.0:
-        ml_risk = ml_prediction.get("risk_score", 0.0)
-        risk_score = _clamp(max(ml_risk, evidence_risk, (0.6 * ml_risk) + (0.4 * evidence_risk)))
+        ml_risk = float(ml_prediction.get("risk_score", 0.0) or 0.0)
+        blended_risk = _clamp((0.6 * ml_risk) + (0.4 * evidence_risk))
+        # Preserve the strongest available signal while keeping blended calibration.
+        risk_score = _clamp(max(ml_risk, evidence_risk, blended_risk))
         confidence_floor = 0.6 + min(0.25, 0.02 * len(urls)) + (0.05 if external_risk > 0.0 else 0.0)
         confidence = _clamp(max(confidence_floor, ml_prediction.get("confidence", 0.0)))
         summary_indicators.extend(ml_prediction.get("indicators", []))

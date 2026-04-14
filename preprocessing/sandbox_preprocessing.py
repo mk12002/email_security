@@ -537,7 +537,7 @@ def _load_local_benign_bootstrap(base_dir: Path, max_rows: int) -> list[dict[str
             if not blob:
                 continue
 
-            stable_suffix = sha1(str(file_path).encode("utf-8", errors="ignore")).hexdigest()[:12]
+            stable_suffix = sha1(str(file_path).encode("utf-8", errors="ignore")).hexdigest()[:12]  # nosec B324
             sample_id = f"benign_{file_path.stem}_{stable_suffix}"
             if sample_id in seen_sample_ids:
                 continue

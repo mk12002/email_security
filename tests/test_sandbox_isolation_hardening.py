@@ -10,6 +10,7 @@ from email_security.configs.settings import Settings
 
 def test_sandbox_falls_back_when_local_docker_disabled(monkeypatch) -> None:
     monkeypatch.setattr(sandbox_agent.settings, "sandbox_local_docker_enabled", False, raising=False)
+    monkeypatch.setattr(sandbox_agent.settings, "sandbox_executor_url", "", raising=False)
 
     # Ensure this path never attempts local Docker.
     monkeypatch.setattr(

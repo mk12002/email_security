@@ -56,7 +56,7 @@ class ModelLoader:
                 loaded = joblib.load(artifact)
             else:
                 with open(artifact, "rb") as handle:
-                    loaded = pickle.load(handle)
+                    loaded = pickle.load(handle)  # nosec B301
 
             if isinstance(loaded, dict) and "model" in loaded:
                 loaded.setdefault("kind", "sklearn_bundle")

@@ -30,25 +30,10 @@ class IOCStore:
     """Persistent local IOC database backed by SQLite for fast membership checks."""
 
     def __init__(self, db_path: str):
-        requested_path = Path(db_path)
-        if not requested_path.is_absolute():
-            requested_path = Path(".") / requested_path
-
-        self.db_path = requested_path
-        try:
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            # Local test/dev runs can inherit container-only paths like /app/...
-            # from .env. Fall back to a writable workspace-local DB path.
-            fallback = Path(__file__).resolve().parents[2] / "data" / "ioc_store_local.db"
-            fallback.parent.mkdir(parents=True, exist_ok=True)
-            logger.warning(
-                "IOC DB path is not writable; using local fallback",
-                requested=str(requested_path),
-                fallback=str(fallback),
-                error=str(exc),
-            )
-            self.db_path = fallback
+        self.db_path = Path(db_path)
+        if not self.db_path.is_absolute():
+            self.db_path = Path(".") / self.db_path
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_schema()
 
     def _connect(self) -> sqlite3.Connection:
@@ -286,108 +271,111 @@ def _clamp(value: float) -> float:
     return max(0.0, min(1.0, round(value, 4)))
 
 
-def _refresh_ioc_store_if_needed() -> int:
-    return int(refresh_ioc_store(force=False).get("total_iocs", 0))
-
-
-def _evaluate_ioc_health(age_seconds: int | None, total_iocs: int) -> tuple[str, list[str]]:
+def _evaluate_ioc_health(last_refresh_age_seconds: int | None, total_iocs: int) -> tuple[str, list[str]]:
+    """Evaluate IOC store health level based on staleness and minimum data policy."""
+    violations: list[str] = []
     warning_age = max(60, int(settings.ioc_warning_age_seconds))
     critical_age = max(warning_age, int(settings.ioc_critical_age_seconds))
     min_records = max(1, int(settings.ioc_min_records))
 
-    violations: list[str] = []
     level = "healthy"
-
-    if age_seconds is None:
-        level = "critical"
+    if last_refresh_age_seconds is None:
         violations.append("ioc_refresh_never_recorded")
-    else:
-        if age_seconds > critical_age:
-            level = "critical"
-            violations.append(f"ioc_age_exceeds_critical:{age_seconds}>{critical_age}")
-        elif age_seconds > warning_age:
-            if level != "critical":
-                level = "warning"
-            violations.append(f"ioc_age_exceeds_warning:{age_seconds}>{warning_age}")
+        level = "critical"
+    elif int(last_refresh_age_seconds) > critical_age:
+        violations.append(f"ioc_age_exceeds_critical:{int(last_refresh_age_seconds)}>{critical_age}")
+        level = "critical"
+    elif int(last_refresh_age_seconds) > warning_age:
+        violations.append(f"ioc_age_exceeds_warning:{int(last_refresh_age_seconds)}>{warning_age}")
+        level = "warning"
 
-    if total_iocs < min_records:
-        if total_iocs == 0:
-            level = "critical"
-        elif level != "critical":
+    if int(total_iocs) < min_records:
+        violations.append(f"ioc_record_count_low:{int(total_iocs)}<{min_records}")
+        if level == "healthy":
             level = "warning"
-        violations.append(f"ioc_record_count_low:{total_iocs}<{min_records}")
 
     return level, violations
 
 
-def get_ioc_store_status() -> dict[str, Any]:
-    """Return IOC lifecycle health for monitoring endpoints and alerting."""
+def _refresh_ioc_store_if_needed() -> int:
     now = int(time.time())
-    last_refresh = int(_STORE.get_last_refresh_ts() or 0)
-    age_seconds = (now - last_refresh) if last_refresh else None
-    stale_after = max(60, int(settings.ioc_stale_seconds))
-    stale = bool(age_seconds is None or age_seconds > stale_after)
-
-    status = {
-        "db_path": str(_STORE.db_path),
-        "total_iocs": int(_STORE.count()),
-        "last_refresh_ts": last_refresh,
-        "last_refresh_age_seconds": age_seconds,
-        "stale_after_seconds": stale_after,
-        "is_stale": stale,
-    }
-
-    health_level, policy_violations = _evaluate_ioc_health(status["last_refresh_age_seconds"], status["total_iocs"])
-    status["health_level"] = health_level
-    status["policy_violations"] = policy_violations
-
-    if stale:
-        logger.warning(
-            "IOC store appears stale",
-            age_seconds=age_seconds,
-            stale_after_seconds=stale_after,
-            db_path=str(_STORE.db_path),
-            health_level=health_level,
-            violations=policy_violations,
-        )
-
-    return status
-
-
-def refresh_ioc_store(force: bool = False) -> dict[str, Any]:
-    """Refresh IOC store from feeds with optional force mode."""
-    now = int(time.time())
-    last_refresh = int(_STORE.get_last_refresh_ts() or 0)
-    min_interval = max(30, int(settings.ioc_refresh_seconds))
-    elapsed = (now - last_refresh) if last_refresh else None
-
-    if not force and elapsed is not None and elapsed < min_interval:
-        status = get_ioc_store_status()
-        status["refreshed"] = False
-        status["reason"] = "interval_not_elapsed"
-        return status
+    last_refresh = _STORE.get_last_refresh_ts()
+    if last_refresh and (now - last_refresh) < max(30, settings.ioc_refresh_seconds):
+        return _STORE.count()
 
     harvested = _collect_iocs_from_feeds()
     upserted = _STORE.upsert_many(harvested)
     _STORE._set_last_refresh_ts(now)
-    status = get_ioc_store_status()
-    status.update(
-        {
-            "refreshed": True,
-            "reason": "forced" if force else "interval_elapsed",
-            "harvested": len(harvested),
-            "upserted": int(upserted),
-        }
-    )
+    total = _STORE.count()
     logger.info(
         "IOC store refreshed",
         harvested=len(harvested),
         upserted=upserted,
-        total=status["total_iocs"],
+        total=total,
         db_path=str(_STORE.db_path),
-        force=force,
     )
-    return status
+    return total
+
+
+def get_ioc_store_status() -> dict[str, Any]:
+    """Return IOC store metadata and policy-driven health indicators."""
+    now = int(time.time())
+    total_iocs = _STORE.count()
+    last_refresh_ts = int(_STORE.get_last_refresh_ts() or 0)
+    last_refresh_age_seconds: int | None = None
+    if last_refresh_ts > 0:
+        last_refresh_age_seconds = max(0, now - last_refresh_ts)
+
+    stale_after_seconds = max(60, int(settings.ioc_stale_seconds))
+    is_stale = (
+        last_refresh_age_seconds is None
+        or int(last_refresh_age_seconds) > stale_after_seconds
+    )
+
+    health_level, policy_violations = _evaluate_ioc_health(
+        last_refresh_age_seconds,
+        total_iocs=total_iocs,
+    )
+
+    return {
+        "db_path": str(_STORE.db_path),
+        "total_iocs": int(total_iocs),
+        "last_refresh_ts": int(last_refresh_ts),
+        "last_refresh_age_seconds": last_refresh_age_seconds,
+        "stale_after_seconds": int(stale_after_seconds),
+        "is_stale": bool(is_stale),
+        "health_level": str(health_level),
+        "policy_violations": [str(item) for item in policy_violations],
+    }
+
+
+def refresh_ioc_store(force: bool = False) -> dict[str, Any]:
+    """Refresh IOC store from feeds and return refresh summary with current status."""
+    now = int(time.time())
+    refreshed = False
+    harvested = 0
+    upserted = 0
+
+    refresh_interval = max(30, int(settings.ioc_refresh_seconds))
+    last_refresh_ts = int(_STORE.get_last_refresh_ts() or 0)
+    should_refresh = bool(force) or (not last_refresh_ts) or ((now - last_refresh_ts) >= refresh_interval)
+
+    if should_refresh:
+        rows = _collect_iocs_from_feeds()
+        harvested = len(rows)
+        upserted = _STORE.upsert_many(rows)
+        _STORE._set_last_refresh_ts(now)
+        refreshed = True
+
+    status = get_ioc_store_status()
+    return {
+        "force": bool(force),
+        "refreshed": bool(refreshed),
+        "harvested": int(harvested),
+        "upserted": int(upserted),
+        "total_iocs": int(status.get("total_iocs", 0)),
+        "status": status,
+    }
 
 
 def _request_timeout() -> float:
@@ -619,7 +607,7 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
 
     ml_risk = float(prediction.get("risk_score", 0.0) or 0.0)
     ml_confidence = float(prediction.get("confidence", 0.0) or 0.0)
-    blended_risk = (0.55 * ml_risk) + (0.3 * local_match_score) + (0.15 * external_score)
+    blended_risk = _clamp((0.55 * ml_risk) + (0.3 * local_match_score) + (0.15 * external_score))
     fused_risk = _clamp(max(ml_risk, local_match_score, external_score, blended_risk))
     confidence_floor = 0.55 + (0.2 if matches else 0.0) + (0.1 if external_score > 0.0 else 0.0)
     fused_confidence = _clamp(max(ml_confidence, confidence_floor))

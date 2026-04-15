@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI
 from fastapi import Depends, File, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 import psycopg2
@@ -56,31 +56,44 @@ SUPPORTED_AGENT_TESTS = [
 AGENT_TEST_EXAMPLES: dict[str, dict[str, Any]] = {
     "header_agent": {
         "headers": {
-            "sender": "alerts-security@paypa1-security.example",
-            "reply_to": "support@evil.example",
+            "sender": "admin@rnicrosoft.com",
+            "reply_to": "hacker@evil.example",
             "subject": "Urgent: verify your account",
-            "received": ["from smtp-unknown by victim-mx"],
+            "received": [
+                "from mx.github.com by smtp.gmail.com",
+                "from internal by mx.github.com"
+            ],
             "message_id": "<m-header-1>",
             "authentication_results": "spf=fail; dkim=fail; dmarc=fail",
         }
     },
     "content_agent": {
-        "headers": {"subject": "Invoice overdue"},
-        "body": "Urgent action required. Confirm your password now to avoid account lock.",
+        "headers": {"subject": "URGENT: Final Notice - Invoice Overdue"},
+        "body": {
+            "plain": "Dear Customer, your account is past due. If you do not click the link below to process your payment within 24 hours, your services will be terminated and legal action will be taken. Act immediately.",
+            "html": ""
+        }
     },
     "url_agent": {
         "urls": [
             "http://secure-login-paypa1.example/verify",
-            "https://microsoft.com-security-login.example/reset",
+            "https://microsoft.com-security-login.example/reset?token=123",
+            "https://google.com"
         ]
     },
     "attachment_agent": {
         "attachments": [
             {
                 "filename": "invoice_urgent.exe",
-                "content_type": "application/octet-stream",
-                "size_bytes": 24576,
+                "content_type": "application/x-msdownload",
+                "size_bytes": 145760,
                 "path": "/tmp/invoice_urgent.exe",  # nosec B108
+            },
+            {
+                "filename": "meeting_notes.txt",
+                "content_type": "text/plain",
+                "size_bytes": 2048,
+                "path": "/tmp/meeting_notes.txt",  # nosec B108
             }
         ]
     },
@@ -88,31 +101,40 @@ AGENT_TEST_EXAMPLES: dict[str, dict[str, Any]] = {
         "attachments": [
             {
                 "filename": "payload.docm",
-                "content_type": "application/vnd.ms-word",
+                "content_type": "application/vnd.ms-word.document.macroEnabled.12",
                 "size_bytes": 40960,
                 "path": "/tmp/payload.docm",  # nosec B108
+            },
+            {
+                "filename": "summary.pdf",
+                "content_type": "application/pdf",
+                "size_bytes": 10240,
+                "path": "/tmp/summary.pdf",  # nosec B108
             }
         ]
     },
     "threat_intel_agent": {
         "headers": {"sender": "attacker@evil.example"},
-        "urls": ["http://known-bad.example/phish"],
+        "urls": ["http://known-bad.example/phish", "https://github.com"],
         "iocs": {
-            "domains": ["evil.example"],
-            "ips": ["185.100.87.202"],
+            "domains": ["evil.example", "github.com"],
+            "ips": ["185.100.87.202", "140.82.112.3"],
             "hashes": ["44d88612fea8a8f36de82e1278abb02f"],
         },
     },
     "user_behavior_agent": {
         "headers": {
-            "sender": "finance-team@example.com",
-            "subject": "Payroll details update",
+            "sender": "finance-team@gmail.com",
+            "subject": "Payroll details update URGENT",
         },
-        "body": "Please review payroll changes immediately and confirm via this link.",
+        "body": {
+             "plain": "Please review payroll changes immediately and confirm via this link.",
+             "html": ""
+        },
         "recipient_context": {
             "department": "finance",
             "role": "analyst",
-            "historical_click_rate": 0.35,
+            "historical_click_rate": 0.85,
         },
     },
 }
@@ -145,6 +167,16 @@ async def lifespan(app: FastAPI):
         app.state._threat_intel_refresh_task = asyncio.create_task(
             _threat_intel_refresh_loop(stop_event)
         )
+    
+    # Warm up large ML models to prevent cold-start latency for the first API request
+    logger.info("Pre-warming ML models...")
+    from email_security.agents.content_agent.model_loader import load_model as load_content_model
+    try:
+        load_content_model()
+        logger.info("Content ML model warmed up successfully.")
+    except Exception as e:
+        logger.warning(f"Failed to pre-warm content model: {e}")
+
     yield
     # --- Shutdown ---
     stop_event.set()
@@ -456,6 +488,12 @@ async def _threat_intel_refresh_loop(stop_event: asyncio.Event) -> None:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+
+@app.get("/", include_in_schema=False)
+async def root_redirect():
+    """Redirect root to the frontend UI."""
+    return RedirectResponse(url="/ui")
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
@@ -868,3 +906,17 @@ async def get_report(analysis_id: str, _auth: None = Depends(_require_api_key)):
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to fetch report: {exc}") from exc
+
+@app.get("/api/v1/pewpew")
+async def pew_pew():
+    """Easter Egg: Pew Pew!"""
+    return {
+        "status": "pew pew",
+        "message": "Lasers fired at incoming phishing emails! 💥🔫👾",
+        "ascii_art": r"""
+        \ \ / /
+         \ V / 
+         | |  
+         |_|  
+        """
+    }

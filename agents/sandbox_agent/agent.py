@@ -162,8 +162,16 @@ def _file_entropy(path: Path) -> float:
 def _static_attachment_score(target: Path) -> float:
     score = 0.0
     ext = target.suffix.lower()
+    
+    filename = target.name.lower()
+    parts = filename.split(".")
+    # Catch double extensions in sandbox as well
+    if len(parts) > 2 and parts[-1] in [e.strip(".") for e in RISKY_EXTENSIONS]:
+        score += 0.85
+        ext = f".{parts[-1]}"
+
     if ext in RISKY_EXTENSIONS:
-        score += 0.28
+        score += 0.55
 
     try:
         blob = target.read_bytes()
@@ -174,12 +182,12 @@ def _static_attachment_score(target: Path) -> float:
     if entropy >= 7.1:
         score += 0.22
 
-    if any(token in blob for token in SUSPICIOUS_IMPORT_STRINGS):
-        score += 0.32
+    if any(token in blob.lower() for token in SUSPICIOUS_IMPORT_STRINGS):
+        score += 0.42
 
     lower_blob = blob.lower()
     if ext in {".docm", ".xlsm"} and b"vba" in lower_blob:
-        score += 0.25
+        score += 0.85
 
     return _clamp(score)
 
@@ -515,6 +523,13 @@ def _compute_static_score(attachment: dict[str, Any], target: Path) -> float:
     return _static_attachment_score(target)
 
 
+def _is_high_static_suspicion(target: Path, static_score: float) -> bool:
+    ext = target.suffix.lower()
+    if static_score >= 0.85:
+        return True
+    return ext in {".docm", ".xlsm", ".exe", ".dll", ".js", ".ps1"} and static_score >= 0.7
+
+
 def _should_detonate(attachment: dict[str, Any], target: Path) -> tuple[bool, float, str]:
     static_score = _compute_static_score(attachment, target)
     if static_score >= 0.45:
@@ -599,6 +614,9 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     risk = 0.0
     indicators: list[str] = []
     behavior_summary: dict[str, Any] = {}
+    analysis_mode = "fallback_static"
+    operational_alert: dict[str, Any] | None = None
+    high_static_suspicion = False
     model = load_model()
 
     detonate_fn: Any = None
@@ -612,23 +630,38 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
                 stale_seconds=max(300, int(settings.sandbox_cleanup_stale_seconds)),
             )
             detonate_fn = lambda target: _detonate_attachment(docker_client, target)
+            analysis_mode = "docker"
         except (DockerException, NotFound, OSError) as exc:
             indicators.append("docker_sandbox_unavailable")
+            indicators.append("soc_operational_alert:sandbox_backend_unavailable")
+            operational_alert = {
+                "code": "sandbox_backend_unavailable",
+                "severity": "warning",
+                "message": "Local Docker sandbox is unavailable; fallback static mode in effect.",
+            }
             logger.warning("Sandbox unavailable, falling back to static behavior hints", error=str(exc))
     else:
         executor_url = str(settings.sandbox_executor_url or "").strip()
         if executor_url:
             indicators.append("sandbox_executor_mode")
             detonate_fn = _detonate_via_executor
+            analysis_mode = "executor"
         else:
             indicators.append("sandbox_local_docker_disabled")
 
     if detonate_fn is None:
+        analysis_mode = "fallback_static"
         for attachment in attachments[:5]:
             filename = str(attachment.get("filename") or "").lower()
             target = Path(attachment.get("path", ""))
             if target.exists():
-                risk += 0.35 * _compute_static_score(attachment, target)
+                static_score = _compute_static_score(attachment, target)
+                if _is_high_static_suspicion(target, static_score):
+                    high_static_suspicion = True
+                    risk += 0.85 * static_score
+                    indicators.append(f"fallback_high_static_combo:{target.name}")
+                else:
+                    risk += 0.45 * static_score
             else:
                 indicators.append(f"missing_attachment_path:{attachment.get('filename', 'unknown')}")
             if any(token in filename for token in ["invoice", "payment", "urgent", "update"]):
@@ -653,6 +686,8 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
                 continue
 
             should_detonate, static_score, detonation_reason = _should_detonate(attachment, target)
+            if _is_high_static_suspicion(target, static_score):
+                high_static_suspicion = True
             if not should_detonate:
                 indicators.append(f"sandbox_skipped_low_suspicion:{target.name}")
                 continue
@@ -667,8 +702,20 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
                     indicators.append("docker_sandbox_unavailable")
                 else:
                     indicators.append("sandbox_executor_unavailable")
+                indicators.append("soc_operational_alert:sandbox_backend_unavailable")
+                analysis_mode = "fallback_static"
+                if operational_alert is None:
+                    operational_alert = {
+                        "code": "sandbox_backend_unavailable",
+                        "severity": "warning",
+                        "message": "Sandbox backend unavailable during detonation; fallback static scoring applied.",
+                    }
                 logger.warning("Sandbox detonation path unavailable", target=str(target), error=str(exc))
-                risk += 0.35 * static_score
+                if _is_high_static_suspicion(target, static_score):
+                    risk += 0.85 * static_score
+                    indicators.append(f"fallback_high_static_combo:{target.name}")
+                else:
+                    risk += 0.45 * static_score
                 continue
 
             ml_prediction = predict(training_row, model=model)
@@ -710,13 +757,20 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         "sandbox_local_docker_disabled",
         "sandbox_executor_unavailable",
     }
+    if analysis_mode == "fallback_static" and high_static_suspicion:
+        final_risk = _clamp(max(final_risk, 0.45))
+        indicators.append("fallback_static_suspicious_floor")
+
     result = {
         "agent_name": "sandbox_agent",
         "risk_score": final_risk,
         "behavior_risk_score": final_risk,
         "confidence": _clamp(0.45 if any(item in fallback_indicators for item in indicators) else 0.86),
+        "analysis_mode": analysis_mode,
         "indicators": indicators[:30],
         "behavior_summary": behavior_summary,
     }
+    if operational_alert is not None:
+        result["operational_alert"] = operational_alert
     logger.info("Analysis complete", risk_score=result["risk_score"])
     return result

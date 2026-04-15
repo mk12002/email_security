@@ -111,6 +111,7 @@ def load_model_bundle(model_path: str | Path) -> Any:
             model=str(path),
             tokenizer=str(path),
             truncation=True,
+            local_files_only=True,
         )
         return {"kind": "transformer_pipeline", "model": pipe}
 

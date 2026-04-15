@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import json
 from pathlib import Path
 import websockets
@@ -16,7 +15,7 @@ async def upload_file(client, file_path):
         print(f"Upload successful. Analysis ID: {data['analysis_id']}")
         return data['analysis_id']
 
-async def test_websocket():
+async def run_websocket_probe() -> int:
     # 1. Create a dummy EML file
     dummy_eml = Path("dummy.eml")
     dummy_eml.write_bytes(b"From: badguy@evil.com\nTo: user@company.com\nSubject: Invoice\n\nPlease pay the invoice.")
@@ -41,14 +40,15 @@ async def test_websocket():
                 updates.append(msg)
                 
                 if msg["event_type"] == "final_verdict":
-                    print("Received final verdict! WebSocket test PASSED.")
+                    print("Received final verdict! WebSocket probe PASSED.")
                     break
     except Exception as e:
-        print(f"Test failed: {e}")
-        sys.exit(1)
+        print(f"Probe failed: {e}")
+        return 1
     finally:
         if dummy_eml.exists():
             dummy_eml.unlink()
+    return 0
 
 if __name__ == "__main__":
-    asyncio.run(test_websocket())
+    sys.exit(asyncio.run(run_websocket_probe()))

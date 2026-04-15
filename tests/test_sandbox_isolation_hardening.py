@@ -32,6 +32,7 @@ def test_sandbox_falls_back_when_local_docker_disabled(monkeypatch) -> None:
 
     assert result["agent_name"] == "sandbox_agent"
     assert "sandbox_local_docker_disabled" in result["indicators"]
+    assert result["analysis_mode"] == "fallback_static"
     assert result["confidence"] <= 0.45
 
 
@@ -82,4 +83,19 @@ def test_sandbox_executor_mode_uses_remote_path(monkeypatch, tmp_path: Path) -> 
     result = sandbox_agent.analyze({"attachments": [{"filename": sample.name, "path": str(sample)}]})
 
     assert "sandbox_executor_mode" in result["indicators"]
+    assert result["analysis_mode"] == "executor"
     assert result["risk_score"] >= 0.8
+
+
+def test_fallback_high_static_combo_gets_suspicious_floor(monkeypatch, tmp_path: Path) -> None:
+    sample = tmp_path / "urgent_payload.docm"
+    sample.write_bytes((bytes(range(256)) * 16) + b"VirtualAlloc WriteProcessMemory powershell vba AutoOpen")
+
+    monkeypatch.setattr(sandbox_agent.settings, "sandbox_local_docker_enabled", False, raising=False)
+    monkeypatch.setattr(sandbox_agent.settings, "sandbox_executor_url", "", raising=False)
+
+    result = sandbox_agent.analyze({"attachments": [{"filename": sample.name, "path": str(sample)}]})
+
+    assert result["analysis_mode"] == "fallback_static"
+    assert "fallback_static_suspicious_floor" in result["indicators"]
+    assert result["risk_score"] >= 0.45

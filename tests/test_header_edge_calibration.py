@@ -64,3 +64,22 @@ def test_normal_authenticated_multi_hop_stays_low() -> None:
     )
 
     assert result["risk_score"] < 0.4
+
+
+def test_sparse_header_maps_to_insufficient_evidence() -> None:
+    result = analyze(
+        _headers_payload(
+            {
+                "sender": "",
+                "reply_to": "",
+                "authentication_results": "",
+                "received": [],
+            }
+        )
+    )
+
+    assert result["header_verdict"] == "insufficient_evidence"
+    assert result["risk_score"] <= 0.18
+    evidence = result.get("evidence_summary", {})
+    assert "sender_missing" in evidence.get("missing_data_indicators", [])
+    assert evidence.get("malicious_evidence_indicators", []) == []

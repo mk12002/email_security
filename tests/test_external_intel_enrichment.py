@@ -24,9 +24,8 @@ def test_url_agent_external_enrichment_fusion(monkeypatch: pytest.MonkeyPatch) -
 
     result = url_agent.analyze({"urls": ["http://suspicious.example/login"]})
 
-    # Using the new max() logic, max(0.4, 0.64, 0.496) = 0.64
-    # confidence max(0.8, 0.6+0.02+0.05)=0.8
-    assert result["risk_score"] == pytest.approx(0.640, abs=1e-3)
+    # External threat signal should dominate URL evidence when available.
+    assert result["risk_score"] == pytest.approx(1.000, abs=1e-3)
     assert result["confidence"] == pytest.approx(0.800, abs=1e-3)
     assert any("external_risk=1.0" == item for item in result["indicators"])
     assert any("external_lookups_enabled" == item for item in result["indicators"])
@@ -72,3 +71,57 @@ def test_threat_intel_external_enrichment_fusion(monkeypatch: pytest.MonkeyPatch
     assert result["confidence"] == pytest.approx(0.850, abs=1e-3)
     assert any(str(item).startswith("ioc_match:") for item in result["indicators"])
     assert "external_threat_enrichment_enabled" in result["indicators"]
+
+
+def test_url_agent_risk_gap_and_confidence_penalty(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(url_agent, "_any_external_lookup_enabled", lambda: True)
+    monkeypatch.setattr(url_agent, "apply_calibration", lambda score: (score, None))
+
+    def _heuristic(url: str):
+        if "paypa1" in url:
+            return 0.8, ["credential_bait_terms"]
+        return 0.55, ["credential_bait_terms"]
+
+    monkeypatch.setattr(url_agent, "_heuristic_score", _heuristic)
+    monkeypatch.setattr(url_agent, "_external_score", lambda _url: (0.0, []))
+    monkeypatch.setattr(url_agent, "extract_features", lambda payload: payload)
+
+    def _predict(features, model=None):
+        url = (features.get("urls") or [""])[0]
+        if "paypa1" in url:
+            return {"risk_score": 0.85, "confidence": 0.9, "indicators": ["ml_url_model_used"]}
+        return {"risk_score": 0.75, "confidence": 0.9, "indicators": ["ml_url_model_used"]}
+
+    monkeypatch.setattr(url_agent, "load_model", lambda: object())
+    monkeypatch.setattr(url_agent, "predict", _predict)
+
+    malicious = url_agent.analyze({"urls": ["http://secure-paypa1-account.example/login"]})
+    benign = url_agent.analyze({"urls": ["https://github.com/login"]})
+
+    gap = float(malicious["risk_score"]) - float(benign["risk_score"])
+    assert gap >= 0.25
+    assert any(str(item).startswith("confidence_penalty_conflict=") for item in malicious["indicators"])
+    assert "global_allowlist_prior_applied" in benign["indicators"]
+
+
+def test_url_agent_brand_impersonation_floor(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(url_agent, "_any_external_lookup_enabled", lambda: True)
+    monkeypatch.setattr(url_agent, "_external_score", lambda _url: (0.0, ["openphish_unavailable", "urlhaus_unavailable"]))
+    monkeypatch.setattr(url_agent, "extract_features", lambda payload: payload)
+    monkeypatch.setattr(url_agent, "load_model", lambda: object())
+    monkeypatch.setattr(
+        url_agent,
+        "predict",
+        lambda _features, model=None: {
+            "risk_score": 0.2,
+            "confidence": 0.85,
+            "indicators": ["ml_url_model_used"],
+        },
+    )
+    monkeypatch.setattr(url_agent, "apply_calibration", lambda score: (0.25, "isotonic"))
+
+    result = url_agent.analyze({"urls": ["https://microsoft.com-security-login.example/reset"]})
+
+    assert result["risk_score"] >= 0.45
+    assert "brand_impersonation_suspicious_floor" in result["indicators"]
+    assert any("brand_impersonation:microsoft" in item for item in result["indicators"])

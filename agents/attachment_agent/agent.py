@@ -46,13 +46,22 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     indicators: list[str] = []
 
     for attachment in attachments[:10]:
+        filename: str = attachment.get("filename", "") or ""
         path = Path(attachment.get("path", ""))
         file_score = 0.0
-        extension = path.suffix.lower()
+        
+        # Determine actual extension properly handling double extensions like .pdf.exe
+        lower_name = filename.lower()
+        parts = lower_name.split(".")
+        if len(parts) > 2 and parts[-1] in [ext.strip(".") for ext in SUSPICIOUS_EXTENSIONS]:
+            file_score += 0.85
+            indicators.append(f"double_extension_evasion:{filename}")
+        
+        extension = f".{parts[-1]}" if len(parts) > 1 else ""
 
         if extension in SUSPICIOUS_EXTENSIONS:
-            file_score += 0.28
-            indicators.append(f"suspicious_extension:{path.name}")
+            file_score += 0.55
+            indicators.append(f"suspicious_extension:{filename}")
 
         if path.exists() and path.is_file():
             blob = path.read_bytes()
@@ -61,24 +70,27 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
                 file_score += 0.22
                 indicators.append(f"high_entropy:{path.name}")
 
-            if any(token in blob for token in SUSPICIOUS_IMPORT_STRINGS):
-                file_score += 0.32
-                indicators.append(f"suspicious_imports:{path.name}")
+            if any(token in blob.lower() for token in SUSPICIOUS_IMPORT_STRINGS):
+                file_score += 0.42
+                indicators.append(f"suspicious_imports:{filename}")
 
             if extension in {".docm", ".xlsm"} and b"vba" in blob.lower():
-                file_score += 0.25
-                indicators.append(f"office_macro_presence:{path.name}")
+                file_score += 0.85
+                indicators.append(f"office_macro_presence:{filename}")
         else:
-            indicators.append(f"missing_attachment_path:{attachment.get('filename', 'unknown')}")
+            indicators.append(f"missing_attachment_path:{filename}")
 
         cumulative += _clamp(file_score)
-
+        
     avg_score = cumulative / max(1, len(attachments[:10]))
+    # For attachments, if ANY single file is malicious, the whole email is malicious.
+    max_score = _clamp(max([0] + [s for s in [avg_score] if s > 0.8])) or avg_score
+
     heuristic_result = {
         "agent_name": "attachment_agent",
-        "risk_score": _clamp(avg_score),
+        "risk_score": _clamp(max_score),
         "confidence": _clamp(0.6 + min(0.3, len(attachments) * 0.03)),
-        "indicators": indicators[:20],
+        "indicators": list(set(indicators))[:20],
     }
 
     features = extract_features(data)
@@ -86,9 +98,12 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     ml_prediction = predict(features, model=model)
 
     if ml_prediction.get("confidence", 0.0) > 0.0:
-        risk_score = _clamp((0.65 * ml_prediction.get("risk_score", 0.0)) + (0.35 * heuristic_result["risk_score"]))
+        ml_risk = ml_prediction.get("risk_score", 0.0)
+        blended = (0.65 * ml_risk) + (0.35 * heuristic_result["risk_score"])
+        # Do not let ML drop an explicitly malicious attachment heuristic score completely.
+        risk_score = _clamp(max(blended, ml_risk, heuristic_result["risk_score"]))
         confidence = _clamp(max(heuristic_result["confidence"], ml_prediction.get("confidence", 0.0)))
-        merged_indicators = (heuristic_result["indicators"] + ml_prediction.get("indicators", []))[:20]
+        merged_indicators = list(set(heuristic_result["indicators"] + ml_prediction.get("indicators", [])))[:20]
     else:
         risk_score = heuristic_result["risk_score"]
         confidence = heuristic_result["confidence"]

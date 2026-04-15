@@ -20,6 +20,9 @@ logger = get_agent_logger("url_agent")
 _OPENPHISH_CACHE: dict[str, Any] = {"fetched_at": 0.0, "urls": set()}
 
 
+BENIGN_ALLOWLIST = {"github.com", "python.org", "microsoft.com", "google.com", "www.github.com", "www.google.com"}
+BRAND_TOKENS = {"microsoft", "google", "paypal", "amazon", "apple", "github"}
+
 def _clamp(value: float) -> float:
     return max(0.0, min(1.0, round(value, 4)))
 
@@ -55,7 +58,53 @@ def _heuristic_score(url: str) -> tuple[float, list[str]]:
     return _clamp(score), indicators
 
 
+
+def _normalized_host(url: str) -> str:
+    from urllib.parse import urlparse
+    host = (urlparse(str(url)).hostname or "").lower().strip(".")
+    if host.startswith("www."):
+        return host[4:]
+    return host
+
+def _external_state(indicators: list[str], score: float) -> str:
+    if score > 0.0:
+        return "hit"
+    lowered = [str(item).lower() for item in indicators]
+    if any("unavailable" in item for item in lowered):
+        return "unknown"
+    return "clean"
+
+def _brand_impersonation_indicator(url: str) -> str | None:
+    host = _normalized_host(url)
+    if not host:
+        return None
+
+    for brand in BRAND_TOKENS:
+        legit_root = f"{brand}.com"
+        if host == legit_root or host.endswith(f".{legit_root}"):
+            continue
+        if brand not in host:
+            continue
+        if (
+            f"{legit_root}-" in host or f"-{legit_root}" in host
+            or f"{brand}-" in host or f"-{brand}" in host
+            or (f"{legit_root}." in host and not host.endswith(f".{legit_root}"))
+        ):
+            return f"brand_impersonation:{brand}"
+    return None
+
+def _apply_allowlist_prior(url: str, score: float, external_state_label: str, heur_score: float) -> tuple[float, str | None]:
+    host = _normalized_host(url)
+    if host not in BENIGN_ALLOWLIST:
+        return score, None
+    if external_state_label == "hit":
+        return score, None
+    if heur_score >= 0.7:
+        return _clamp(score - 0.08), f"benign_allowlist_soft:{host}"
+    return _clamp(score - 0.2), f"benign_allowlist_prior:{host}"
+
 def _request_timeout() -> float:
+
     return max(1.0, float(settings.external_lookup_timeout_seconds))
 
 
@@ -239,36 +288,64 @@ def _any_external_lookup_enabled() -> bool:
 
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting analysis", agent="url_agent")
+    from email_security.agents.url_agent.calibration import apply_calibration
     urls = data.get("urls", []) or []
     if not urls:
-        return {
-            "agent_name": "url_agent",
-            "risk_score": 0.0,
-            "confidence": 0.7,
-            "indicators": ["no_urls_detected"],
-        }
+        return {"agent_name": "url_agent", "risk_score": 0.0, "confidence": 0.7, "indicators": ["no_urls_detected"]}
 
     combined_scores: list[float] = []
     heuristic_scores: list[float] = []
     external_scores: list[float] = []
+    conflict_count = 0
+    brand_impersonation_count = 0
+    all_allowlisted_clean = True
     url_level_indicators: list[str] = []
+
     for url in urls[:20]:
         heur_score, heur_ind = _heuristic_score(url)
         external_score, external_ind = _external_score(url)
-        final_score = max(heur_score, _clamp((0.45 * heur_score) + (0.55 * external_score)))
+        brand_indicator = _brand_impersonation_indicator(url)
+        if brand_indicator:
+            brand_impersonation_count += 1
+            heur_ind.append(brand_indicator)
+            heur_score = _clamp(heur_score + 0.85)
+
+        state = _external_state(external_ind, external_score)
+        if external_score > 0.0:
+            final_score = _clamp(max(external_score, heur_score))
+        elif state == "clean":
+            final_score = _clamp(0.65 * heur_score)
+        else:
+            final_score = _clamp(0.8 * heur_score)
+
+        if heur_score > 0.8:
+            final_score = _clamp(max(final_score, heur_score))
+
+        final_score, allowlist_indicator = _apply_allowlist_prior(
+            url=url, score=final_score, external_state_label=state, heur_score=heur_score
+        )
+        if allowlist_indicator:
+            external_ind.append(allowlist_indicator)
+
+        if heur_score >= 0.45 and external_score <= 0.0 and state == "clean":
+            conflict_count += 1
+            external_ind.append("heuristic_reputation_conflict")
+
+        if not (_normalized_host(url) in BENIGN_ALLOWLIST and state != "hit"):
+            all_allowlisted_clean = False
+
         combined_scores.append(final_score)
         heuristic_scores.append(heur_score)
         external_scores.append(external_score)
-        url_level_indicators.extend([f"{url}::{entry}" for entry in heur_ind + external_ind])
+        url_level_indicators.extend(heur_ind + external_ind)
 
     heuristic_risk = _clamp(sum(heuristic_scores) / len(heuristic_scores))
     external_risk = _clamp(sum(external_scores) / len(external_scores))
-    evidence_risk = _clamp(
-        max(
-            sum(combined_scores) / len(combined_scores),
-            (0.65 * heuristic_risk) + (0.35 * external_risk),
-        )
-    )
+    evidence_delta = abs(heuristic_risk - external_risk)
+    if external_risk <= 0.0:
+        evidence_risk = _clamp(sum(combined_scores) / len(combined_scores))
+    else:
+        evidence_risk = _clamp(max(sum(combined_scores) / len(combined_scores), (0.45 * heuristic_risk) + (0.55 * external_risk)))
 
     summary_indicators = [
         f"urls_analyzed={len(combined_scores)}",
@@ -280,21 +357,59 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     else:
         summary_indicators.append("external_lookups_disabled")
 
-    features = extract_features(data)
+    # To avoid the averaging issue, run ML over each URL individually, take max risk
     model = load_model()
-    ml_prediction = predict(features, model=model)
+    max_ml_risk = 0.0
+    max_ml_conf = 0.0
+    ml_indicators = []
+    
+    for u in urls[:20]:
+        f = extract_features({"urls": [u]})
+        pred = predict(f, model=model)
+        if pred.get("confidence", 0.0) > 0.0:
+            if float(pred.get("risk_score", 0.0)) > max_ml_risk:
+                max_ml_risk = float(pred.get("risk_score", 0.0))
+                max_ml_conf = float(pred.get("confidence", 0.0))
+                for ind in pred.get("indicators", []):
+                    if ind not in ml_indicators:
+                        ml_indicators.append(ind)
 
-    if ml_prediction.get("confidence", 0.0) > 0.0:
-        ml_risk = float(ml_prediction.get("risk_score", 0.0) or 0.0)
-        blended_risk = _clamp((0.6 * ml_risk) + (0.4 * evidence_risk))
-        # Preserve the strongest available signal while keeping blended calibration.
-        risk_score = _clamp(max(ml_risk, evidence_risk, blended_risk))
-        confidence_floor = 0.6 + min(0.25, 0.02 * len(urls)) + (0.05 if external_risk > 0.0 else 0.0)
-        confidence = _clamp(max(confidence_floor, ml_prediction.get("confidence", 0.0)))
-        summary_indicators.extend(ml_prediction.get("indicators", []))
+    if max_ml_conf > 0.0:
+        risk_score = _clamp(max(evidence_risk, max_ml_risk, heuristic_risk))
+        calibrated_risk, calibration_method = apply_calibration(risk_score)
+        risk_score = calibrated_risk
+
+        confidence_floor = (0.65 + min(0.25, 0.02 * len(urls)) + (0.05 if external_risk > 0.0 else 0.0) + min(0.1, 0.12 * heuristic_risk) + min(0.05, 0.08 * evidence_delta))
+        confidence = _clamp(max(confidence_floor, max_ml_conf))
+        if conflict_count > 0:
+            confidence = _clamp(confidence - min(0.2, 0.08 * conflict_count))
+            summary_indicators.append(f"confidence_penalty_conflict={conflict_count}")
+        if calibration_method:
+            summary_indicators.append(f"risk_calibrated={calibration_method}")
     else:
         risk_score = evidence_risk
-        confidence = _clamp(0.6 + min(0.25, 0.02 * len(urls)) + (0.08 if external_risk > 0.0 else 0.0))
+        confidence = _clamp(0.58 + min(0.25, 0.02 * len(urls)) + (0.08 if external_risk > 0.0 else 0.0) + min(0.1, 0.12 * heuristic_risk) + min(0.05, 0.08 * evidence_delta))
+        if conflict_count > 0:
+            confidence = _clamp(confidence - min(0.2, 0.08 * conflict_count))
+            summary_indicators.append(f"confidence_penalty_conflict={conflict_count}")
+        calibrated_risk, calibration_method = apply_calibration(risk_score)
+        risk_score = calibrated_risk
+        if calibration_method:
+            summary_indicators.append(f"risk_calibrated={calibration_method}")
+
+    if all_allowlisted_clean and risk_score > 0.0:
+        risk_score = _clamp(risk_score * 0.3)
+        summary_indicators.append("global_allowlist_prior_applied")
+        
+    if brand_impersonation_count > 0 and external_risk <= 0.0 and heuristic_risk >= 0.35:
+        risk_score = _clamp(max(risk_score, 0.45))
+        summary_indicators.append("brand_impersonation_suspicious_floor")
+
+    if external_risk <= 0.0 and heuristic_risk <= 0.25:
+        confidence = _clamp(min(confidence, 0.82))
+        summary_indicators.append("confidence_capped_low_evidence")
+
+    summary_indicators.extend(ml_indicators)
 
     result = {
         "agent_name": "url_agent",

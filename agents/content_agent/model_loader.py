@@ -41,6 +41,7 @@ class ModelLoader:
             model=str(self.model_path),
             tokenizer=str(self.model_path),
             truncation=True,
+            local_files_only=True,
         )
         return {"kind": "transformer_pipeline", "model": pipe}
 

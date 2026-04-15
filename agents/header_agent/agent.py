@@ -62,42 +62,59 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     auth_all_pass = _auth_all_pass(auth)
 
     indicators: list[str] = []
+    missing_data_indicators: list[str] = []
+    malicious_evidence_indicators: list[str] = []
     risk = 0.0
 
     # 1. Heuristic Setup
     if "spf=fail" in auth or "spf=softfail" in auth:
         risk += 0.25
         indicators.append("spf_failed")
+        malicious_evidence_indicators.append("spf_failed")
     if "dkim=fail" in auth:
         risk += 0.2
         indicators.append("dkim_failed")
+        malicious_evidence_indicators.append("dkim_failed")
     if "dmarc=fail" in auth:
         risk += 0.25
         indicators.append("dmarc_failed")
+        malicious_evidence_indicators.append("dmarc_failed")
 
     for trusted in TRUSTED_DOMAINS:
         if sender_domain and sender_domain != trusted and levenshtein_distance(sender_domain, trusted) <= 2:
-            risk += 0.3
+            risk += 0.85
             indicators.append(f"lookalike_domain:{sender_domain}->{trusted}")
+            malicious_evidence_indicators.append("lookalike_domain")
             break
 
     if len(received) <= 1:
-        risk += 0.05
-        indicators.append("short_smtp_trace")
+        missing_data_indicators.append("short_smtp_trace")
+        indicators.append("missing_data:short_smtp_trace")
 
         # Authenticated single-hop traffic can still be suspicious in SOC triage.
         # Keep these events in review band rather than auto-safe.
-        if auth_all_pass:
-            risk += 0.3
+        if auth_all_pass and len(received) == 1:
+            risk += 0.28
             indicators.append("authenticated_single_hop_anomaly")
+            malicious_evidence_indicators.append("authenticated_single_hop_anomaly")
 
     if reply_to_domain and sender_domain and reply_to_domain != sender_domain:
         risk += 0.24
         indicators.append("reply_to_domain_mismatch")
+        malicious_evidence_indicators.append("reply_to_domain_mismatch")
 
         if auth_all_pass:
             risk += 0.12
             indicators.append("authenticated_reply_to_anomaly")
+            malicious_evidence_indicators.append("authenticated_reply_to_anomaly")
+
+    if not sender_domain:
+        missing_data_indicators.append("sender_missing")
+        indicators.append("missing_data:sender_missing")
+
+    if not auth:
+        missing_data_indicators.append("authentication_results_missing")
+        indicators.append("missing_data:authentication_results_missing")
 
     heuristic_confidence = _clamp(0.65 + min(0.25, len(indicators) * 0.05))
 
@@ -107,7 +124,12 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
 
     if ml_result.get("confidence", 0.0) > 0.0:
         # Weighted fusion: 60% ML, 40% heuristic (consistent with other agents)
-        final_risk = _clamp((0.6 * ml_result["risk_score"]) + (0.4 * risk))
+        fused_risk = (0.6 * ml_result["risk_score"]) + (0.4 * risk)
+        # Prevent ML from diluting strong heuristic signals
+        if len(malicious_evidence_indicators) > 0:
+            final_risk = _clamp(max(risk, fused_risk))
+        else:
+            final_risk = _clamp(fused_risk)
         final_confidence = _clamp(max(heuristic_confidence, ml_result.get("confidence", 0.0)))
         indicators.extend(ml_result.get("indicators", []))
     else:
@@ -121,10 +143,31 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     ):
         final_risk = _clamp(max(final_risk, 0.42))
 
+    insufficient_evidence = (
+        len(malicious_evidence_indicators) == 0
+        and len(missing_data_indicators) > 0
+    )
+    if insufficient_evidence:
+        final_risk = _clamp(min(final_risk, 0.18))
+
+    if final_risk >= 0.8:
+        header_verdict = "malicious"
+    elif final_risk >= 0.4:
+        header_verdict = "suspicious"
+    elif insufficient_evidence:
+        header_verdict = "insufficient_evidence"
+    else:
+        header_verdict = "benign"
+
     result = {
         "agent_name": "header_agent",
         "risk_score": final_risk,
         "confidence": final_confidence,
+        "header_verdict": header_verdict,
+        "evidence_summary": {
+            "missing_data_indicators": missing_data_indicators[:10],
+            "malicious_evidence_indicators": malicious_evidence_indicators[:10],
+        },
         "indicators": indicators[:20],
     }
     logger.info("Analysis complete", risk_score=result["risk_score"], used_ml=ml_result.get("confidence", 0.0) > 0)

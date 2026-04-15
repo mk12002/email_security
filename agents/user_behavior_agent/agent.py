@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from email_security.agents.user_behavior_agent.feature_extractor import extract_features
@@ -51,8 +52,10 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     ml_prediction = predict(features, model=model)
 
     if ml_prediction.get("confidence", 0.0) > 0.0:
+        ml_risk = ml_prediction.get("risk_score", 0.0)
         # Fuse outputs allowing XGBoost explicit dominance given exact deterministic mapping
-        final_risk = _clamp((0.85 * ml_prediction.get("risk_score", 0.0)) + (0.15 * heuristic_result["risk_score"]))
+        fused_risk = (0.85 * ml_risk) + (0.15 * heuristic_result["risk_score"])
+        final_risk = _clamp(max(fused_risk, ml_risk))
         final_confidence = _clamp(max(heuristic_result["confidence"], ml_prediction.get("confidence", 0.0)))
         final_indicators = list(set(heuristic_result["indicators"] + ml_prediction.get("indicators", [])))[:20]
     else:

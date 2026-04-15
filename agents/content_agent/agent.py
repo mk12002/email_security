@@ -58,7 +58,9 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     ml_prediction = predict(features, model=model)
 
     if ml_prediction.get("confidence", 0.0) > 0.0:
-        final_risk = _clamp((0.6 * ml_prediction.get("risk_score", 0.0)) + (0.4 * heuristic_result["risk_score"]))
+        fused_risk = (0.6 * ml_prediction.get("risk_score", 0.0)) + (0.4 * heuristic_result["risk_score"])
+        # Prevent weak heuristics from diluting a strong ML prediction (and vice versa)
+        final_risk = _clamp(max(fused_risk, ml_prediction.get("risk_score", 0.0), heuristic_result["risk_score"]))
         final_confidence = _clamp(max(heuristic_result["confidence"], ml_prediction.get("confidence", 0.0)))
         final_indicators = (heuristic_result["indicators"] + ml_prediction.get("indicators", []))[:20]
     else:

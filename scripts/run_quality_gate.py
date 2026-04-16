@@ -26,6 +26,11 @@ TEST_GROUPS = {
     "sandbox_safety": [
         "tests/test_sandbox_agent_behavior.py",
         "tests/test_sandbox_model_inference.py",
+        "tests/test_sandbox_isolation_hardening.py",
+        "tests/test_sandbox_executor_service.py",
+        "tests/test_sandbox_detonation_hardening.py",
+        "tests/test_sandbox_additional_paths.py",
+        "tests/test_sandbox_hardening_check.py",
     ],
     "data_and_model_smoke": [
         "tests/test_content_preprocessing.py",
@@ -34,6 +39,10 @@ TEST_GROUPS = {
         "tests/test_threat_intel_smoke.py",
         "tests/test_user_behavior_smoke.py",
     ],
+}
+
+COMMAND_CHECKS = {
+    "sandbox_hardening": [sys.executable, "scripts/check_sandbox_hardening.py"],
 }
 
 
@@ -62,6 +71,28 @@ def _run_pytest(paths: list[str]) -> dict[str, object]:
     }
 
 
+def _run_command(command: list[str]) -> dict[str, object]:
+    started = datetime.now(timezone.utc)
+    proc = subprocess.run(
+        command,
+        cwd=str(REPO_ROOT),
+        text=True,
+        capture_output=True,
+        env=dict(os.environ),
+        check=False,
+    )
+    finished = datetime.now(timezone.utc)
+    return {
+        "command": " ".join(command),
+        "started_utc": started.isoformat(),
+        "finished_utc": finished.isoformat(),
+        "exit_code": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+        "passed": proc.returncode == 0,
+    }
+
+
 def main() -> int:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     out_dir = ANALYSIS_ROOT / f"quality_gate_{ts}"
@@ -77,6 +108,11 @@ def main() -> int:
     for group_name, group_tests in TEST_GROUPS.items():
         run = _run_pytest(group_tests)
         results["groups"][group_name] = run
+        overall_ok = overall_ok and bool(run["passed"])
+
+    for check_name, command in COMMAND_CHECKS.items():
+        run = _run_command(command)
+        results["groups"][check_name] = run
         overall_ok = overall_ok and bool(run["passed"])
 
     results["overall_passed"] = overall_ok

@@ -1,0 +1,81 @@
+{
+  "timestamp_utc": "2026-04-16T07:06:45.080558+00:00",
+  "app_env": "development",
+  "production_warnings": [],
+  "ioc_status": {
+    "db_path": "/home/LabsKraft/new_work/email_security/data/ioc_store.db",
+    "total_iocs": 89695,
+    "last_refresh_ts": 1776323176,
+    "last_refresh_age_seconds": 29,
+    "stale_after_seconds": 1800,
+    "is_stale": false,
+    "health_level": "healthy",
+    "policy_violations": []
+  },
+  "model_artifacts": {
+    "ok": true,
+    "details": {
+      "header": {
+        "path": "/home/LabsKraft/new_work/models/header_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "content": {
+        "path": "/home/LabsKraft/new_work/models/content_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "url": {
+        "path": "/home/LabsKraft/new_work/models/url_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "attachment": {
+        "path": "/home/LabsKraft/new_work/models/attachment_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "sandbox": {
+        "path": "/home/LabsKraft/new_work/models/sandbox_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "threat_intel": {
+        "path": "/home/LabsKraft/new_work/models/threat_intel_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      },
+      "user_behavior": {
+        "path": "/home/LabsKraft/new_work/models/user_behavior_agent",
+        "exists": true,
+        "non_empty": true,
+        "ok": true
+      }
+    }
+  },
+  "rabbitmq": {
+    "ok": true,
+    "queues": [
+      {
+        "queue": "email.results.queue",
+        "exists": true,
+        "messages_ready": 0,
+        "consumers": 0
+      },
+      {
+        "queue": "email.dead.letter.queue",
+        "exists": true,
+        "messages_ready": 0,
+        "consumers": 0
+      }
+    ]
+  },
+  "critical_failures": [],
+  "overall_passed": true
+}

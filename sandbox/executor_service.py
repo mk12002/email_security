@@ -48,7 +48,9 @@ def _validate_attachment_path(path: Path) -> None:
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Invalid attachment path: {exc}") from exc
 
-    if not str(candidate).startswith(str(root)):
+    try:
+        candidate.relative_to(root)
+    except ValueError:
         raise HTTPException(status_code=403, detail="Attachment path outside allowed root")
     if not candidate.exists() or not candidate.is_file():
         raise HTTPException(status_code=404, detail="Attachment path not found")

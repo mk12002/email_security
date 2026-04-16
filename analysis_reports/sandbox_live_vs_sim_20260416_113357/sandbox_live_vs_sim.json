@@ -1,0 +1,434 @@
+{
+  "timestamp_utc": "2026-04-16T11:33:57.061159+00:00",
+  "executor_url": "http://127.0.0.1:8099",
+  "case_count": 4,
+  "cases": [
+    {
+      "name": "negative_benign_text_attachment",
+      "input": {
+        "attachments": [
+          {
+            "filename": "meeting_notes.txt",
+            "path": "/tmp/sandbox_exec_live_compare/meeting_notes.txt"
+          }
+        ]
+      },
+      "live_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:meeting_notes.txt"
+        ],
+        "behavior_summary": {}
+      },
+      "simulated_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:meeting_notes.txt"
+        ],
+        "behavior_summary": {}
+      },
+      "comparison": {
+        "live_risk": 0.0,
+        "simulated_risk": 0.0,
+        "risk_delta_live_minus_simulated": 0.0,
+        "live_mode": "executor",
+        "simulated_mode": "executor",
+        "live_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:meeting_notes.txt"
+        ],
+        "simulated_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:meeting_notes.txt"
+        ]
+      }
+    },
+    {
+      "name": "positive_double_extension_executable",
+      "input": {
+        "attachments": [
+          {
+            "filename": "urgent_invoice.pdf.exe",
+            "path": "/tmp/sandbox_exec_live_compare/urgent_invoice.pdf.exe"
+          }
+        ]
+      },
+      "live_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.85,
+        "behavior_risk_score": 0.85,
+        "confidence": 0.45,
+        "analysis_mode": "fallback_static",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "fallback_static_suspicious_floor"
+        ],
+        "behavior_summary": {},
+        "operational_alert": {
+          "code": "sandbox_backend_unavailable",
+          "severity": "warning",
+          "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+        }
+      },
+      "simulated_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.8303,
+        "behavior_risk_score": 0.8303,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "ml_sandbox_model_used:urgent_invoice.pdf.exe",
+          "shell_spawn_detected:urgent_invoice.pdf.exe",
+          "remote_connect_detected:urgent_invoice.pdf.exe",
+          "risky_executable_attachment:urgent_invoice.pdf.exe"
+        ],
+        "behavior_summary": {
+          "urgent_invoice.pdf.exe": {
+            "exec_chain": [
+              "/bin/sh",
+              "/usr/bin/curl"
+            ],
+            "remote_ips": [
+              "8.8.8.8"
+            ],
+            "sensitive_writes": [
+              "/etc/cron.d/evil"
+            ],
+            "shell_spawned": true,
+            "network_tool_spawned": true,
+            "critical_chain_detected": true,
+            "derived_training_row": {
+              "executed": 1,
+              "return_code": 0,
+              "timed_out": 0,
+              "spawned_processes": 2,
+              "suspicious_process_count": 2,
+              "file_entropy": 7.8,
+              "connect_calls": 1,
+              "execve_calls": 2,
+              "file_write_calls": 1,
+              "sequence_length": 4,
+              "sequence_process_calls": 2,
+              "sequence_network_calls": 1,
+              "sequence_filesystem_calls": 1,
+              "sequence_registry_calls": 0,
+              "sequence_memory_calls": 0,
+              "critical_chain_detected": 1,
+              "behavior_risk_score": 0.94
+            },
+            "heuristic_risk_score": 0.94,
+            "ml_prediction": {
+              "risk_score": 0.6482,
+              "confidence": 0.6482,
+              "indicators": [
+                "ml_sandbox_model_used"
+              ],
+              "decision_threshold": 0.48499999999999993,
+              "predicted_label": 1
+            },
+            "fused_risk_score": 0.7503
+          }
+        }
+      },
+      "comparison": {
+        "live_risk": 0.85,
+        "simulated_risk": 0.8303,
+        "risk_delta_live_minus_simulated": 0.0197,
+        "live_mode": "fallback_static",
+        "simulated_mode": "executor",
+        "live_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "fallback_static_suspicious_floor"
+        ],
+        "simulated_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "ml_sandbox_model_used:urgent_invoice.pdf.exe",
+          "shell_spawn_detected:urgent_invoice.pdf.exe",
+          "remote_connect_detected:urgent_invoice.pdf.exe",
+          "risky_executable_attachment:urgent_invoice.pdf.exe"
+        ]
+      }
+    },
+    {
+      "name": "positive_macro_enabled_docm",
+      "input": {
+        "attachments": [
+          {
+            "filename": "payment_update.docm",
+            "path": "/tmp/sandbox_exec_live_compare/payment_update.docm"
+          }
+        ]
+      },
+      "live_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.85,
+        "behavior_risk_score": 0.85,
+        "confidence": 0.45,
+        "analysis_mode": "fallback_static",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:payment_update.docm",
+          "sandbox_static_score:1.000:payment_update.docm",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:payment_update.docm",
+          "fallback_static_suspicious_floor"
+        ],
+        "behavior_summary": {},
+        "operational_alert": {
+          "code": "sandbox_backend_unavailable",
+          "severity": "warning",
+          "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+        }
+      },
+      "simulated_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.8303,
+        "behavior_risk_score": 0.8303,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:payment_update.docm",
+          "sandbox_static_score:1.000:payment_update.docm",
+          "ml_sandbox_model_used:payment_update.docm",
+          "shell_spawn_detected:payment_update.docm",
+          "remote_connect_detected:payment_update.docm",
+          "risky_executable_attachment:payment_update.docm"
+        ],
+        "behavior_summary": {
+          "payment_update.docm": {
+            "exec_chain": [
+              "/bin/sh",
+              "/usr/bin/curl"
+            ],
+            "remote_ips": [
+              "8.8.8.8"
+            ],
+            "sensitive_writes": [
+              "/etc/cron.d/evil"
+            ],
+            "shell_spawned": true,
+            "network_tool_spawned": true,
+            "critical_chain_detected": true,
+            "derived_training_row": {
+              "executed": 1,
+              "return_code": 0,
+              "timed_out": 0,
+              "spawned_processes": 2,
+              "suspicious_process_count": 2,
+              "file_entropy": 7.8,
+              "connect_calls": 1,
+              "execve_calls": 2,
+              "file_write_calls": 1,
+              "sequence_length": 4,
+              "sequence_process_calls": 2,
+              "sequence_network_calls": 1,
+              "sequence_filesystem_calls": 1,
+              "sequence_registry_calls": 0,
+              "sequence_memory_calls": 0,
+              "critical_chain_detected": 1,
+              "behavior_risk_score": 0.94
+            },
+            "heuristic_risk_score": 0.94,
+            "ml_prediction": {
+              "risk_score": 0.6482,
+              "confidence": 0.6482,
+              "indicators": [
+                "ml_sandbox_model_used"
+              ],
+              "decision_threshold": 0.48499999999999993,
+              "predicted_label": 1
+            },
+            "fused_risk_score": 0.7503
+          }
+        }
+      },
+      "comparison": {
+        "live_risk": 0.85,
+        "simulated_risk": 0.8303,
+        "risk_delta_live_minus_simulated": 0.0197,
+        "live_mode": "fallback_static",
+        "simulated_mode": "executor",
+        "live_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:payment_update.docm",
+          "sandbox_static_score:1.000:payment_update.docm",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:payment_update.docm",
+          "fallback_static_suspicious_floor"
+        ],
+        "simulated_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:payment_update.docm",
+          "sandbox_static_score:1.000:payment_update.docm",
+          "ml_sandbox_model_used:payment_update.docm",
+          "shell_spawn_detected:payment_update.docm",
+          "remote_connect_detected:payment_update.docm",
+          "risky_executable_attachment:payment_update.docm"
+        ]
+      }
+    },
+    {
+      "name": "edge_budget_enforcement_multi_attach",
+      "input": {
+        "attachments": [
+          {
+            "filename": "urgent_invoice.pdf.exe",
+            "path": "/tmp/sandbox_exec_live_compare/urgent_invoice.pdf.exe"
+          },
+          {
+            "filename": "payment_update.docm",
+            "path": "/tmp/sandbox_exec_live_compare/payment_update.docm"
+          },
+          {
+            "filename": "meeting_notes.txt",
+            "path": "/tmp/sandbox_exec_live_compare/meeting_notes.txt"
+          }
+        ]
+      },
+      "live_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.85,
+        "behavior_risk_score": 0.85,
+        "confidence": 0.45,
+        "analysis_mode": "fallback_static",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "sandbox_skipped_budget:payment_update.docm",
+          "sandbox_skipped_budget:meeting_notes.txt",
+          "fallback_static_suspicious_floor"
+        ],
+        "behavior_summary": {},
+        "operational_alert": {
+          "code": "sandbox_backend_unavailable",
+          "severity": "warning",
+          "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+        }
+      },
+      "simulated_output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.8303,
+        "behavior_risk_score": 0.8303,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "ml_sandbox_model_used:urgent_invoice.pdf.exe",
+          "shell_spawn_detected:urgent_invoice.pdf.exe",
+          "remote_connect_detected:urgent_invoice.pdf.exe",
+          "risky_executable_attachment:urgent_invoice.pdf.exe",
+          "sandbox_skipped_budget:payment_update.docm",
+          "sandbox_skipped_budget:meeting_notes.txt"
+        ],
+        "behavior_summary": {
+          "urgent_invoice.pdf.exe": {
+            "exec_chain": [
+              "/bin/sh",
+              "/usr/bin/curl"
+            ],
+            "remote_ips": [
+              "8.8.8.8"
+            ],
+            "sensitive_writes": [
+              "/etc/cron.d/evil"
+            ],
+            "shell_spawned": true,
+            "network_tool_spawned": true,
+            "critical_chain_detected": true,
+            "derived_training_row": {
+              "executed": 1,
+              "return_code": 0,
+              "timed_out": 0,
+              "spawned_processes": 2,
+              "suspicious_process_count": 2,
+              "file_entropy": 7.8,
+              "connect_calls": 1,
+              "execve_calls": 2,
+              "file_write_calls": 1,
+              "sequence_length": 4,
+              "sequence_process_calls": 2,
+              "sequence_network_calls": 1,
+              "sequence_filesystem_calls": 1,
+              "sequence_registry_calls": 0,
+              "sequence_memory_calls": 0,
+              "critical_chain_detected": 1,
+              "behavior_risk_score": 0.94
+            },
+            "heuristic_risk_score": 0.94,
+            "ml_prediction": {
+              "risk_score": 0.6482,
+              "confidence": 0.6482,
+              "indicators": [
+                "ml_sandbox_model_used"
+              ],
+              "decision_threshold": 0.48499999999999993,
+              "predicted_label": 1
+            },
+            "fused_risk_score": 0.7503
+          }
+        }
+      },
+      "comparison": {
+        "live_risk": 0.85,
+        "simulated_risk": 0.8303,
+        "risk_delta_live_minus_simulated": 0.0197,
+        "live_mode": "fallback_static",
+        "simulated_mode": "executor",
+        "live_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "sandbox_skipped_budget:payment_update.docm",
+          "sandbox_skipped_budget:meeting_notes.txt"
+        ],
+        "simulated_indicator_sample": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "ml_sandbox_model_used:urgent_invoice.pdf.exe",
+          "shell_spawn_detected:urgent_invoice.pdf.exe",
+          "remote_connect_detected:urgent_invoice.pdf.exe",
+          "risky_executable_attachment:urgent_invoice.pdf.exe",
+          "sandbox_skipped_budget:payment_update.docm"
+        ]
+      }
+    }
+  ]
+}

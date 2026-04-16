@@ -1,0 +1,43 @@
+{
+  "timestamp_utc": "2026-04-16T06:32:13.525071+00:00",
+  "python": "/home/LabsKraft/new_work/venv/bin/python",
+  "groups": {
+    "core_orchestrator": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python -m pytest -q tests/test_langgraph_orchestrator.py tests/test_orchestrator_partial_finalization.py tests/test_operational_flow_e2e.py",
+      "started_utc": "2026-04-16T06:32:13.525094+00:00",
+      "finished_utc": "2026-04-16T06:32:28.872750+00:00",
+      "exit_code": 0,
+      "stdout": ".....                                                                    [100%]\n5 passed in 10.88s\n",
+      "stderr": "",
+      "passed": true
+    },
+    "sandbox_safety": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python -m pytest -q tests/test_sandbox_agent_behavior.py tests/test_sandbox_model_inference.py tests/test_sandbox_isolation_hardening.py tests/test_sandbox_executor_service.py tests/test_sandbox_detonation_hardening.py tests/test_sandbox_additional_paths.py tests/test_sandbox_hardening_check.py",
+      "started_utc": "2026-04-16T06:32:28.872799+00:00",
+      "finished_utc": "2026-04-16T06:32:34.895998+00:00",
+      "exit_code": 0,
+      "stdout": ".........................                                                [100%]\n25 passed in 2.15s\n",
+      "stderr": "",
+      "passed": true
+    },
+    "data_and_model_smoke": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python -m pytest -q tests/test_content_preprocessing.py tests/test_url_model_smoke.py tests/test_attachment_ensemble_smoke.py tests/test_threat_intel_smoke.py tests/test_user_behavior_smoke.py",
+      "started_utc": "2026-04-16T06:32:34.896044+00:00",
+      "finished_utc": "2026-04-16T06:33:20.912473+00:00",
+      "exit_code": 0,
+      "stdout": ".....                                                                    [100%]\n5 passed in 41.32s\n",
+      "stderr": "",
+      "passed": true
+    },
+    "sandbox_hardening": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python scripts/check_sandbox_hardening.py",
+      "started_utc": "2026-04-16T06:33:20.912518+00:00",
+      "finished_utc": "2026-04-16T06:33:20.975315+00:00",
+      "exit_code": 1,
+      "stdout": "{\n  \"timestamp_utc\": \"2026-04-16T06:33:20.967033+00:00\",\n  \"checks\": [\n    {\n      \"name\": \"no_docker_sock_mount\",\n      \"passed\": false,\n      \"details\": {\n        \"compose\": \"/home/LabsKraft/new_work/email_security/docker/docker-compose.yml\",\n        \"docker_sock_mounted\": true,\n        \"allow_docker_sock\": false\n      }\n    },\n    {\n      \"name\": \"sandbox_executor_token_required_when_url_set\",\n      \"passed\": false,\n      \"details\": {\n        \"sandbox_executor_url_configured\": true,\n        \"sandbox_executor_shared_token_set\": false\n      }\n    }\n  ],\n  \"violations\": [\n    \"docker_sock_mount_detected: remove /var/run/docker.sock mount for sandbox agent in hardened CI/production profiles\",\n    \"sandbox_executor_missing_token: SANDBOX_EXECUTOR_URL is set but SANDBOX_EXECUTOR_SHARED_TOKEN is empty\"\n  ],\n  \"passed\": false\n}\n",
+      "stderr": "",
+      "passed": false
+    }
+  },
+  "overall_passed": false
+}

@@ -160,6 +160,23 @@ async def lifespan(app: FastAPI):
         host=settings.api_host,
         port=settings.api_port,
     )
+
+    if settings.runtime_bootstrap_enabled:
+        try:
+            from email_security.scripts.bootstrap_runtime_state import bootstrap_runtime_state
+
+            bootstrap_report = bootstrap_runtime_state(
+                declare_results_queue=bool(settings.runtime_bootstrap_declare_results_queue),
+                refresh_ioc=bool(settings.runtime_bootstrap_refresh_ioc),
+                force_ioc_refresh=bool(settings.runtime_bootstrap_force_ioc_refresh),
+            )
+            if bootstrap_report.get("overall_ok"):
+                logger.info("Runtime bootstrap complete", report=bootstrap_report)
+            else:
+                logger.warning("Runtime bootstrap partial failure", report=bootstrap_report)
+        except Exception as exc:
+            logger.warning("Runtime bootstrap failed", error=str(exc))
+
     stop_event = asyncio.Event()
     app.state._threat_intel_refresh_stop = stop_event
     app.state._threat_intel_refresh_task = None

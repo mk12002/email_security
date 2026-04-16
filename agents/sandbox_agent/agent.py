@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import io
 import math
 import re
 import shlex
-import tarfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -127,19 +125,6 @@ def _is_private_ip(ip: str) -> bool:
         except Exception:
             return False
     return False
-
-
-def _build_tar_bytes(src: Path, dst_name: str) -> bytes:
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w") as tar:
-        payload = src.read_bytes()
-        info = tarfile.TarInfo(name=dst_name)
-        info.size = len(payload)
-        info.mode = 0o644
-        info.mtime = int(time.time())
-        tar.addfile(info, io.BytesIO(payload))
-    buffer.seek(0)
-    return buffer.read()
 
 
 def _file_entropy(path: Path) -> float:
@@ -374,7 +359,7 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
     image = settings.sandbox_detonation_image
     timeout_seconds = int(settings.sandbox_timeout_seconds)
     sample_name = f"sample{target.suffix.lower() or '.bin'}"
-    sample_path = f"/sandbox/input/{sample_name}"
+    sample_path = f"/tmp/{sample_name}"
     ext = target.suffix.lower()
 
     try:
@@ -389,9 +374,14 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
         "image": image,
         "command": ["sh", "-lc", "while true; do sleep 1; done"],
         "detach": True,
-        "remove": False,
         "working_dir": "/sandbox",
         "name": container_name,
+        "volumes": {
+            str(target.resolve()): {
+                "bind": sample_path,
+                "mode": "ro",
+            }
+        },
         "read_only": True,
         "tmpfs": {
             "/sandbox": "rw,noexec,nosuid,nodev,size=256m",
@@ -436,21 +426,10 @@ def _detonate_attachment(docker_client: Any, target: Path) -> tuple[float, list[
     try:
         logger.info("Sandbox detonation started", attachment=str(target), image=image, timeout_seconds=timeout_seconds)
         container.start()
-        container.exec_run(["mkdir", "-p", "/sandbox/input", "/sandbox/output"], stdout=False, stderr=False)
-
-        archive = _build_tar_bytes(target, sample_name)
-        container.put_archive(path="/sandbox/input", data=archive)
-
         detonation_cmd = _choose_exec_command(sample_path=sample_path, ext=ext)
         shell_cmd = (
             f"set -e; "
             f"chmod +x {shlex.quote(sample_path)} || true; "
-            f"if ! command -v strace >/dev/null 2>&1; then "
-            f"  if command -v apt-get >/dev/null 2>&1; then "
-            f"    apt-get update >/dev/null 2>&1 && "
-            f"    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends strace >/dev/null 2>&1 || true; "
-            f"  fi; "
-            f"fi; "
             f"if command -v strace >/dev/null 2>&1; then "
             f"  timeout {max(2, timeout_seconds - 2)}s strace -f -tt -s 256 -e trace=process,network,file {detonation_cmd}; "
             f"else "

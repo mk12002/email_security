@@ -1,0 +1,96 @@
+{
+  "timestamp": "2026-04-16T06:21:10.576406+00:00",
+  "summary": {
+    "total_checks": 12,
+    "passed": 12,
+    "failed": 0,
+    "status": "pass"
+  },
+  "checks": [
+    {
+      "code": "training_csv_exists",
+      "status": "pass",
+      "message": "Processed sandbox training CSV exists.",
+      "details": {}
+    },
+    {
+      "code": "audit_json_exists",
+      "status": "pass",
+      "message": "Sandbox audit JSON exists.",
+      "details": {}
+    },
+    {
+      "code": "training_has_contract_columns",
+      "status": "pass",
+      "message": "Training CSV includes required feature contract columns.",
+      "details": {
+        "missing_columns": []
+      }
+    },
+    {
+      "code": "training_label_binary",
+      "status": "pass",
+      "message": "Training labels are binary for sampled rows.",
+      "details": {}
+    },
+    {
+      "code": "training_multi_source",
+      "status": "pass",
+      "message": "Training set includes multiple sandbox data sources.",
+      "details": {
+        "source_count": 6
+      }
+    },
+    {
+      "code": "audit_feature_version_match",
+      "status": "pass",
+      "message": "Audit feature version matches current contract.",
+      "details": {
+        "audit_feature_version": "v1",
+        "contract_feature_version": "v1"
+      }
+    },
+    {
+      "code": "audit_feature_columns_match",
+      "status": "pass",
+      "message": "Audit feature columns exactly match contract ordering.",
+      "details": {}
+    },
+    {
+      "code": "runtime_has_contract_columns",
+      "status": "pass",
+      "message": "Runtime observations include required feature contract columns.",
+      "details": {
+        "missing_columns": []
+      }
+    },
+    {
+      "code": "model_artifact_exists",
+      "status": "pass",
+      "message": "Sandbox model artifact exists.",
+      "details": {}
+    },
+    {
+      "code": "model_metrics_exists",
+      "status": "pass",
+      "message": "Sandbox model metrics JSON exists.",
+      "details": {}
+    },
+    {
+      "code": "model_feature_order_match",
+      "status": "pass",
+      "message": "Model bundle feature list matches contract exactly.",
+      "details": {
+        "feature_count": 17
+      }
+    },
+    {
+      "code": "model_threshold_valid",
+      "status": "pass",
+      "message": "Model threshold is defined and valid in [0,1].",
+      "details": {
+        "threshold": 0.48499999999999993
+      }
+    }
+  ]
+}

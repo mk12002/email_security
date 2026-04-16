@@ -1,0 +1,12 @@
+version: "3.9"
+
+# Dev-only override: enable local docker-backed detonation for sandbox agent.
+# Do not use this override in hardened CI/production deployments.
+services:
+  sandbox_agent_service:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      SANDBOX_LOCAL_DOCKER_ENABLED: "1"
+      SANDBOX_EXECUTOR_URL: ""
+      SANDBOX_EXECUTOR_SHARED_TOKEN: ""

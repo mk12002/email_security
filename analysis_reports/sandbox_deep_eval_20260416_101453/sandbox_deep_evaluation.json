@@ -1,0 +1,405 @@
+{
+  "timestamp_utc": "2026-04-16T10:15:14.300115+00:00",
+  "case_count": 8,
+  "cases": [
+    {
+      "name": "edge_no_attachments",
+      "description": "No attachment payload should short-circuit safely.",
+      "input": {
+        "attachments": []
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.75,
+        "indicators": [
+          "no_attachments_for_sandbox"
+        ],
+        "behavior_summary": {}
+      },
+      "analysis": {
+        "case": "edge_no_attachments",
+        "risk_score": 0.0,
+        "analysis_mode": "unknown",
+        "indicator_count": 1,
+        "top_indicators": [
+          "no_attachments_for_sandbox"
+        ],
+        "interpretation": "benign_or_low_signal"
+      }
+    },
+    {
+      "name": "edge_missing_attachment_path",
+      "description": "Attachment metadata points to non-existent file.",
+      "input": {
+        "attachments": [
+          {
+            "filename": "missing.exe",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/missing.exe"
+          }
+        ]
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "missing_attachment_path:missing.exe"
+        ],
+        "behavior_summary": {}
+      },
+      "analysis": {
+        "case": "edge_missing_attachment_path",
+        "risk_score": 0.0,
+        "analysis_mode": "executor",
+        "indicator_count": 2,
+        "top_indicators": [
+          "sandbox_executor_mode",
+          "missing_attachment_path:missing.exe"
+        ],
+        "interpretation": "benign_or_low_signal"
+      }
+    },
+    {
+      "name": "negative_benign_text_attachment",
+      "description": "Benign text document with low-risk content.",
+      "input": {
+        "attachments": [
+          {
+            "filename": "meeting_notes.txt",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/meeting_notes.txt"
+          }
+        ]
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.0,
+        "behavior_risk_score": 0.0,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:meeting_notes.txt"
+        ],
+        "behavior_summary": {}
+      },
+      "analysis": {
+        "case": "negative_benign_text_attachment",
+        "risk_score": 0.0,
+        "analysis_mode": "executor",
+        "indicator_count": 2,
+        "top_indicators": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:meeting_notes.txt"
+        ],
+        "interpretation": "benign_or_low_signal"
+      }
+    },
+    {
+      "name": "positive_double_extension_executable",
+      "description": "Double-extension executable with suspicious memory/process API strings.",
+      "input": {
+        "attachments": [
+          {
+            "filename": "urgent_invoice.pdf.exe",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/urgent_invoice.pdf.exe"
+          }
+        ]
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.85,
+        "behavior_risk_score": 0.85,
+        "confidence": 0.45,
+        "analysis_mode": "fallback_static",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "fallback_static_suspicious_floor"
+        ],
+        "behavior_summary": {},
+        "operational_alert": {
+          "code": "sandbox_backend_unavailable",
+          "severity": "warning",
+          "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+        }
+      },
+      "analysis": {
+        "case": "positive_double_extension_executable",
+        "risk_score": 0.85,
+        "analysis_mode": "fallback_static",
+        "indicator_count": 7,
+        "top_indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "fallback_static_suspicious_floor"
+        ],
+        "interpretation": "high_risk"
+      }
+    },
+    {
+      "name": "positive_macro_enabled_docm",
+      "description": "Macro-enabled Office file with VBA/macro markers.",
+      "input": {
+        "attachments": [
+          {
+            "filename": "payment_update.docm",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/payment_update.docm"
+          }
+        ]
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.85,
+        "behavior_risk_score": 0.85,
+        "confidence": 0.45,
+        "analysis_mode": "fallback_static",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:payment_update.docm",
+          "sandbox_static_score:1.000:payment_update.docm",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:payment_update.docm",
+          "fallback_static_suspicious_floor"
+        ],
+        "behavior_summary": {},
+        "operational_alert": {
+          "code": "sandbox_backend_unavailable",
+          "severity": "warning",
+          "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+        }
+      },
+      "analysis": {
+        "case": "positive_macro_enabled_docm",
+        "risk_score": 0.85,
+        "analysis_mode": "fallback_static",
+        "indicator_count": 7,
+        "top_indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:payment_update.docm",
+          "sandbox_static_score:1.000:payment_update.docm",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:payment_update.docm",
+          "fallback_static_suspicious_floor"
+        ],
+        "interpretation": "high_risk"
+      }
+    },
+    {
+      "name": "edge_detonation_budget_enforced",
+      "description": "Only top-priority attachment should be processed when budget=1.",
+      "input": {
+        "attachments": [
+          {
+            "filename": "urgent_invoice.pdf.exe",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/urgent_invoice.pdf.exe"
+          },
+          {
+            "filename": "payment_update.docm",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/payment_update.docm"
+          },
+          {
+            "filename": "newsletter.pdf",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/newsletter.pdf"
+          }
+        ]
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.85,
+        "behavior_risk_score": 0.85,
+        "confidence": 0.45,
+        "analysis_mode": "fallback_static",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "sandbox_skipped_budget:payment_update.docm",
+          "sandbox_skipped_budget:newsletter.pdf",
+          "fallback_static_suspicious_floor"
+        ],
+        "behavior_summary": {},
+        "operational_alert": {
+          "code": "sandbox_backend_unavailable",
+          "severity": "warning",
+          "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+        }
+      },
+      "analysis": {
+        "case": "edge_detonation_budget_enforced",
+        "risk_score": 0.85,
+        "analysis_mode": "fallback_static",
+        "indicator_count": 9,
+        "top_indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "sandbox_skipped_budget:payment_update.docm",
+          "sandbox_skipped_budget:newsletter.pdf"
+        ],
+        "interpretation": "high_risk"
+      }
+    },
+    {
+      "name": "edge_executor_unavailable_fallback",
+      "description": "Executor detonation raises backend error and agent should degrade safely.",
+      "input": {
+        "attachments": [
+          {
+            "filename": "urgent_invoice.pdf.exe",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/urgent_invoice.pdf.exe"
+          }
+        ]
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.85,
+        "behavior_risk_score": 0.85,
+        "confidence": 0.45,
+        "analysis_mode": "fallback_static",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "fallback_static_suspicious_floor"
+        ],
+        "behavior_summary": {},
+        "operational_alert": {
+          "code": "sandbox_backend_unavailable",
+          "severity": "warning",
+          "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+        }
+      },
+      "analysis": {
+        "case": "edge_executor_unavailable_fallback",
+        "risk_score": 0.85,
+        "analysis_mode": "fallback_static",
+        "indicator_count": 7,
+        "top_indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "sandbox_executor_unavailable",
+          "soc_operational_alert:sandbox_backend_unavailable",
+          "fallback_high_static_combo:urgent_invoice.pdf.exe",
+          "fallback_static_suspicious_floor"
+        ],
+        "interpretation": "high_risk"
+      }
+    },
+    {
+      "name": "positive_executor_behavior_signals",
+      "description": "Simulated successful executor detonation with strong malicious behavior chain.",
+      "input": {
+        "attachments": [
+          {
+            "filename": "urgent_invoice.pdf.exe",
+            "path": "/tmp/sandbox_deep_eval__0_y3oml/urgent_invoice.pdf.exe"
+          }
+        ]
+      },
+      "output": {
+        "agent_name": "sandbox_agent",
+        "risk_score": 0.8303,
+        "behavior_risk_score": 0.8303,
+        "confidence": 0.86,
+        "analysis_mode": "executor",
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "ml_sandbox_model_used:urgent_invoice.pdf.exe",
+          "shell_spawn_detected:urgent_invoice.pdf.exe",
+          "remote_connect_detected:urgent_invoice.pdf.exe",
+          "risky_executable_attachment:urgent_invoice.pdf.exe"
+        ],
+        "behavior_summary": {
+          "urgent_invoice.pdf.exe": {
+            "exec_chain": [
+              "/bin/sh",
+              "/usr/bin/curl"
+            ],
+            "remote_ips": [
+              "8.8.8.8"
+            ],
+            "sensitive_writes": [
+              "/etc/cron.d/evil"
+            ],
+            "shell_spawned": true,
+            "network_tool_spawned": true,
+            "critical_chain_detected": true,
+            "derived_training_row": {
+              "executed": 1,
+              "return_code": 0,
+              "timed_out": 0,
+              "spawned_processes": 2,
+              "suspicious_process_count": 2,
+              "file_entropy": 7.8,
+              "connect_calls": 1,
+              "execve_calls": 2,
+              "file_write_calls": 1,
+              "sequence_length": 4,
+              "sequence_process_calls": 2,
+              "sequence_network_calls": 1,
+              "sequence_filesystem_calls": 1,
+              "sequence_registry_calls": 0,
+              "sequence_memory_calls": 0,
+              "critical_chain_detected": 1,
+              "behavior_risk_score": 0.94
+            },
+            "heuristic_risk_score": 0.94,
+            "ml_prediction": {
+              "risk_score": 0.6482,
+              "confidence": 0.6482,
+              "indicators": [
+                "ml_sandbox_model_used"
+              ],
+              "decision_threshold": 0.48499999999999993,
+              "predicted_label": 1
+            },
+            "fused_risk_score": 0.7503
+          }
+        }
+      },
+      "analysis": {
+        "case": "positive_executor_behavior_signals",
+        "risk_score": 0.8303,
+        "analysis_mode": "executor",
+        "indicator_count": 7,
+        "top_indicators": [
+          "sandbox_executor_mode",
+          "sandbox_detonation_reason:static_score_threshold:urgent_invoice.pdf.exe",
+          "sandbox_static_score:1.000:urgent_invoice.pdf.exe",
+          "ml_sandbox_model_used:urgent_invoice.pdf.exe",
+          "shell_spawn_detected:urgent_invoice.pdf.exe",
+          "remote_connect_detected:urgent_invoice.pdf.exe",
+          "risky_executable_attachment:urgent_invoice.pdf.exe"
+        ],
+        "interpretation": "high_risk"
+      }
+    }
+  ]
+}

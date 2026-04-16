@@ -238,6 +238,24 @@ class Settings(BaseSettings):
     log_rotation: str = Field(default="10 MB", description="Log rotation threshold")
     log_retention: str = Field(default="30 days", description="Log retention period")
 
+    # --- Runtime Bootstrap ---
+    runtime_bootstrap_enabled: bool = Field(
+        default=True,
+        description="Run startup bootstrap checks for queue declaration and IOC freshness",
+    )
+    runtime_bootstrap_declare_results_queue: bool = Field(
+        default=True,
+        description="Declare results queue during runtime bootstrap",
+    )
+    runtime_bootstrap_refresh_ioc: bool = Field(
+        default=True,
+        description="Refresh IOC store during runtime bootstrap",
+    )
+    runtime_bootstrap_force_ioc_refresh: bool = Field(
+        default=True,
+        description="Force IOC refresh during runtime bootstrap regardless of interval",
+    )
+
     # --- Garuda Integration ---
     garuda_api_base_url: str = Field(
         default="http://garuda-agent:8088", description="Garuda API base URL"

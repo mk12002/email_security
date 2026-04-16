@@ -28,6 +28,11 @@ x-common-app-env: &common-app-env
   IOC_REFRESH_SECONDS: ${IOC_REFRESH_SECONDS:-300}
   SANDBOX_DETONATION_IMAGE: ${SANDBOX_DETONATION_IMAGE:-python:3.11-slim}
   SANDBOX_TIMEOUT_SECONDS: ${SANDBOX_TIMEOUT_SECONDS:-60}
+  SANDBOX_LOCAL_DOCKER_ENABLED: ${SANDBOX_LOCAL_DOCKER_ENABLED:-0}
+  SANDBOX_EXECUTOR_URL: ${SANDBOX_EXECUTOR_URL:-}
+  SANDBOX_EXECUTOR_SHARED_TOKEN: ${SANDBOX_EXECUTOR_SHARED_TOKEN:-}
+  SANDBOX_EXECUTOR_TIMEOUT_SECONDS: ${SANDBOX_EXECUTOR_TIMEOUT_SECONDS:-30}
+  SANDBOX_EXECUTOR_ATTACHMENT_ROOT: ${SANDBOX_EXECUTOR_ATTACHMENT_ROOT:-/mnt/attachments}
   SANDBOX_ALLOW_NETWORK: ${SANDBOX_ALLOW_NETWORK:-0}
   SANDBOX_NON_ROOT_USER: ${SANDBOX_NON_ROOT_USER:-65534:65534}
   SANDBOX_MEMORY_LIMIT_MB: ${SANDBOX_MEMORY_LIMIT_MB:-256}
@@ -227,7 +232,6 @@ services:
       - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
-      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -236,9 +240,9 @@ services:
     restart: unless-stopped
 
   # NOTE:
-  # Sandbox dynamic detonation requires Docker daemon access.
-  # The docker socket is mounted for functional parity in non-production environments.
-  # For production, prefer an isolated detonation control plane.
+  # Base compose is hardened and does not mount docker.sock.
+  # For local parity testing, use docker-compose.dev.yml override.
+  # Production should prefer isolated sandbox executor control plane.
 
   threat_intel_agent_service:
     build:

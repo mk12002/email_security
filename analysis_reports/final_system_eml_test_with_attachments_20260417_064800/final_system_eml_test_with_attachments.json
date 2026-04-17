@@ -1,0 +1,247 @@
+{
+  "timestamp_utc": "2026-04-17T06:48:00.080120+00:00",
+  "cases": [
+    {
+      "eml_path": "/home/LabsKraft/new_work/datasets/email_content/spam/spamassassin/00330.c5f7346dec1e6fe6ed324d8e78a2b46e.eml",
+      "analysis_id": "0227d98c-23f2-42af-894c-a7ebe790d981",
+      "url_count": 3,
+      "attachment_count": 1,
+      "attachment_paths": [
+        "attachments/0227d98c-23f2-42af-894c-a7ebe790d981_00da7f8e-0d30-4b24-be4c-b9df2d8a8c79_K1_Titelseite_66-Internet.jpg"
+      ],
+      "per_agent": {
+        "header_agent": {
+          "risk_score": 0.18,
+          "confidence": 0.7,
+          "analysis_mode": null,
+          "top_indicators": [
+            "missing_data:authentication_results_missing",
+            "ml_header_model_used"
+          ],
+          "operational_alert": null
+        },
+        "content_agent": {
+          "risk_score": 0.9488,
+          "confidence": 0.9987,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_slm_label:Phishing",
+            "ml_slm_confidence:0.9987"
+          ],
+          "operational_alert": null
+        },
+        "url_agent": {
+          "risk_score": 0.9997,
+          "confidence": 0.82,
+          "analysis_mode": null,
+          "top_indicators": [
+            "urls_analyzed=3",
+            "heuristic_risk=0.08",
+            "external_risk=0.0",
+            "external_lookups_enabled",
+            "confidence_capped_low_evidence",
+            "ml_url_model_used",
+            "non_https_url",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "non_https_url"
+          ],
+          "operational_alert": null
+        },
+        "attachment_agent": {
+          "risk_score": 0.22,
+          "confidence": 0.9982,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_attachment_model_used_ensemble_10",
+            "high_entropy:0227d98c-23f2-42af-894c-a7ebe790d981_00da7f8e-0d30-4b24-be4c-b9df2d8a8c79_K1_Titelseite_66-Internet.jpg"
+          ],
+          "operational_alert": null
+        },
+        "sandbox_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.86,
+          "analysis_mode": "executor",
+          "top_indicators": [
+            "sandbox_executor_mode",
+            "sandbox_skipped_low_suspicion:0227d98c-23f2-42af-894c-a7ebe790d981_00da7f8e-0d30-4b24-be4c-b9df2d8a8c79_K1_Titelseite_66-Internet.jpg"
+          ],
+          "operational_alert": null
+        },
+        "threat_intel_agent": {
+          "risk_score": 0.0004,
+          "confidence": 0.65,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_local_ioc_hits",
+            "local_match_score=0.0",
+            "external_enrichment_score=0.0",
+            "external_threat_enrichment_enabled",
+            "malwarebazaar_unavailable",
+            "virustotal_hash_unavailable"
+          ],
+          "operational_alert": null
+        },
+        "user_behavior_agent": {
+          "risk_score": 0.06,
+          "confidence": 0.85,
+          "analysis_mode": null,
+          "top_indicators": [
+            "unfamiliar_sender_domain"
+          ],
+          "operational_alert": null
+        }
+      },
+      "sandbox_detail": {
+        "analysis_mode": "executor",
+        "risk_score": 0.0,
+        "confidence": 0.86,
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:0227d98c-23f2-42af-894c-a7ebe790d981_00da7f8e-0d30-4b24-be4c-b9df2d8a8c79_K1_Titelseite_66-Internet.jpg"
+        ],
+        "operational_alert": null,
+        "behavior_summary_keys": []
+      },
+      "final_decision": {
+        "overall_risk_score": 0.4807,
+        "verdict": "suspicious",
+        "recommended_actions": [
+          "manual_review",
+          "soc_alert"
+        ],
+        "threat_level": "medium",
+        "counterfactual_result": {
+          "is_counterfactual": true,
+          "agents_altered": [
+            "url_agent",
+            "content_agent"
+          ],
+          "new_normalized_score": 0.3423,
+          "threshold": 0.4,
+          "perturbation_model": "bounded_confidence_attenuation"
+        }
+      }
+    },
+    {
+      "eml_path": "/home/LabsKraft/new_work/datasets/email_content/spam/spamassassin/00260.c75ce8b8d8bfc55723426979d260bf61.eml",
+      "analysis_id": "11bdef67-224e-44a3-8a8a-6eb188dbc13c",
+      "url_count": 2,
+      "attachment_count": 1,
+      "attachment_paths": [
+        "attachments/11bdef67-224e-44a3-8a8a-6eb188dbc13c_60dbb892-33a1-4996-a8b7-466fd85f1f83_LenkaWolfgangK1-Pornodarsteller.jpg"
+      ],
+      "per_agent": {
+        "header_agent": {
+          "risk_score": 0.18,
+          "confidence": 0.7,
+          "analysis_mode": null,
+          "top_indicators": [
+            "missing_data:authentication_results_missing",
+            "ml_header_model_used"
+          ],
+          "operational_alert": null
+        },
+        "content_agent": {
+          "risk_score": 0.9489,
+          "confidence": 0.9988,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_slm_label:Phishing",
+            "ml_slm_confidence:0.9988"
+          ],
+          "operational_alert": null
+        },
+        "url_agent": {
+          "risk_score": 0.9997,
+          "confidence": 0.82,
+          "analysis_mode": null,
+          "top_indicators": [
+            "urls_analyzed=2",
+            "heuristic_risk=0.08",
+            "external_risk=0.0",
+            "external_lookups_enabled",
+            "confidence_capped_low_evidence",
+            "ml_url_model_used",
+            "non_https_url",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "non_https_url"
+          ],
+          "operational_alert": null
+        },
+        "attachment_agent": {
+          "risk_score": 0.1239,
+          "confidence": 0.8761,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_attachment_model_used_ensemble_10"
+          ],
+          "operational_alert": null
+        },
+        "sandbox_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.86,
+          "analysis_mode": "executor",
+          "top_indicators": [
+            "sandbox_executor_mode",
+            "sandbox_skipped_low_suspicion:11bdef67-224e-44a3-8a8a-6eb188dbc13c_60dbb892-33a1-4996-a8b7-466fd85f1f83_LenkaWolfgangK1-Pornodarsteller.jpg"
+          ],
+          "operational_alert": null
+        },
+        "threat_intel_agent": {
+          "risk_score": 0.0004,
+          "confidence": 0.65,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_local_ioc_hits",
+            "local_match_score=0.0",
+            "external_enrichment_score=0.0",
+            "external_threat_enrichment_enabled",
+            "malwarebazaar_unavailable",
+            "virustotal_hash_unavailable"
+          ],
+          "operational_alert": null
+        },
+        "user_behavior_agent": {
+          "risk_score": 0.06,
+          "confidence": 0.85,
+          "analysis_mode": null,
+          "top_indicators": [
+            "unfamiliar_sender_domain"
+          ],
+          "operational_alert": null
+        }
+      },
+      "sandbox_detail": {
+        "analysis_mode": "executor",
+        "risk_score": 0.0,
+        "confidence": 0.86,
+        "indicators": [
+          "sandbox_executor_mode",
+          "sandbox_skipped_low_suspicion:11bdef67-224e-44a3-8a8a-6eb188dbc13c_60dbb892-33a1-4996-a8b7-466fd85f1f83_LenkaWolfgangK1-Pornodarsteller.jpg"
+        ],
+        "operational_alert": null,
+        "behavior_summary_keys": []
+      },
+      "final_decision": {
+        "overall_risk_score": 0.4413,
+        "verdict": "suspicious",
+        "recommended_actions": [
+          "manual_review",
+          "soc_alert"
+        ],
+        "threat_level": "medium",
+        "counterfactual_result": {
+          "is_counterfactual": true,
+          "agents_altered": [
+            "url_agent"
+          ],
+          "new_normalized_score": 0.3647,
+          "threshold": 0.4,
+          "perturbation_model": "bounded_confidence_attenuation"
+        }
+      }
+    }
+  ]
+}

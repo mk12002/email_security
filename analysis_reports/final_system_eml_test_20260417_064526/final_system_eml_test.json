@@ -1,0 +1,213 @@
+{
+  "timestamp_utc": "2026-04-17T06:45:26.273390+00:00",
+  "cases": [
+    {
+      "eml_path": "/home/LabsKraft/new_work/datasets/email_content/legitimate/spamassassin_ham/01672.dd744a40e87e0715cd0153fef3a63a99.eml",
+      "analysis_id": "84bc70ad-8f20-4a4e-9136-230d3667cc5a",
+      "url_count": 1,
+      "attachment_count": 0,
+      "attachment_paths": [],
+      "per_agent": {
+        "header_agent": {
+          "risk_score": 0.18,
+          "confidence": 0.8223,
+          "analysis_mode": null,
+          "top_indicators": [
+            "missing_data:short_smtp_trace",
+            "missing_data:authentication_results_missing",
+            "ml_header_model_used"
+          ],
+          "operational_alert": null
+        },
+        "content_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.9226,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_slm_label:Legitimate",
+            "ml_slm_confidence:0.9226"
+          ],
+          "operational_alert": null
+        },
+        "url_agent": {
+          "risk_score": 0.9806,
+          "confidence": 0.9806,
+          "analysis_mode": null,
+          "top_indicators": [
+            "urls_analyzed=1",
+            "heuristic_risk=0.28",
+            "external_risk=0.0",
+            "external_lookups_enabled",
+            "ml_url_model_used",
+            "high_subdomain_entropy",
+            "non_https_url",
+            "openphish_unavailable"
+          ],
+          "operational_alert": null
+        },
+        "attachment_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.8,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments"
+          ],
+          "operational_alert": null
+        },
+        "sandbox_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.75,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments_for_sandbox"
+          ],
+          "operational_alert": null
+        },
+        "threat_intel_agent": {
+          "risk_score": 0.0004,
+          "confidence": 0.65,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_local_ioc_hits",
+            "local_match_score=0.0",
+            "external_enrichment_score=0.0",
+            "external_threat_enrichment_enabled"
+          ],
+          "operational_alert": null
+        },
+        "user_behavior_agent": {
+          "risk_score": 0.0601,
+          "confidence": 0.85,
+          "analysis_mode": null,
+          "top_indicators": [
+            "unfamiliar_sender_domain"
+          ],
+          "operational_alert": null
+        }
+      },
+      "sandbox_detail": {
+        "analysis_mode": null,
+        "risk_score": 0.0,
+        "confidence": 0.75,
+        "indicators": [
+          "no_attachments_for_sandbox"
+        ],
+        "behavior_summary_keys": [],
+        "operational_alert": null
+      },
+      "final_decision": {
+        "overall_risk_score": 0.2292,
+        "verdict": "likely_safe",
+        "recommended_actions": [
+          "deliver_with_banner"
+        ],
+        "threat_level": "low",
+        "counterfactual_result": {
+          "is_counterfactual": false,
+          "reason": "no_blocking_boundary"
+        }
+      }
+    },
+    {
+      "eml_path": "/home/LabsKraft/new_work/datasets/email_content/spam/spamassassin/00317.22fe43af6f4c707c4f1bdc56af959a8e.eml",
+      "analysis_id": "3e91eeb9-68a3-4a53-b349-962f4a688b28",
+      "url_count": 0,
+      "attachment_count": 0,
+      "attachment_paths": [],
+      "per_agent": {
+        "header_agent": {
+          "risk_score": 0.18,
+          "confidence": 0.75,
+          "analysis_mode": null,
+          "top_indicators": [
+            "missing_data:short_smtp_trace",
+            "missing_data:authentication_results_missing",
+            "ml_header_model_used"
+          ],
+          "operational_alert": null
+        },
+        "content_agent": {
+          "risk_score": 0.6327,
+          "confidence": 0.9735,
+          "analysis_mode": null,
+          "top_indicators": [
+            "long_email_body",
+            "ml_slm_label:Spam",
+            "ml_slm_confidence:0.9735"
+          ],
+          "operational_alert": null
+        },
+        "url_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.7,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_urls_detected"
+          ],
+          "operational_alert": null
+        },
+        "attachment_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.8,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments"
+          ],
+          "operational_alert": null
+        },
+        "sandbox_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.75,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments_for_sandbox"
+          ],
+          "operational_alert": null
+        },
+        "threat_intel_agent": {
+          "risk_score": 0.0004,
+          "confidence": 0.65,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_local_ioc_hits",
+            "local_match_score=0.0",
+            "external_enrichment_score=0.0",
+            "external_threat_enrichment_enabled"
+          ],
+          "operational_alert": null
+        },
+        "user_behavior_agent": {
+          "risk_score": 0.06,
+          "confidence": 0.85,
+          "analysis_mode": null,
+          "top_indicators": [
+            "unfamiliar_sender_domain"
+          ],
+          "operational_alert": null
+        }
+      },
+      "sandbox_detail": {
+        "analysis_mode": null,
+        "risk_score": 0.0,
+        "confidence": 0.75,
+        "indicators": [
+          "no_attachments_for_sandbox"
+        ],
+        "behavior_summary_keys": [],
+        "operational_alert": null
+      },
+      "final_decision": {
+        "overall_risk_score": 0.1596,
+        "verdict": "likely_safe",
+        "recommended_actions": [
+          "deliver_with_banner"
+        ],
+        "threat_level": "safe",
+        "counterfactual_result": {
+          "is_counterfactual": false,
+          "reason": "no_blocking_boundary"
+        }
+      }
+    }
+  ]
+}

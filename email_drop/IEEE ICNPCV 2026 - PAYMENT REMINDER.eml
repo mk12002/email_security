@@ -1,0 +1,196 @@
+Delivered-To: mohit.kr1103@gmail.com
+Received: by 2002:a05:6f02:f89:b0:11c:6bba:b2a with SMTP id d9csp1179776rch;
+        Wed, 15 Apr 2026 23:04:54 -0700 (PDT)
+X-Received: by 2002:a05:6a20:3953:b0:39b:dea7:5624 with SMTP id adf61e73a8af0-39fe402074bmr27493795637.47.1776319494182;
+        Wed, 15 Apr 2026 23:04:54 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1776319494; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=QG5YumpPeKopz2a8lGZEVSm4ucVugWWOEi8wHPLiJ1RhClsDQSGyyQn5vK4ISZTuoK
+         xDF+scmZNJNcLUSdRE4pNxPhDhV+YCUObyPvVG0LDQpJmG7Ysn5UKQyB8VKCeCMbYmhF
+         vhX3S6eFyF5hWev3JGBmeaEYZjWaoIQKCv5tTSrZfGsAt0htF/oyFGatBDG31jWOLPVG
+         63coiYvoAM6NpEK4g8vckLABc8o5oBO/22UN3aayy7cCvavk/6O7Dfkugf2RAU16JZ+w
+         soSGMVOF1nn5jkis65tHhcyi70b2cqJKyZIpUusBqWk68WTmKeBdL66kVi1SggGCvr0u
+         fYQA==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=request-id:client-request-id:mime-version:date:subject:to:from
+         :dkim-signature:message-id;
+        bh=+WX1ZD1H1ixxizuXGFNSHy7EPol/T/9VFo1gkeoUUFE=;
+        fh=YBNF+b+uMUhEiSfvhtKWIP0e4DyhKMSaAG3uLPq289o=;
+        b=KeTnq7qBBsq0PRauH+xeA+EWgbyGmlQbQjbINzlORgRdglDutlCqsY5/Z4sa/Uft3o
+         ZUieF5EK6W8EzBZlvuNOLcxN9a5/GFXa3GBdy1GbEJlmgNAWWzc88DRzSQLnZ2H4/Ico
+         F7gfWmxIuSPs518lztZqMw6IuycuOj9TiD1gBDHagifTgA5TkyPzvPh+Z4Q8H9Ra1S7W
+         12pcIvOTSczKfav/WydAlwS4XGpR+d56bj1dboneEP4dPeXlYll++eURm3jHf6T4hr8F
+         WsCKGu8g8/uUXIb/BITYnTppa7E4qW1nZFcC+M3xtLbrU8NZpK84vvbK+ZfuUwDNG7pN
+         X49A==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@msr-cmt.org header.s=s1024 header.b=aopvpX3H;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of noreply@msr-cmt.org designates 2a01:111:f403:c105::7 as permitted sender) smtp.mailfrom=noreply@msr-cmt.org;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=msr-cmt.org
+Return-Path: <noreply@msr-cmt.org>
+Received: from CH4PR04CU002.outbound.protection.outlook.com (mail-northcentralusazlp170130007.outbound.protection.outlook.com. [2a01:111:f403:c105::7])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c795859384esi6343186a12.410.2026.04.15.23.04.53
+        for <mohit.kr1103@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Wed, 15 Apr 2026 23:04:54 -0700 (PDT)
+Received-SPF: pass (google.com: domain of noreply@msr-cmt.org designates 2a01:111:f403:c105::7 as permitted sender) client-ip=2a01:111:f403:c105::7;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@msr-cmt.org header.s=s1024 header.b=aopvpX3H;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of noreply@msr-cmt.org designates 2a01:111:f403:c105::7 as permitted sender) smtp.mailfrom=noreply@msr-cmt.org;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=msr-cmt.org
+Message-ID: <69e07c06.630a0220.973c.1735SMTPIN_ADDED_BROKEN@mx.google.com>
+X-Google-Original-Message-ID: <[061d693b63844b8e97b42f422bec46fc-JFZGS42DN5WW25LONFRWC5DJN5XFA3DBORTG64TNFVIHE33EFVBEYMSQPRWXG4TDNV2HYRLNMFUWYVDFON2HYRLYN5JW25DQ@microsoft.com]>
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;
+ b=L/iknd1SW+aiGU5hixCjmdsFelL1ve0vxgqBp+5suCZwGHmuMmEscyK6sBkoelXAG/IZi0tUNAGl+cUfGrLp60vT4OxfGTys5TKOgsTWOSHqqp3bQtnQJFBhlr5CdleApb6xcDRarD8wcqT6GAXL70Y4e3TUZRhVgpTZzU92TriM3ZVe6iTtxA/oNmbUxMmOq6NyWa3+aZ7wsH9qNQ8IU5DtLI0Z8etB269DQlTMCK5M1+sl+6pCXlNgfA2gC+nNz7LFArs0PKEYPz1ldp1WW7WIbiNN4qoLB3COmsf7RNJwTRNkgpl6J434R3D/1J4aiVAVsrxc4a12n/SNpI50gw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=+WX1ZD1H1ixxizuXGFNSHy7EPol/T/9VFo1gkeoUUFE=;
+ b=gjLiygBkL9sFXgr8JyLBj30Gd3nsSdGY0lP16IFO8fWM/GCC2jAyv5D+F3PfbPS248BmuKx8KUstMkSAx6vCKA9Jf4h4HbCBVEfUfMGJX6y7JipOP4YyMaUVQeDvF4LvbU/ZSKazvA8UsY6JGOR8Fspo0iEc5P+4j7QsegrhusyNLC4glF0Dcut+Y7LAXA2OPyBrs1QX5F5vB4atGoV4hn4Uj1K2yAR6t3tkwJeqdwV5ofj7D2F3o1iFLVhgTCEjXI/tD927hEww7Xhrxn2KDuqFZDnPUHAnBIOF+sJEZLoTi9GwnkfXpGBFcyzNe7tgVe3Ng3aMTlZOgqWfD99SqQ==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=none; dmarc=none;
+ dkim=none; arc=none
+Received: from substrate.office.com (2603:10b6:a03:589::14) by
+ SJ2P220MB1612.NAMP220.PROD.OUTLOOK.COM with HTTP via
+ MW4PR03CA0131.NAMPRD03.PROD.OUTLOOK.COM; Thu, 16 Apr 2026 06:04:52 +0000
+DKIM-Signature: v=1; a=rsa-sha256; d=msr-cmt.org; s=s1024; c=relaxed/relaxed;
+	t=1776319492; h=from:to:cc:subject:date:messageid;
+	bh=+WX1ZD1H1ixxizuXGFNSHy7EPol/T/9VFo1gkeoUUFE=;
+	b=aopvpX3Hmem9Al2IuedmxO2Zq6lSqiulLnBEAOBlAiYPbssaSg7UyWVlmx3aXNUNl7OgGr9mW0o
+	2htDWwf1LWyypTbgiqtl9fMkA7hVERSqrEo2qI+2aZWeE5Agzo5d/dUuq9DA2fa79+yDKjaWFPZDe
+	Z+0EfTUyRzMdMga0/q4=
+From: Microsoft CMT <noreply@msr-cmt.org>
+To: Mohit Kumar <mohit.kr1103@gmail.com>
+Subject: IEEE ICNPCV 2026 - PAYMENT REMINDER
+Date: Thu, 16 Apr 2026 06:04:52 +0000
+X-MS-Iris-MetaData: =?utf-8?q?{=22Type=22=3Anull=2C=22Fields=22=3A{=22InstanceID=22=3A=22061d693b-6384-4b8e-97b4-?=
+ =?utf-8?q?2f422bec46fc=22=2C=22ActivityID=22=3A=22e962b268-f012-4410-812a-2f5e31044?=
+ =?utf-8?q?d8e=22}}?=
+MIME-Version: 1.0
+X-TsbHttpDeliveryResponseType: Success
+Content-Type: multipart/alternative; boundary="=-Pt0sbibjldoxcHN2JCjuHw=="
+X-MS-PublicTrafficType: Email
+client-request-id: 061d693b-6384-4b8e-97b4-2f422bec46fc
+request-id: 061d693b-6384-4b8e-97b4-2f422bec46fc
+Return-Path: noreply@msr-cmt.org
+X-MS-TrafficTypeDiagnostic: SJ2P220MB1612:EE_ICP
+X-MS-Exchange-SenderADCheck: 0
+X-MS-Exchange-AntiSpam-Relay: 0
+X-Microsoft-Antispam:
+	BCL:0;ARA:13230040|7149299003|61400799027|69100299015|19092799006|376014|3613699012|14018399003|4076899003|8096899003|13003099007|56012099003|16102099003|18002099003|15920700032;
+X-Microsoft-Antispam-Message-Info:
+	VHQPX3ESnWLboejldT+jLKZia8fZYV0/Tru08KQM8WS/QsP/O4tQ8HvpJN2XXqWTXX/n9PCvUKI+eTNO0TNIaHxNpX3M1p3MAirpIIIKltQZv31j6OL2QK8a0dr2UWupsDD5uj0T1QiJmgMmxLSFQcmlPBzFEZvaO2TTcfH2WV5tdwIgq8UD0oWS2Sef5HGWM4YdthQcsa1R4551mYsyen+dI5Zw+g2spNqebgc9tFJ+Mtto3U385FQZvVptbt6QteqjE3QSbIsl4N+6grJrizbxJ2hs+3boo0dEex9wCobO0DOnNk9CgBME/l2MjW4s4xz6HZYXu4QxJ9Hb8fzfNywGG0y78TmIedR6/WbaHvAE+efGeKugnNHPDZ+F6s7FrvlL6NdFusqFH49JOKs2nyEAnNctZuiqatwgutjzrkuYYymbvPZ7Uqt79yE8R8p4x4n+xBHZANFwV32hQog+kOZ+/0XBzwR5xvl2SXH23QmkeTGC/MqtknaB2aPhJQT+7NV3fp+D70+cuzWL+WV2CbkpGF0leB4yZ/yZSeY3QsZPzwhgVmTQR+9RCEwthZEvzLkd5892qkySjDCkLt1OtGUwO62O3yhvuqhwZzsBANJ+gJi9zQxR08aNDzPtHYK81MNoVWpEIIkG79jnllrPFi6Y4i90Mj4qp7+5EgS82vpkp64yJkOUiLcaHlclBzkZV3d3qq3KyQMDRaLDx7sBswiwVw3I1LjLyGIa8bGybZE=
+X-Forefront-Antispam-Report:
+	CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:;PTR:;CAT:NONE;SFS:(13230040)(7149299003)(61400799027)(69100299015)(19092799006)(376014)(3613699012)(14018399003)(4076899003)(8096899003)(13003099007)(56012099003)(16102099003)(18002099003)(15920700032);DIR:OUT;SFP:1020;
+X-MS-Exchange-AntiSpam-MessageData-ChunkCount: 1
+X-MS-Exchange-AntiSpam-MessageData-0:
+	Yk5t3Ym/tj32NYnD2GbTOB63Yj5/ZhVGafxgRYlqdr+4Pq8EE1t0paKqk1gQ4j1N71iHKTcagoA40Xt6A7O9va8VCxDLsnS/oD+P0Xoy5gNQZ5YXziMXdldq05rPn28Cp2HLguy2Eyy16dKUtQMe8MMLZh3Wax9vBK+O4Qc8PHLZ9w5HqBxkjV71GDZM66Ec9bvGEm3kEf0TtCMJWEgSfVm2kAGluKuoBPQRyCRloyftwbi1+mnUm+lWepZpouW8JriCFFDIwrwef9GUixAH4s+g6Ps8qyhk4SKyL8fn7vMk9LP7GK+s/XLQH8rWliWMkmtxai+SLUZk6PLbKKDZNjoO+G9CltLxpUhV2rWTbzIpIjbatOzd2pTus48muOoBXMgi0YxOZdqcvezYvCfTo5OGMBg9oevCY+rpS5seRNT04Cc7HsZmCuRIiCS4nGXLulWvMlSo72VeEC392IWI90FUr957Lm+Ic/v+Oze5EIarm2c7xuFJtVv33+DPDKgn442RkHAhA+nLQpDX0gjs6nK+19KO/oaIMkIya5UgYSQAEhLRDaFKbxO/p16Af/fulxKM7zV87Sbk1u+Nt2mDH44Wd5h9NzPfKakIGvtgVhP/F8pSqqvnFdwP6ATWil5Rin4NEQJzw0nOuRPUikseA3ZrYVVVfn/3XHQiJkGXC+6xcs/gz+UlWy5A+wv7rJjx
+X-OriginatorOrg: ideasprod02.microsoft.com
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: HttpSubmission-SJ2P220MB1612
+X-MS-Exchange-CrossTenant-Id: 59df2b09-9902-40f2-a310-49b3e1d8ad40
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 16 Apr 2026 06:04:52.5929 (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id:
+	1361e469-ad31-4599-da21-08de9b7e135c
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: SJ2P220MB1612
+
+--=-Pt0sbibjldoxcHN2JCjuHw==
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Dear Mohit Kumar
+
+Paper ID / Submission ID : 291
+
+Title : HybEx-Law: A Hybrid Neural-Symbolic System for Legal Aid Eligibilit=
+y Determination
+
+As per our records your registration is pending, kindly register within due=
+ date.=20
+
+Complete the Registration Process (The last date of payment is 16/04/2026 )=
+=20
+
+Registration Link for Payment :
+
+Indian :
+https://rzp.io/rzp/ICNPCV2026
+
+Foreign :
+https://rzp.io/rzp/ICNPCVForeign2026
+
+After the last date of registration IEEE PDF Express and E copyright inform=
+ation will be given for registered authors.=20
+
+Note;
+If already did the payment, kindly send the payment screenshot and paper id=
+ to below mail id.
+
+Warm regards,
+Finance Chair
+ ICNPCV 2026=20
+https://icaiaa.com/
+Mob No : 91-8867668872
+Email : icnpcvconf@gmail.com
+
+
+Please do not reply to this email as it was generated from an email account=
+ that is not monitored.
+
+
+To stop receiving conference emails, you can check the 'Do not send me conf=
+erence email' box from your User Profile.
+
+Microsoft respects your privacy. To learn more, please read our <a href=3D'=
+https://go.microsoft.com/fwlink/?LinkId=3D521839'>Privacy Statement</a>.
+
+Microsoft Corporation
+One Microsoft Way
+Redmond, WA 98052=
+
+--=-Pt0sbibjldoxcHN2JCjuHw==
+Content-Type: text/html; charset=utf-8
+Content-Id: <2e02ec76-dc5e-4511-a5d9-b142ccb79fc5>
+Content-Transfer-Encoding: base64
+
+PCFET0NUWVBFIGh0bWw+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48
+Ym9keT48cHJlIHN0eWxlPSJmb250LWZhbWlseTogbW9ub3NwYWNlOyB3aGl0ZS1zcGFjZTogcHJl
+LXdyYXA7Ij5EZWFyIE1vaGl0IEt1bWFyCgpQYXBlciBJRCAvIFN1Ym1pc3Npb24gSUQgOiAyOTEK
+ClRpdGxlIDogSHliRXgtTGF3OiBBIEh5YnJpZCBOZXVyYWwtU3ltYm9saWMgU3lzdGVtIGZvciBM
+ZWdhbCBBaWQgRWxpZ2liaWxpdHkgRGV0ZXJtaW5hdGlvbgoKQXMgcGVyIG91ciByZWNvcmRzIHlv
+dXIgcmVnaXN0cmF0aW9uIGlzIHBlbmRpbmcsIGtpbmRseSByZWdpc3RlciB3aXRoaW4gZHVlIGRh
+dGUuIAoKQ29tcGxldGUgdGhlIFJlZ2lzdHJhdGlvbiBQcm9jZXNzIChUaGUgbGFzdCBkYXRlIG9m
+IHBheW1lbnQgaXMgMTYvMDQvMjAyNiApIAoKUmVnaXN0cmF0aW9uIExpbmsgZm9yIFBheW1lbnQg
+OgoKSW5kaWFuIDoKPGEgaHJlZj0iaHR0cHM6Ly9yenAuaW8vcnpwL0lDTlBDVjIwMjYiPmh0dHBz
+Oi8vcnpwLmlvL3J6cC9JQ05QQ1YyMDI2PC9hPgoKRm9yZWlnbiA6CjxhIGhyZWY9Imh0dHBzOi8v
+cnpwLmlvL3J6cC9JQ05QQ1ZGb3JlaWduMjAyNiI+aHR0cHM6Ly9yenAuaW8vcnpwL0lDTlBDVkZv
+cmVpZ24yMDI2PC9hPgoKQWZ0ZXIgdGhlIGxhc3QgZGF0ZSBvZiByZWdpc3RyYXRpb24gSUVFRSBQ
+REYgRXhwcmVzcyBhbmQgRSBjb3B5cmlnaHQgaW5mb3JtYXRpb24gd2lsbCBiZSBnaXZlbiBmb3Ig
+cmVnaXN0ZXJlZCBhdXRob3JzLiAKCk5vdGU7CklmIGFscmVhZHkgZGlkIHRoZSBwYXltZW50LCBr
+aW5kbHkgc2VuZCB0aGUgcGF5bWVudCBzY3JlZW5zaG90IGFuZCBwYXBlciBpZCB0byBiZWxvdyBt
+YWlsIGlkLgoKV2FybSByZWdhcmRzLApGaW5hbmNlIENoYWlyCiBJQ05QQ1YgMjAyNiAKPGEgaHJl
+Zj0iaHR0cHM6Ly9pY2FpYWEuY29tLyI+aHR0cHM6Ly9pY2FpYWEuY29tLzwvYT4KTW9iIE5vIDog
+OTEtODg2NzY2ODg3MgpFbWFpbCA6IGljbnBjdmNvbmZAZ21haWwuY29tPGJyIC8+PGJyIC8+PGJy
+IC8+UGxlYXNlIGRvIG5vdCByZXBseSB0byB0aGlzIGVtYWlsIGFzIGl0IHdhcyBnZW5lcmF0ZWQg
+ZnJvbSBhbiBlbWFpbCBhY2NvdW50IHRoYXQgaXMgbm90IG1vbml0b3JlZC48YnIgLz48YnIgLz48
+YnIgLz5UbyBzdG9wIHJlY2VpdmluZyBjb25mZXJlbmNlIGVtYWlscywgeW91IGNhbiBjaGVjayB0
+aGUgJ0RvIG5vdCBzZW5kIG1lIGNvbmZlcmVuY2UgZW1haWwnIGJveCBmcm9tIHlvdXIgVXNlciBQ
+cm9maWxlLjxiciAvPjxiciAvPk1pY3Jvc29mdCByZXNwZWN0cyB5b3VyIHByaXZhY3kuIFRvIGxl
+YXJuIG1vcmUsIHBsZWFzZSByZWFkIG91ciA8YSBocmVmPSdodHRwczovL2dvLm1pY3Jvc29mdC5j
+b20vZndsaW5rLz9MaW5rSWQ9NTIxODM5Jz5Qcml2YWN5IFN0YXRlbWVudDwvYT4uPGJyIC8+PGJy
+IC8+TWljcm9zb2Z0IENvcnBvcmF0aW9uPGJyIC8+T25lIE1pY3Jvc29mdCBXYXk8YnIgLz5SZWRt
+b25kLCBXQSA5ODA1MjwvcHJlPjxpbWcgc3JjPSdodHRwczovL211Y3AuYXBpLmFjY291bnQubWlj
+cm9zb2Z0LmNvbS9tL3YyL3Y/ZD1BSUFBQ0hKS0xLUDVFTDYyM1lNSTdVNU9CRVVUTExSQUNPSTNK
+SFRSNFlUSDJTSVBDUkpVQ0syWlRZWkw1RlVJWU9QNkpaTUlSM1E3UUdSM01HTUFFSzZKS0hVSlpT
+VktNNDNQQUQ2N0hWVUE0WE1YQkZBTE9ESU1TTE1VTUZGT0pHS1BENEtCNFJZWTY2NFNPV1BOUTRR
+VE5MQkhaTlEmaT1BSUFBRE5BQUdDS0tMVVZURlFHVFdWUzVMNjRDQk1EUVZLWU1ENllCWDdBRlpS
+T0U3T1ZCRFoyRlVESEpTVFRWUFJCRTZFMzJCS0NaWUFDTERGWllCRFo1RVJSRlYzTzcyTVVOWFZF
+UlhYNVRUTklTNTZORVFIWlNXN0VFU0ZUTFZVUkdVWjNHS1ZRTFJSSVE3T0NVRkUzV0NLU1ZBUDRQ
+QUJZQ0hNMlhXNlZVTkVaTVZMTzZVU000WU4yUVdXUVlORlBKMllHT0NVWVFFWUFZUExWWEdUNkM3
+UEdBT0M0QjVQQzU0UExPSUlISlFUSFNWRVdHS0NCWlZXR0NWQTNNSEVYUUFIVjJUUVJETkQzWEtE
+SlJPWVVIU0pUM0VIWScgd2lkdGg9JzEnIGhlaWdodD0nMScgdGFiaW5kZXg9Jy0xJyBhcmlhLWhp
+ZGRlbj0ndHJ1ZScgYWx0PScnIC8+PC9ib2R5PjwvaHRtbD48IS0tIGNWOiBpMkpGY3QvSXRrS3Y2
+TDNlLjMuMS4xLjQgLS0+
+
+--=-Pt0sbibjldoxcHN2JCjuHw==--

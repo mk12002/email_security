@@ -8,6 +8,7 @@ from email_security.agents.content_agent.feature_extractor import extract_featur
 from email_security.agents.content_agent.inference import predict
 from email_security.agents.content_agent.model_loader import load_model
 from email_security.agents.ml_runtime import clamp as _clamp
+from email_security.agents.trust_signals import assess_transactional_legitimacy
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
@@ -53,6 +54,8 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         "indicators": indicators,
     }
 
+    legitimacy = assess_transactional_legitimacy(data)
+
     features = extract_features(data)
     model = load_model()
     ml_prediction = predict(features, model=model)
@@ -67,6 +70,16 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         final_risk = heuristic_result["risk_score"]
         final_confidence = heuristic_result["confidence"]
         final_indicators = heuristic_result["indicators"]
+
+    # Reduce lexical false positives for authenticated transactional reminders.
+    if legitimacy.level in {"strong", "moderate"} and legitimacy.credential_bait_hits == 0:
+        if legitimacy.level == "strong":
+            final_risk = _clamp(min(final_risk, 0.62))
+            final_confidence = _clamp(min(final_confidence, 0.92))
+        else:
+            final_risk = _clamp(min(final_risk, 0.72))
+        final_indicators.append(f"transactional_legitimacy_profile:{legitimacy.level}")
+        final_indicators.extend(legitimacy.indicators[:3])
 
     result = {
         "agent_name": "content_agent",

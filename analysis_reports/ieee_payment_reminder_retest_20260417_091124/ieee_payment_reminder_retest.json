@@ -1,0 +1,423 @@
+{
+  "comparison": {
+    "baseline_source": "/home/LabsKraft/new_work/email_security/analysis_reports/email_drop_full_system_test_20260417_070254/email_drop_full_system_test.json",
+    "email_name": "IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+    "baseline": {
+      "overall_risk_score": 0.5101,
+      "verdict": "suspicious",
+      "recommended_actions": [
+        "manual_review",
+        "soc_alert"
+      ],
+      "total_email_seconds": 14.3125
+    },
+    "after": {
+      "overall_risk_score": 0.4195,
+      "verdict": "likely_safe",
+      "recommended_actions": [
+        "deliver_with_banner"
+      ],
+      "total_email_seconds": 23.2209
+    },
+    "delta": {
+      "overall_risk_score": -0.0906,
+      "verdict_changed": true
+    },
+    "agent_differences": {
+      "attachment_agent": {
+        "baseline_risk": 0.0,
+        "after_risk": 0.0,
+        "delta_risk": 0.0,
+        "baseline_confidence": 0.8,
+        "after_confidence": 0.8
+      },
+      "content_agent": {
+        "baseline_risk": 0.9488,
+        "after_risk": 0.62,
+        "delta_risk": -0.3288,
+        "baseline_confidence": 0.9988,
+        "after_confidence": 0.92
+      },
+      "header_agent": {
+        "baseline_risk": 0.4856,
+        "after_risk": 0.4856,
+        "delta_risk": 0.0,
+        "baseline_confidence": 0.8094,
+        "after_confidence": 0.8094
+      },
+      "sandbox_agent": {
+        "baseline_risk": 0.0,
+        "after_risk": 0.0,
+        "delta_risk": 0.0,
+        "baseline_confidence": 0.75,
+        "after_confidence": 0.75
+      },
+      "threat_intel_agent": {
+        "baseline_risk": 0.0004,
+        "after_risk": 0.0004,
+        "delta_risk": 0.0,
+        "baseline_confidence": 0.65,
+        "after_confidence": 0.65
+      },
+      "url_agent": {
+        "baseline_risk": 0.8147,
+        "after_risk": 0.4481,
+        "delta_risk": -0.3666,
+        "baseline_confidence": 0.8147,
+        "after_confidence": 0.8147
+      },
+      "user_behavior_agent": {
+        "baseline_risk": 0.8454,
+        "after_risk": 0.58,
+        "delta_risk": -0.2654,
+        "baseline_confidence": 0.72,
+        "after_confidence": 0.72
+      }
+    }
+  },
+  "baseline_email_record": {
+    "email_file": "/home/LabsKraft/new_work/email_security/email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+    "analysis_id": "13a4f16f-1414-4353-9d9e-573c219e51c6",
+    "extracted_sections": {
+      "headers": {
+        "from": "Microsoft CMT <noreply@msr-cmt.org>",
+        "sender": "noreply@msr-cmt.org",
+        "to_count": 1,
+        "subject": "IEEE ICNPCV 2026 - PAYMENT REMINDER",
+        "message_id": "<69e07c06.630a0220.973c.1735SMTPIN_ADDED_BROKEN@mx.google.com>",
+        "received_hops": 3,
+        "auth_results_present": true
+      },
+      "body": {
+        "plain_length": 1224,
+        "html_length": 2124
+      },
+      "urls": [
+        "https://go.microsoft.com/fwlink/?LinkId=521839",
+        "https://icaiaa.com/",
+        "https://mucp.api.account.microsoft.com/m/v2/v?d=AIAACHJKLKP5EL623YMI7U5OBEUTLLRACOI3JHTR4YTH2SIPCRJUCK2ZTYZL5FUIYOP6JZMIR3Q7QGR3MGMAEK6JKHUJZSVKM43PAD67HVUA4XMXBFALODIMSLMUMFFOJGKPD4KB4RYY664SOWPNQ4QTNLBHZNQ&i=AIAADNAAGCKKLUVTFQGTWVS5L64CBMDQVKYMD6YBX7AFZROE7OVBDZ2FUDHJSTTVPRBE6E32BKCZYACLDFZYBDZ5ERRFV3O72MUNXVERXX5TTNIS56NEQHZSW7EESFTLVURGUZ3GKVQLRRIQ7OCUFE3WCKSVAP4PABYCHM2XW6VUNEZMVLO6USM4YN2QWWQYNFPJ2YGOCUYQEYAYPLVXGT6C7PGAOC4B5PC54PLOIIHJQTHSVEWGKCBZVWGCVA3MHEXQAHV2TQRDND3XKDJROYUHSJT3EHY",
+        "https://rzp.io/rzp/ICNPCV2026",
+        "https://rzp.io/rzp/ICNPCVForeign2026"
+      ],
+      "attachments": [],
+      "iocs": {
+        "domains": [
+          "go.microsoft.com",
+          "icaiaa.com",
+          "mucp.api.account.microsoft.com",
+          "rzp.io"
+        ],
+        "ips": [
+          "3.1.1.4"
+        ],
+        "hashes": []
+      }
+    },
+    "timing_seconds": {
+      "parse": 0.019,
+      "per_agent": {
+        "header_agent": 0.1189,
+        "content_agent": 0.0416,
+        "url_agent": 13.5955,
+        "attachment_agent": 0.001,
+        "sandbox_agent": 0.0004,
+        "threat_intel_agent": 0.5281,
+        "user_behavior_agent": 0.0018
+      },
+      "decision": 0.0058,
+      "total_email": 14.3125
+    },
+    "agent_outputs": {
+      "header_agent": {
+        "risk_score": 0.4856,
+        "confidence": 0.8094,
+        "analysis_mode": null,
+        "top_indicators": [
+          "ml_header_model_used"
+        ],
+        "operational_alert": null,
+        "result_excerpt": {
+          "has_behavior_summary": false,
+          "has_correlation": false,
+          "has_storyline": false
+        }
+      },
+      "content_agent": {
+        "risk_score": 0.9488,
+        "confidence": 0.9988,
+        "analysis_mode": null,
+        "top_indicators": [
+          "financial_signals:payment",
+          "long_email_body",
+          "ml_slm_label:Phishing",
+          "ml_slm_confidence:0.9988"
+        ],
+        "operational_alert": null,
+        "result_excerpt": {
+          "has_behavior_summary": false,
+          "has_correlation": false,
+          "has_storyline": false
+        }
+      },
+      "url_agent": {
+        "risk_score": 0.8147,
+        "confidence": 0.8147,
+        "analysis_mode": null,
+        "top_indicators": [
+          "urls_analyzed=5",
+          "heuristic_risk=0.066",
+          "external_risk=0.0",
+          "external_lookups_enabled",
+          "confidence_capped_low_evidence",
+          "ml_url_model_used",
+          "openphish_unavailable",
+          "urlhaus_unavailable",
+          "openphish_unavailable",
+          "urlhaus_unavailable",
+          "url_length_high",
+          "many_subdomains"
+        ],
+        "operational_alert": null,
+        "result_excerpt": {
+          "has_behavior_summary": false,
+          "has_correlation": false,
+          "has_storyline": false
+        }
+      },
+      "attachment_agent": {
+        "risk_score": 0.0,
+        "confidence": 0.8,
+        "analysis_mode": null,
+        "top_indicators": [
+          "no_attachments"
+        ],
+        "operational_alert": null,
+        "result_excerpt": {
+          "has_behavior_summary": false,
+          "has_correlation": false,
+          "has_storyline": false
+        }
+      },
+      "sandbox_agent": {
+        "risk_score": 0.0,
+        "confidence": 0.75,
+        "analysis_mode": null,
+        "top_indicators": [
+          "no_attachments_for_sandbox"
+        ],
+        "operational_alert": null,
+        "result_excerpt": {
+          "has_behavior_summary": false,
+          "has_correlation": false,
+          "has_storyline": false
+        }
+      },
+      "threat_intel_agent": {
+        "risk_score": 0.0004,
+        "confidence": 0.65,
+        "analysis_mode": null,
+        "top_indicators": [
+          "no_local_ioc_hits",
+          "local_match_score=0.0",
+          "external_enrichment_score=0.0",
+          "external_threat_enrichment_enabled"
+        ],
+        "operational_alert": null,
+        "result_excerpt": {
+          "has_behavior_summary": false,
+          "has_correlation": false,
+          "has_storyline": false
+        }
+      },
+      "user_behavior_agent": {
+        "risk_score": 0.8454,
+        "confidence": 0.72,
+        "analysis_mode": null,
+        "top_indicators": [
+          "ml_user_behavior_anomaly_detected",
+          "unfamiliar_sender_domain"
+        ],
+        "operational_alert": null,
+        "result_excerpt": {
+          "has_behavior_summary": false,
+          "has_correlation": false,
+          "has_storyline": false
+        }
+      }
+    },
+    "final_decision": {
+      "overall_risk_score": 0.5101,
+      "verdict": "suspicious",
+      "recommended_actions": [
+        "manual_review",
+        "soc_alert"
+      ],
+      "threat_level": "medium",
+      "counterfactual_result": {
+        "is_counterfactual": true,
+        "agents_altered": [
+          "content_agent",
+          "url_agent"
+        ],
+        "new_normalized_score": 0.3856,
+        "threshold": 0.4,
+        "perturbation_model": "bounded_confidence_attenuation"
+      }
+    },
+    "reflection_checks": {
+      "headers_extracted": true,
+      "body_extracted": true,
+      "urls_extracted_count": 5,
+      "attachments_extracted_count": 0,
+      "header_agent_has_output": true,
+      "content_agent_has_output": true,
+      "url_agent_reflects_url_presence": true,
+      "attachment_agent_reflects_attachment_presence": true,
+      "sandbox_agent_reflects_attachment_presence": true,
+      "threat_intel_reflects_iocs_presence": true,
+      "user_behavior_has_output": true
+    }
+  },
+  "after_email_record": {
+    "timestamp_utc": "2026-04-17T09:11:24.541261+00:00",
+    "email_file": "/home/LabsKraft/new_work/email_security/email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+    "analysis_id": "44fc0eba-dc7d-4cd6-936f-a73b384479d0",
+    "timing_seconds": {
+      "parse": 0.0275,
+      "per_agent": {
+        "header_agent": 0.4296,
+        "content_agent": 6.8142,
+        "url_agent": 15.4987,
+        "attachment_agent": 0.0002,
+        "sandbox_agent": 0.0003,
+        "threat_intel_agent": 0.4054,
+        "user_behavior_agent": 0.0415
+      },
+      "decision": 0.0035,
+      "total_email": 23.2209
+    },
+    "agent_outputs": {
+      "header_agent": {
+        "risk_score": 0.4856,
+        "confidence": 0.8094,
+        "indicators": [
+          "ml_header_model_used"
+        ],
+        "analysis_mode": null,
+        "operational_alert": null
+      },
+      "content_agent": {
+        "risk_score": 0.62,
+        "confidence": 0.92,
+        "indicators": [
+          "financial_signals:payment",
+          "long_email_body",
+          "ml_slm_label:Phishing",
+          "ml_slm_confidence:0.9988",
+          "transactional_legitimacy_profile:strong",
+          "txn_trust:auth_all_pass",
+          "txn_trust:trusted_url_ratio=0.8",
+          "txn_trust:transactional_hits=4"
+        ],
+        "analysis_mode": null,
+        "operational_alert": null
+      },
+      "url_agent": {
+        "risk_score": 0.4481,
+        "confidence": 0.8147,
+        "indicators": [
+          "urls_analyzed=5",
+          "heuristic_risk=0.066",
+          "external_risk=0.0",
+          "external_lookups_enabled",
+          "confidence_capped_low_evidence",
+          "transactional_legitimacy_profile:strong",
+          "txn_trust:auth_all_pass",
+          "txn_trust:trusted_url_ratio=0.8",
+          "ml_url_model_used",
+          "openphish_unavailable",
+          "urlhaus_unavailable",
+          "openphish_unavailable",
+          "urlhaus_unavailable",
+          "url_length_high",
+          "many_subdomains",
+          "openphish_unavailable",
+          "urlhaus_unavailable",
+          "openphish_unavailable",
+          "urlhaus_unavailable",
+          "openphish_unavailable"
+        ],
+        "analysis_mode": null,
+        "operational_alert": null
+      },
+      "attachment_agent": {
+        "risk_score": 0.0,
+        "confidence": 0.8,
+        "indicators": [
+          "no_attachments"
+        ],
+        "analysis_mode": null,
+        "operational_alert": null
+      },
+      "sandbox_agent": {
+        "risk_score": 0.0,
+        "confidence": 0.75,
+        "indicators": [
+          "no_attachments_for_sandbox"
+        ],
+        "analysis_mode": null,
+        "operational_alert": null
+      },
+      "threat_intel_agent": {
+        "risk_score": 0.0004,
+        "confidence": 0.65,
+        "indicators": [
+          "no_local_ioc_hits",
+          "local_match_score=0.0",
+          "external_enrichment_score=0.0",
+          "external_threat_enrichment_enabled"
+        ],
+        "analysis_mode": null,
+        "operational_alert": null
+      },
+      "user_behavior_agent": {
+        "risk_score": 0.58,
+        "confidence": 0.72,
+        "indicators": [
+          "unfamiliar_sender_domain",
+          "ml_user_behavior_anomaly_detected",
+          "transactional_legitimacy_profile:strong",
+          "txn_trust:auth_all_pass",
+          "txn_trust:trusted_url_ratio=0.8"
+        ],
+        "analysis_mode": null,
+        "operational_alert": null
+      }
+    },
+    "final_decision": {
+      "overall_risk_score": 0.4195,
+      "verdict": "likely_safe",
+      "recommended_actions": [
+        "deliver_with_banner"
+      ],
+      "threat_level": "low",
+      "counterfactual_result": {
+        "is_counterfactual": false,
+        "reason": "no_blocking_boundary"
+      }
+    },
+    "reflection_checks": {
+      "headers_extracted": true,
+      "body_extracted": true,
+      "urls_extracted_count": 5,
+      "attachments_extracted_count": 0,
+      "header_agent_has_output": true,
+      "content_agent_has_output": true,
+      "url_agent_reflects_url_presence": true,
+      "attachment_agent_reflects_attachment_presence": true,
+      "sandbox_agent_reflects_attachment_presence": true,
+      "threat_intel_reflects_iocs_presence": true,
+      "user_behavior_has_output": true
+    }
+  }
+}

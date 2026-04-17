@@ -1,0 +1,806 @@
+{
+  "timestamp_utc": "2026-04-17T09:50:46.191023+00:00",
+  "run_started_utc": "2026-04-17T09:49:15.787550+00:00",
+  "run_ended_utc": "2026-04-17T09:50:46.191023+00:00",
+  "baseline_source": "/home/LabsKraft/new_work/email_security/analysis_reports/email_drop_full_system_test_20260417_070254/email_drop_full_system_test.json",
+  "email_drop_dir": "/home/LabsKraft/new_work/email_security/email_drop",
+  "email_count": 3,
+  "emails": [
+    {
+      "email_file": "/home/LabsKraft/new_work/email_security/email_drop/Dabur & Sony invite you to AINCAT'26.eml",
+      "analysis_id": "5376467d-f555-4c2c-9e48-312422420d6e",
+      "timing_marks": {
+        "email_started_utc": "2026-04-17T09:49:15.787619+00:00",
+        "email_ended_utc": "2026-04-17T09:50:23.926606+00:00",
+        "duration_seconds": 68.139
+      },
+      "extracted_sections": {
+        "headers": {
+          "from": "Naukri Campus <eventnc@naukri.com>",
+          "sender": "eventnc@naukri.com",
+          "to_count": 1,
+          "subject": "Dabur & Sony invite you to AINCAT'26",
+          "message_id": "<1C.2B.41541.3D740E96@n5clciece01.ieil.net>",
+          "received_hops": 3,
+          "auth_results_present": true
+        },
+        "body": {
+          "plain_length": 0,
+          "html_length": 34513
+        },
+        "urls": [
+          "http://www.w3.org/1999/xhtml",
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A1%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Fcampus%2Fcontests%2Fall-india-online-aptitude-test%3Futm_source%3DAINCAT25Email%26utm_medium%3DEmail%26utm_campaign%3DAINCAT%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A1%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Fcampus%2Fcontests%2Fall-india-online-aptitude-test%3Futm_source%3DAINCAT25Email%26utm_medium%3DEmail%26utm_campaign%3DAINCAT%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A10%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Ftwitter.com%2FNaukri%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A10%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Ftwitter.com%2FNaukri%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A11%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.instagram.com%2Fnaukridotcom%2F%3Fhl%3Den%26utm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A11%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.instagram.com%2Fnaukridotcom%2F%3Fhl%3Den%26utm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A12%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Fmnjuser%2Fsettings%2Fcommunication%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A12%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Fmnjuser%2Fsettings%2Fcommunication%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A13%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fw5.naukri.com%2Ffdbck%2Fmain%2Ffeedback.php%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A13%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fw5.naukri.com%2Ffdbck%2Fmain%2Ffeedback.php%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A14%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Ftermsconditions%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A14%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Ftermsconditions%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A15%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fcompany.naukri.com%2Flanding-page%2Ffakejobtrend%2Fnew%2Findex.html%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A15%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fcompany.naukri.com%2Flanding-page%2Ffakejobtrend%2Fnew%2Findex.html%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A2%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Famgen-inc-overview-11114410%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A2%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Famgen-inc-overview-11114410%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A3%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Fdtcc-overview-383748%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A3%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Fdtcc-overview-383748%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A4%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Fvoya-global-services-overview-5310084%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A4%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Fvoya-global-services-overview-5310084%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A5%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Fexl-overview-109516%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A5%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Fexl-overview-109516%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A6%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Fdabur-overview-26216%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A6%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Fdabur-overview-26216%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A7%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Flytx-india-technologies-pvt-ltd-overview-123926015%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A7%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Flytx-india-technologies-pvt-ltd-overview-123926015%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707%26utm_source%3Dmail",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A8%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.naukri.com%2Fcampus%2Fcontests%2Fall-india-online-aptitude-test%3Futm_source%3DAINCAT25Email%26utm_medium%3DEmail%26utm_campaign%3DAINCAT%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A8%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.naukri.com%2Fcampus%2Fcontests%2Fall-india-online-aptitude-test%3Futm_source%3DAINCAT25Email%26utm_medium%3DEmail%26utm_campaign%3DAINCAT%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A9%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&amp;redirect=https%3A%2F%2Fwww.facebook.com%2FNaukri%2F%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://cm.naukri.com?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22clickPosition%22%3A9%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22ab20244f93c6ed3d6400dfc7230b02bcc371a8c0345ee0d811e56d4c06f64435%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22segmentId%22%3A%22227169%22%2C%22appId%22%3A456%2C%22tenantId%22%3A%221%22%2C%22parentActivityId%22%3A%221025641%22%2C%22eventName%22%3A%22communicationClick%22%2C%22parentJourneyId%22%3A%226729%22%7D&redirect=https%3A%2F%2Fwww.facebook.com%2FNaukri%2F%3Futm_campaign%3Dredbusactive%26utm_medium%3Demail%26utm_content%3D6729_aincatactive90days_aincatnactive_start_1bb0%26utm_term%3D1025707",
+          "https://fonts.googleapis.com",
+          "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&amp;display=swap",
+          "https://fonts.gstatic.com",
+          "https://logs.naukri.com/collectorapi/v1/uba?data=%7B%22deviceType%22%3A%22WEB%22%2C%22additionalParams%22%3A%7B%7D%2C%22campaignId%22%3A%226958%22%2C%22communicationId%22%3A%2269e047c77255ff9002c84dad%22%2C%22communicationType%22%3A%22mail%22%2C%22journeyId%22%3A%226729_20260415%22%2C%22userId%22%3A%22316974572%22%2C%22eventCode%22%3A%226729_aincatactive90days_aincatnactive_start_1bb0_mail%22%2C%22encEmail%22%3A%22a0a46c15fc67e291a5db5ac925045e15111abb790f495144f5f063455a855dd3237376ccad94d1f7%22%2C%22mailType%22%3A%22nc_promotional%22%2C%22recipientType%22%3A%22jobseeker%22%2C%22mailerId%22%3A%221025707%22%2C%22requestId%22%3A%2269e0476dee41759177622056%22%2C%22appId%22%3A%22456%22%2C%22segmentId%22%3A%22227169%22%2C%22tenantId%22%3A%221%22%2C%22eventName%22%3A%22communicationOpen%22%2C%22parentActivityId%22%3A%221025641%22%2C%22parentJourneyId%22%3A%226729%22%2C%22initTime%22%3A1776306029142%7D",
+          "https://www.ieplads.com/mailers/2021/naukri/call-intent-mailer/images/fb.png",
+          "https://www.ieplads.com/mailers/2021/naukri/call-intent-mailer/images/insta.png",
+          "https://www.ieplads.com/mailers/2022/naukri/23may/images/twitter.png",
+          "https://www.ieplads.com/mailers/2023_ui/naukri/career-camp-15feb/images/space.png",
+          "https://www.ieplads.com/mailers/2025_ui/naukri-campus/ncat-03april/images/img1.png",
+          "https://www.ieplads.com/mailers/2025_ui/naukri-campus/ncat-03april/images/img3.png",
+          "https://www.ieplads.com/mailers/2025_ui/naukri-campus/ncat-03april/images/img4.png",
+          "https://www.ieplads.com/mailers/2025_ui/naukri-campus/ncat-03april/images/line.png",
+          "https://www.naukri.com/campus/apps/careers/customised/logo/2026/amgen.png",
+          "https://www.naukri.com/campus/apps/careers/customised/logo/2026/dabur.png",
+          "https://www.naukri.com/campus/apps/careers/customised/logo/2026/dtcc.png",
+          "https://www.naukri.com/campus/apps/careers/customised/logo/2026/exl.png",
+          "https://www.naukri.com/campus/apps/careers/customised/logo/2026/lytx.png",
+          "https://www.naukri.com/campus/apps/careers/customised/logo/2026/voya.png"
+        ],
+        "attachments": [],
+        "iocs": {
+          "domains": [
+            "cm.naukri.com",
+            "fonts.googleapis.com",
+            "fonts.gstatic.com",
+            "logs.naukri.com",
+            "www.ieplads.com",
+            "www.naukri.com",
+            "www.w3.org"
+          ],
+          "ips": [],
+          "hashes": []
+        }
+      },
+      "timing_seconds": {
+        "parse": 0.0211,
+        "per_agent": {
+          "header_agent": 0.3506,
+          "content_agent": 8.6452,
+          "url_agent": 55.0316,
+          "attachment_agent": 0.0002,
+          "sandbox_agent": 0.0003,
+          "threat_intel_agent": 0.0562,
+          "user_behavior_agent": 0.0466
+        },
+        "decision": 3.987,
+        "total_email": 68.139
+      },
+      "agent_outputs": {
+        "header_agent": {
+          "risk_score": 0.0234,
+          "confidence": 0.961,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_header_model_used"
+          ],
+          "operational_alert": null
+        },
+        "content_agent": {
+          "risk_score": 0.17,
+          "confidence": 0.999,
+          "analysis_mode": null,
+          "top_indicators": [
+            "long_email_body",
+            "click_through_language",
+            "ml_slm_label:Legitimate",
+            "ml_slm_confidence:0.9990",
+            "transactional_legitimacy_profile:moderate",
+            "txn_trust:auth_all_pass",
+            "txn_trust:transactional_hits=1"
+          ],
+          "operational_alert": null
+        },
+        "url_agent": {
+          "risk_score": 0.6984,
+          "confidence": 0.82,
+          "analysis_mode": null,
+          "top_indicators": [
+            "urls_analyzed=20",
+            "heuristic_risk=0.17",
+            "external_risk=0.0",
+            "external_lookups_enabled",
+            "confidence_capped_low_evidence",
+            "transactional_legitimacy_profile:moderate",
+            "txn_trust:auth_all_pass",
+            "txn_trust:transactional_hits=1",
+            "ml_url_model_used",
+            "non_https_url",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "non_https_url",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "url_length_high",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "url_length_high",
+            "openphish_unavailable"
+          ],
+          "operational_alert": null
+        },
+        "attachment_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.8,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments"
+          ],
+          "operational_alert": null
+        },
+        "sandbox_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.75,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments_for_sandbox"
+          ],
+          "operational_alert": null
+        },
+        "threat_intel_agent": {
+          "risk_score": 0.0004,
+          "confidence": 0.65,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_local_ioc_hits",
+            "local_match_score=0.0",
+            "external_enrichment_score=0.0",
+            "external_threat_enrichment_enabled"
+          ],
+          "operational_alert": null
+        },
+        "user_behavior_agent": {
+          "risk_score": 0.0481,
+          "confidence": 0.85,
+          "analysis_mode": null,
+          "top_indicators": [
+            "unfamiliar_sender_domain",
+            "transactional_legitimacy_profile:moderate",
+            "txn_trust:auth_all_pass",
+            "txn_trust:transactional_hits=1"
+          ],
+          "operational_alert": null
+        }
+      },
+      "final_decision": {
+        "overall_risk_score": 0.257,
+        "verdict": "likely_safe",
+        "recommended_actions": [
+          "deliver_with_banner"
+        ],
+        "threat_level": "safe",
+        "counterfactual_result": {
+          "is_counterfactual": false,
+          "reason": "no_blocking_boundary"
+        }
+      },
+      "llm_reasoning": {
+        "fallback_used": false,
+        "explanation": "The likely scenario is a low-risk email with moderate transactional legitimacy but containing multiple long URLs, some non-HTTPS and unusually long, raising suspicion. Header, content, attachment, sandbox, and threat intel agents indicate benign or very low risk, with high confidence. The URL agent flags potential risk due to URL characteristics despite no known threat matches. User behavior shows unfamiliar sender domain but no malicious activity. Overall confidence is high that this is not a targeted attack but warrants caution due to URL risk. Final score of 0.257 reflects low to moderate risk, primarily driven by URL concerns, suggesting monitoring rather than immediate blocking."
+      },
+      "reflection_checks": {
+        "headers_extracted": true,
+        "body_extracted": true,
+        "urls_extracted_count": 50,
+        "attachments_extracted_count": 0,
+        "header_agent_has_output": true,
+        "content_agent_has_output": true,
+        "url_agent_reflects_url_presence": true,
+        "attachment_agent_reflects_attachment_presence": true,
+        "sandbox_agent_reflects_attachment_presence": true,
+        "threat_intel_reflects_iocs_presence": true,
+        "user_behavior_has_output": true
+      },
+      "comparison_vs_baseline": {
+        "baseline_verdict": "likely_safe",
+        "after_verdict": "likely_safe",
+        "baseline_score": 0.2376,
+        "after_score": 0.257,
+        "score_delta": 0.0194,
+        "verdict_changed": false,
+        "agent_differences": {
+          "attachment_agent": {
+            "baseline_risk": 0.0,
+            "after_risk": 0.0,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.8,
+            "after_confidence": 0.8
+          },
+          "content_agent": {
+            "baseline_risk": 0.17,
+            "after_risk": 0.17,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.999,
+            "after_confidence": 0.999
+          },
+          "header_agent": {
+            "baseline_risk": 0.0234,
+            "after_risk": 0.0234,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.961,
+            "after_confidence": 0.961
+          },
+          "sandbox_agent": {
+            "baseline_risk": 0.0,
+            "after_risk": 0.0,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.75,
+            "after_confidence": 0.75
+          },
+          "threat_intel_agent": {
+            "baseline_risk": 0.0004,
+            "after_risk": 0.0004,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.65,
+            "after_confidence": 0.65
+          },
+          "url_agent": {
+            "baseline_risk": 0.97,
+            "after_risk": 0.6984,
+            "delta_risk": -0.2716,
+            "baseline_confidence": 0.82,
+            "after_confidence": 0.82
+          },
+          "user_behavior_agent": {
+            "baseline_risk": 0.0601,
+            "after_risk": 0.0481,
+            "delta_risk": -0.012,
+            "baseline_confidence": 0.85,
+            "after_confidence": 0.85
+          }
+        }
+      }
+    },
+    {
+      "email_file": "/home/LabsKraft/new_work/email_security/email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+      "analysis_id": "54d46c5d-2229-4894-81a9-6b6377690f51",
+      "timing_marks": {
+        "email_started_utc": "2026-04-17T09:50:23.927909+00:00",
+        "email_ended_utc": "2026-04-17T09:50:40.704491+00:00",
+        "duration_seconds": 16.7766
+      },
+      "extracted_sections": {
+        "headers": {
+          "from": "Microsoft CMT <noreply@msr-cmt.org>",
+          "sender": "noreply@msr-cmt.org",
+          "to_count": 1,
+          "subject": "IEEE ICNPCV 2026 - PAYMENT REMINDER",
+          "message_id": "<69e07c06.630a0220.973c.1735SMTPIN_ADDED_BROKEN@mx.google.com>",
+          "received_hops": 3,
+          "auth_results_present": true
+        },
+        "body": {
+          "plain_length": 1224,
+          "html_length": 2124
+        },
+        "urls": [
+          "https://go.microsoft.com/fwlink/?LinkId=521839",
+          "https://icaiaa.com/",
+          "https://mucp.api.account.microsoft.com/m/v2/v?d=AIAACHJKLKP5EL623YMI7U5OBEUTLLRACOI3JHTR4YTH2SIPCRJUCK2ZTYZL5FUIYOP6JZMIR3Q7QGR3MGMAEK6JKHUJZSVKM43PAD67HVUA4XMXBFALODIMSLMUMFFOJGKPD4KB4RYY664SOWPNQ4QTNLBHZNQ&i=AIAADNAAGCKKLUVTFQGTWVS5L64CBMDQVKYMD6YBX7AFZROE7OVBDZ2FUDHJSTTVPRBE6E32BKCZYACLDFZYBDZ5ERRFV3O72MUNXVERXX5TTNIS56NEQHZSW7EESFTLVURGUZ3GKVQLRRIQ7OCUFE3WCKSVAP4PABYCHM2XW6VUNEZMVLO6USM4YN2QWWQYNFPJ2YGOCUYQEYAYPLVXGT6C7PGAOC4B5PC54PLOIIHJQTHSVEWGKCBZVWGCVA3MHEXQAHV2TQRDND3XKDJROYUHSJT3EHY",
+          "https://rzp.io/rzp/ICNPCV2026",
+          "https://rzp.io/rzp/ICNPCVForeign2026"
+        ],
+        "attachments": [],
+        "iocs": {
+          "domains": [
+            "go.microsoft.com",
+            "icaiaa.com",
+            "mucp.api.account.microsoft.com",
+            "rzp.io"
+          ],
+          "ips": [
+            "3.1.1.4"
+          ],
+          "hashes": []
+        }
+      },
+      "timing_seconds": {
+        "parse": 0.0287,
+        "per_agent": {
+          "header_agent": 0.0905,
+          "content_agent": 0.0112,
+          "url_agent": 13.4128,
+          "attachment_agent": 0.0008,
+          "sandbox_agent": 0.0006,
+          "threat_intel_agent": 0.392,
+          "user_behavior_agent": 0.0085
+        },
+        "decision": 2.8315,
+        "total_email": 16.7766
+      },
+      "agent_outputs": {
+        "header_agent": {
+          "risk_score": 0.4856,
+          "confidence": 0.8094,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_header_model_used"
+          ],
+          "operational_alert": null
+        },
+        "content_agent": {
+          "risk_score": 0.62,
+          "confidence": 0.92,
+          "analysis_mode": null,
+          "top_indicators": [
+            "financial_signals:payment",
+            "long_email_body",
+            "ml_slm_label:Phishing",
+            "ml_slm_confidence:0.9988",
+            "transactional_legitimacy_profile:strong",
+            "txn_trust:auth_all_pass",
+            "txn_trust:trusted_url_ratio=0.8",
+            "txn_trust:transactional_hits=4"
+          ],
+          "operational_alert": null
+        },
+        "url_agent": {
+          "risk_score": 0.4481,
+          "confidence": 0.8147,
+          "analysis_mode": null,
+          "top_indicators": [
+            "urls_analyzed=5",
+            "heuristic_risk=0.066",
+            "external_risk=0.0",
+            "external_lookups_enabled",
+            "confidence_capped_low_evidence",
+            "transactional_legitimacy_profile:strong",
+            "txn_trust:auth_all_pass",
+            "txn_trust:trusted_url_ratio=0.8",
+            "ml_url_model_used",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "url_length_high",
+            "many_subdomains",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "openphish_unavailable",
+            "urlhaus_unavailable",
+            "openphish_unavailable"
+          ],
+          "operational_alert": null
+        },
+        "attachment_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.8,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments"
+          ],
+          "operational_alert": null
+        },
+        "sandbox_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.75,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_attachments_for_sandbox"
+          ],
+          "operational_alert": null
+        },
+        "threat_intel_agent": {
+          "risk_score": 0.0004,
+          "confidence": 0.65,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_local_ioc_hits",
+            "local_match_score=0.0",
+            "external_enrichment_score=0.0",
+            "external_threat_enrichment_enabled"
+          ],
+          "operational_alert": null
+        },
+        "user_behavior_agent": {
+          "risk_score": 0.58,
+          "confidence": 0.72,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_user_behavior_anomaly_detected",
+            "unfamiliar_sender_domain",
+            "transactional_legitimacy_profile:strong",
+            "txn_trust:auth_all_pass",
+            "txn_trust:trusted_url_ratio=0.8"
+          ],
+          "operational_alert": null
+        }
+      },
+      "final_decision": {
+        "overall_risk_score": 0.4195,
+        "verdict": "likely_safe",
+        "recommended_actions": [
+          "deliver_with_banner"
+        ],
+        "threat_level": "low",
+        "counterfactual_result": {
+          "is_counterfactual": false,
+          "reason": "no_blocking_boundary"
+        }
+      },
+      "llm_reasoning": {
+        "fallback_used": false,
+        "explanation": "The likely attack scenario is a phishing attempt involving a financial transaction request. The content agent strongly flags phishing with high confidence (0.92) and financial signals, despite strong transactional legitimacy profiles and trusted URLs. The header and URL agents find suspicious but low-risk indicators, such as unusual headers and complex URLs with many subdomains, though no known threat intel or malware attachments are detected. User behavior anomalies and unfamiliar sender domains add moderate risk. Overall confidence is moderate to high due to consistent phishing signals from content and user behavior agents. The final risk score balances these factors, resulting in a moderate risk level around 0.42, indicating a suspicious but not overtly malicious email requiring caution and further investigation."
+      },
+      "reflection_checks": {
+        "headers_extracted": true,
+        "body_extracted": true,
+        "urls_extracted_count": 5,
+        "attachments_extracted_count": 0,
+        "header_agent_has_output": true,
+        "content_agent_has_output": true,
+        "url_agent_reflects_url_presence": true,
+        "attachment_agent_reflects_attachment_presence": true,
+        "sandbox_agent_reflects_attachment_presence": true,
+        "threat_intel_reflects_iocs_presence": true,
+        "user_behavior_has_output": true
+      },
+      "comparison_vs_baseline": {
+        "baseline_verdict": "suspicious",
+        "after_verdict": "likely_safe",
+        "baseline_score": 0.5101,
+        "after_score": 0.4195,
+        "score_delta": -0.0906,
+        "verdict_changed": true,
+        "agent_differences": {
+          "attachment_agent": {
+            "baseline_risk": 0.0,
+            "after_risk": 0.0,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.8,
+            "after_confidence": 0.8
+          },
+          "content_agent": {
+            "baseline_risk": 0.9488,
+            "after_risk": 0.62,
+            "delta_risk": -0.3288,
+            "baseline_confidence": 0.9988,
+            "after_confidence": 0.92
+          },
+          "header_agent": {
+            "baseline_risk": 0.4856,
+            "after_risk": 0.4856,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.8094,
+            "after_confidence": 0.8094
+          },
+          "sandbox_agent": {
+            "baseline_risk": 0.0,
+            "after_risk": 0.0,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.75,
+            "after_confidence": 0.75
+          },
+          "threat_intel_agent": {
+            "baseline_risk": 0.0004,
+            "after_risk": 0.0004,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.65,
+            "after_confidence": 0.65
+          },
+          "url_agent": {
+            "baseline_risk": 0.8147,
+            "after_risk": 0.4481,
+            "delta_risk": -0.3666,
+            "baseline_confidence": 0.8147,
+            "after_confidence": 0.8147
+          },
+          "user_behavior_agent": {
+            "baseline_risk": 0.8454,
+            "after_risk": 0.58,
+            "delta_risk": -0.2654,
+            "baseline_confidence": 0.72,
+            "after_confidence": 0.72
+          }
+        }
+      }
+    },
+    {
+      "email_file": "/home/LabsKraft/new_work/email_security/email_drop/live_check_sample.eml",
+      "analysis_id": "21880e37-ef6a-46e2-9849-3ec7d8845772",
+      "timing_marks": {
+        "email_started_utc": "2026-04-17T09:50:40.704809+00:00",
+        "email_ended_utc": "2026-04-17T09:50:46.190858+00:00",
+        "duration_seconds": 5.486
+      },
+      "extracted_sections": {
+        "headers": {
+          "from": "attacker@example.com",
+          "sender": "attacker@example.com",
+          "to_count": 1,
+          "subject": "Urgent invoice update",
+          "message_id": null,
+          "received_hops": 0,
+          "auth_results_present": false
+        },
+        "body": {
+          "plain_length": 46,
+          "html_length": 0
+        },
+        "urls": [],
+        "attachments": [
+          {
+            "attachment_id": "5f3f17f0-b3ff-4c7d-ae97-381861adc8be",
+            "filename": "urgent_invoice.pdf.exe",
+            "content_type": "application/octet-stream",
+            "size_bytes": 4669,
+            "sha256": "b3b74bbf4f94089d0ceede7b09168625b0692e95b0e42990f537cc26dd42e84c",
+            "path": "attachments/21880e37-ef6a-46e2-9849-3ec7d8845772_5f3f17f0-b3ff-4c7d-ae97-381861adc8be_urgent_invoice.pdf.exe"
+          }
+        ],
+        "iocs": {
+          "domains": [],
+          "ips": [],
+          "hashes": [
+            "b3b74bbf4f94089d0ceede7b09168625b0692e95b0e42990f537cc26dd42e84c"
+          ]
+        }
+      },
+      "timing_seconds": {
+        "parse": 0.005,
+        "per_agent": {
+          "header_agent": 0.0918,
+          "content_agent": 0.0109,
+          "url_agent": 0.0004,
+          "attachment_agent": 0.3829,
+          "sandbox_agent": 0.3165,
+          "threat_intel_agent": 1.4866,
+          "user_behavior_agent": 0.0246
+        },
+        "decision": 3.1671,
+        "total_email": 5.486
+      },
+      "agent_outputs": {
+        "header_agent": {
+          "risk_score": 0.18,
+          "confidence": 0.75,
+          "analysis_mode": null,
+          "top_indicators": [
+            "missing_data:short_smtp_trace",
+            "missing_data:authentication_results_missing",
+            "ml_header_model_used"
+          ],
+          "operational_alert": null
+        },
+        "content_agent": {
+          "risk_score": 0.24,
+          "confidence": 0.9942,
+          "analysis_mode": null,
+          "top_indicators": [
+            "urgency_signals:urgent,immediately",
+            "financial_signals:invoice",
+            "ml_slm_label:Legitimate",
+            "ml_slm_confidence:0.9942"
+          ],
+          "operational_alert": null
+        },
+        "url_agent": {
+          "risk_score": 0.0,
+          "confidence": 0.7,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_urls_detected"
+          ],
+          "operational_alert": null
+        },
+        "attachment_agent": {
+          "risk_score": 1.0,
+          "confidence": 0.6914,
+          "analysis_mode": null,
+          "top_indicators": [
+            "double_extension_evasion:urgent_invoice.pdf.exe",
+            "ml_attachment_model_used_ensemble_10",
+            "high_entropy:21880e37-ef6a-46e2-9849-3ec7d8845772_5f3f17f0-b3ff-4c7d-ae97-381861adc8be_urgent_invoice.pdf.exe",
+            "suspicious_extension:urgent_invoice.pdf.exe",
+            "suspicious_imports:urgent_invoice.pdf.exe"
+          ],
+          "operational_alert": null
+        },
+        "sandbox_agent": {
+          "risk_score": 0.85,
+          "confidence": 0.45,
+          "analysis_mode": "fallback_static",
+          "top_indicators": [
+            "sandbox_executor_mode",
+            "sandbox_detonation_reason:static_score_threshold:21880e37-ef6a-46e2-9849-3ec7d8845772_5f3f17f0-b3ff-4c7d-ae97-381861adc8be_urgent_invoice.pdf.exe",
+            "sandbox_static_score:1.000:21880e37-ef6a-46e2-9849-3ec7d8845772_5f3f17f0-b3ff-4c7d-ae97-381861adc8be_urgent_invoice.pdf.exe",
+            "sandbox_executor_unavailable",
+            "soc_operational_alert:sandbox_backend_unavailable",
+            "fallback_high_static_combo:21880e37-ef6a-46e2-9849-3ec7d8845772_5f3f17f0-b3ff-4c7d-ae97-381861adc8be_urgent_invoice.pdf.exe",
+            "fallback_static_suspicious_floor"
+          ],
+          "operational_alert": {
+            "code": "sandbox_backend_unavailable",
+            "severity": "warning",
+            "message": "Sandbox backend unavailable during detonation; fallback static scoring applied."
+          }
+        },
+        "threat_intel_agent": {
+          "risk_score": 0.0004,
+          "confidence": 0.65,
+          "analysis_mode": null,
+          "top_indicators": [
+            "no_local_ioc_hits",
+            "local_match_score=0.0",
+            "external_enrichment_score=0.0",
+            "external_threat_enrichment_enabled",
+            "malwarebazaar_unavailable",
+            "virustotal_hash_unavailable"
+          ],
+          "operational_alert": null
+        },
+        "user_behavior_agent": {
+          "risk_score": 0.9997,
+          "confidence": 0.85,
+          "analysis_mode": null,
+          "top_indicators": [
+            "ml_user_behavior_anomaly_detected",
+            "subject_urgency_hits:1",
+            "high_confidence_internal_spoof_or_compromise",
+            "unfamiliar_sender_domain"
+          ],
+          "operational_alert": null
+        }
+      },
+      "final_decision": {
+        "overall_risk_score": 0.435,
+        "verdict": "suspicious",
+        "recommended_actions": [
+          "manual_review",
+          "soc_alert"
+        ],
+        "threat_level": "medium",
+        "counterfactual_result": {
+          "is_counterfactual": true,
+          "agents_altered": [
+            "attachment_agent"
+          ],
+          "new_normalized_score": 0.3712,
+          "threshold": 0.4,
+          "perturbation_model": "bounded_confidence_attenuation"
+        }
+      },
+      "llm_reasoning": {
+        "fallback_used": false,
+        "explanation": "The likely attack scenario involves a malicious attachment disguised as an urgent invoice (urgent_invoice.pdf.exe) using double extension evasion and exhibiting high entropy and suspicious imports, indicating malware. The user behavior agent flags high anomaly and potential internal spoofing, reinforcing compromise risk. Header and content agents show low to moderate risk with insufficient header evidence and legitimate content signals. Sandbox analysis was limited due to backend unavailability, relying on static scoring that still indicated high risk. Threat intel found no IOC hits. Overall confidence is moderate to high, driven by attachment and user behavior risks. The email was blocked primarily due to the attachment risk; if the attachment were deemed safe, the score would drop below threshold (0.3712), allowing delivery. Final score: 0.4350."
+      },
+      "reflection_checks": {
+        "headers_extracted": true,
+        "body_extracted": true,
+        "urls_extracted_count": 0,
+        "attachments_extracted_count": 1,
+        "header_agent_has_output": true,
+        "content_agent_has_output": true,
+        "url_agent_reflects_url_presence": true,
+        "attachment_agent_reflects_attachment_presence": true,
+        "sandbox_agent_reflects_attachment_presence": true,
+        "threat_intel_reflects_iocs_presence": true,
+        "user_behavior_has_output": true
+      },
+      "comparison_vs_baseline": {
+        "baseline_verdict": "suspicious",
+        "after_verdict": "suspicious",
+        "baseline_score": 0.435,
+        "after_score": 0.435,
+        "score_delta": 0.0,
+        "verdict_changed": false,
+        "agent_differences": {
+          "attachment_agent": {
+            "baseline_risk": 1.0,
+            "after_risk": 1.0,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.6914,
+            "after_confidence": 0.6914
+          },
+          "content_agent": {
+            "baseline_risk": 0.24,
+            "after_risk": 0.24,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.9942,
+            "after_confidence": 0.9942
+          },
+          "header_agent": {
+            "baseline_risk": 0.18,
+            "after_risk": 0.18,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.75,
+            "after_confidence": 0.75
+          },
+          "sandbox_agent": {
+            "baseline_risk": 0.85,
+            "after_risk": 0.85,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.45,
+            "after_confidence": 0.45
+          },
+          "threat_intel_agent": {
+            "baseline_risk": 0.0004,
+            "after_risk": 0.0004,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.65,
+            "after_confidence": 0.65
+          },
+          "url_agent": {
+            "baseline_risk": 0.0,
+            "after_risk": 0.0,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.7,
+            "after_confidence": 0.7
+          },
+          "user_behavior_agent": {
+            "baseline_risk": 0.9997,
+            "after_risk": 0.9997,
+            "delta_risk": 0.0,
+            "baseline_confidence": 0.85,
+            "after_confidence": 0.85
+          }
+        }
+      }
+    }
+  ],
+  "timing_summary_seconds": {
+    "total_run": 90.4035,
+    "avg_per_email": 30.1345,
+    "agent_totals": {
+      "header_agent": 0.5329,
+      "content_agent": 8.6673,
+      "url_agent": 68.4448,
+      "attachment_agent": 0.3839,
+      "sandbox_agent": 0.3174,
+      "threat_intel_agent": 1.9348,
+      "user_behavior_agent": 0.0797
+    },
+    "agent_avg_per_email": {
+      "header_agent": 0.1776,
+      "content_agent": 2.8891,
+      "url_agent": 22.8149,
+      "attachment_agent": 0.128,
+      "sandbox_agent": 0.1058,
+      "threat_intel_agent": 0.6449,
+      "user_behavior_agent": 0.0266
+    }
+  }
+}

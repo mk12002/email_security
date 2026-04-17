@@ -12,6 +12,7 @@ import httpx
 from email_security.agents.url_agent.feature_extractor import extract_features
 from email_security.agents.url_agent.inference import predict
 from email_security.agents.url_agent.model_loader import load_model
+from email_security.agents.trust_signals import assess_transactional_legitimacy
 from email_security.configs.settings import settings
 from email_security.services.logging_service import get_agent_logger
 
@@ -293,6 +294,8 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     if not urls:
         return {"agent_name": "url_agent", "risk_score": 0.0, "confidence": 0.7, "indicators": ["no_urls_detected"]}
 
+    legitimacy = assess_transactional_legitimacy(data)
+
     combined_scores: list[float] = []
     heuristic_scores: list[float] = []
     external_scores: list[float] = []
@@ -408,6 +411,19 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     if external_risk <= 0.0 and heuristic_risk <= 0.25:
         confidence = _clamp(min(confidence, 0.82))
         summary_indicators.append("confidence_capped_low_evidence")
+
+    # Authenticated transactional reminders often include long gateway/tracking URLs.
+    if (
+        legitimacy.level in {"strong", "moderate"}
+        and legitimacy.credential_bait_hits == 0
+        and external_risk <= 0.0
+        and brand_impersonation_count == 0
+    ):
+        multiplier = 0.55 if legitimacy.level == "strong" else 0.72
+        risk_score = _clamp(risk_score * multiplier)
+        confidence = _clamp(min(confidence, 0.86 if legitimacy.level == "strong" else 0.9))
+        summary_indicators.append(f"transactional_legitimacy_profile:{legitimacy.level}")
+        summary_indicators.extend(legitimacy.indicators[:2])
 
     summary_indicators.extend(ml_indicators)
 

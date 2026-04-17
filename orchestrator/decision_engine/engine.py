@@ -23,6 +23,37 @@ from email_security.services.logging_service import get_service_logger
 logger = get_service_logger("decision_engine")
 
 
+def _contains_indicator(agent: dict[str, Any], token: str) -> bool:
+    indicators = [str(item).lower() for item in (agent.get("indicators") or [])]
+    return any(token in item for item in indicators)
+
+
+def _has_hard_malicious_signal(agent_results: list[dict[str, Any]]) -> bool:
+    for item in agent_results:
+        name = str(item.get("agent_name") or "")
+        risk = float(item.get("risk_score") or 0.0)
+
+        if name in {"attachment_agent", "sandbox_agent"} and risk >= 0.75:
+            return True
+        if name == "threat_intel_agent" and risk >= 0.6:
+            return True
+        if name == "header_agent" and (
+            _contains_indicator(item, "lookalike_domain")
+            or _contains_indicator(item, "reply_to_domain_mismatch")
+            or _contains_indicator(item, "dmarc_failed")
+        ):
+            return True
+    return False
+
+
+def _has_strong_transactional_legitimacy(agent_results: list[dict[str, Any]]) -> bool:
+    strong_votes = 0
+    for item in agent_results:
+        if _contains_indicator(item, "transactional_legitimacy_profile:strong"):
+            strong_votes += 1
+    return strong_votes >= 2
+
+
 def make_decision(agent_results: list[dict[str, Any]]) -> dict[str, Any]:
     """
     Aggregate agent results and produce a final threat decision.
@@ -52,6 +83,14 @@ def make_decision(agent_results: list[dict[str, Any]]) -> dict[str, Any]:
         verdict = "suspicious"
         actions = ["manual_review", "soc_alert"]
     else:
+        verdict = "likely_safe"
+        actions = ["deliver_with_banner"]
+
+    if (
+        verdict == "suspicious"
+        and _has_strong_transactional_legitimacy(agent_results)
+        and not _has_hard_malicious_signal(agent_results)
+    ):
         verdict = "likely_safe"
         actions = ["deliver_with_banner"]
 

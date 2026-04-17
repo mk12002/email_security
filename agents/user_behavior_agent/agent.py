@@ -9,6 +9,7 @@ from email_security.agents.user_behavior_agent.feature_extractor import extract_
 from email_security.agents.user_behavior_agent.inference import predict
 from email_security.agents.user_behavior_agent.model_loader import load_model
 from email_security.agents.ml_runtime import clamp as _clamp
+from email_security.agents.trust_signals import assess_transactional_legitimacy
 from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("user_behavior_agent")
@@ -28,10 +29,16 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     sender_domain = sender.split("@")[-1] if "@" in sender else sender
     sender_familiarity = 1.0 if sender_domain in FAMILIAR_DOMAINS else 0.0
     urgency_hits = sum(1 for term in URGENCY_TERMS if term in subject)
+    legitimacy = assess_transactional_legitimacy(data)
 
     click_probability = 0.2
     click_probability += 0.25 * min(2, urgency_hits)
     click_probability += 0.2 * (1.0 - sender_familiarity)
+
+    if legitimacy.level == "strong" and legitimacy.credential_bait_hits == 0:
+        click_probability -= 0.15
+    elif legitimacy.level == "moderate" and legitimacy.credential_bait_hits == 0:
+        click_probability -= 0.08
 
     indicators = []
     if urgency_hits:
@@ -62,6 +69,12 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         final_risk = heuristic_result["risk_score"]
         final_confidence = heuristic_result["confidence"]
         final_indicators = heuristic_result["indicators"]
+
+    if legitimacy.level in {"strong", "moderate"} and legitimacy.credential_bait_hits == 0:
+        cap = 0.58 if legitimacy.level == "strong" else 0.68
+        final_risk = _clamp(min(final_risk, cap))
+        final_indicators.append(f"transactional_legitimacy_profile:{legitimacy.level}")
+        final_indicators.extend(legitimacy.indicators[:2])
 
     result = {
         "agent_name": "user_behavior_agent",

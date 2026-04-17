@@ -16,6 +16,36 @@ from email_security.services.logging_service import get_service_logger
 logger = get_service_logger("langgraph_orchestrator")
 
 
+def _contains_indicator(agent: dict[str, Any], token: str) -> bool:
+    indicators = [str(item).lower() for item in (agent.get("indicators") or [])]
+    return any(token in item for item in indicators)
+
+
+def _has_hard_malicious_signal(agent_results: list[dict[str, Any]]) -> bool:
+    for item in agent_results:
+        name = str(item.get("agent_name") or "")
+        risk = float(item.get("risk_score") or 0.0)
+        if name in {"attachment_agent", "sandbox_agent"} and risk >= 0.75:
+            return True
+        if name == "threat_intel_agent" and risk >= 0.6:
+            return True
+        if name == "header_agent" and (
+            _contains_indicator(item, "lookalike_domain")
+            or _contains_indicator(item, "reply_to_domain_mismatch")
+            or _contains_indicator(item, "dmarc_failed")
+        ):
+            return True
+    return False
+
+
+def _has_strong_transactional_legitimacy(agent_results: list[dict[str, Any]]) -> bool:
+    strong_votes = 0
+    for item in agent_results:
+        if _contains_indicator(item, "transactional_legitimacy_profile:strong"):
+            strong_votes += 1
+    return strong_votes >= 2
+
+
 class LangGraphOrchestrator:
     """Builds and executes graph-driven orchestration for final threat decisions."""
 
@@ -77,6 +107,7 @@ class LangGraphOrchestrator:
     def _decide_node(self, state: OrchestratorState) -> OrchestratorState:
         score_data = state.get("score_data", {})
         correlation = state.get("correlation", {})
+        agent_results = state.get("agent_results", [])
 
         overall = float(score_data.get("overall_score", 0.0))
         corr_score = float(correlation.get("correlation_score", 0.0))
@@ -92,6 +123,14 @@ class LangGraphOrchestrator:
             verdict = "suspicious"
             actions = ["manual_review", "soc_alert"]
         else:
+            verdict = "likely_safe"
+            actions = ["deliver_with_banner"]
+
+        if (
+            verdict == "suspicious"
+            and _has_strong_transactional_legitimacy(agent_results)
+            and not _has_hard_malicious_signal(agent_results)
+        ):
             verdict = "likely_safe"
             actions = ["deliver_with_banner"]
 

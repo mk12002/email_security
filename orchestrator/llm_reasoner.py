@@ -78,3 +78,67 @@ def generate_reasoning(
     except Exception as exc:
         logger.warning("Azure OpenAI reasoning failed", error=str(exc))
         return _fallback_explanation(agent_results, normalized_score, counterfactual)
+
+
+def explain_counterfactual(counterfactual: dict[str, Any]) -> str:
+    if not counterfactual or not counterfactual.get("is_counterfactual"):
+        return "No counterfactual scenario was applicable for this verdict."
+    
+    if not (settings.azure_openai_endpoint and settings.azure_openai_api_key and settings.azure_openai_deployment):
+        return f"Raw Counterfactual: {counterfactual}"
+        
+    try:
+        client = AzureOpenAI(
+            api_key=settings.azure_openai_api_key,
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_version=settings.azure_openai_api_version,
+        )
+        agents = ", ".join(counterfactual.get("agents_altered", []))
+        new_score = counterfactual.get("new_normalized_score")
+        prompt = (
+            f"Explain the following counterfactual logic in 1-2 clear, human-readable sentences for a SOC analyst.\n"
+            f"Data: We calculated that if the findings from [{agents}] were completely safe, the final risk score would drop to {new_score} "
+            f"and the email would have been delivered.\nMake it sound professional and explanatory."
+        )
+        
+        completion = client.chat.completions.create(
+            model=settings.azure_openai_deployment,
+            messages=[{"role": "system", "content": "You are a cybersecurity triage analyst."}, {"role": "user", "content": prompt}],
+            temperature=0.1,
+        )
+        return completion.choices[0].message.content or "Counterfactual generated."
+    except Exception as exc:
+        logger.warning("Azure OpenAI reasoning failed", error=str(exc))
+        return f"Raw Counterfactual: {counterfactual}"
+
+
+def explain_storyline(storyline: list[dict[str, Any]]) -> str:
+    if not storyline:
+        return "No obvious threat storyline detected."
+        
+    if not (settings.azure_openai_endpoint and settings.azure_openai_api_key and settings.azure_openai_deployment):
+        return f"Raw Storyline: {storyline}"
+        
+    try:
+        client = AzureOpenAI(
+            api_key=settings.azure_openai_api_key,
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_version=settings.azure_openai_api_version,
+        )
+        prompt = (
+            "You are a SOC reasoning engine. Convert the following list of attack phases into a beautiful, chronological "
+            "Markdown-formatted threat narrative for an analyst to read. Use clear spacing.\n"
+            "CRITICAL: You MUST include a Mermaid.js directional graph (`graph TD`) mapping the attack progression conceptually. "
+            "Place it inside a ```mermaid code block along with the text narrative.\n"
+            f"Raw phases: {storyline}"
+        )
+        
+        completion = client.chat.completions.create(
+            model=settings.azure_openai_deployment,
+            messages=[{"role": "system", "content": "You are a cybersecurity triage analyst configuring markdown narratives with diagrams."}, {"role": "user", "content": prompt}],
+            temperature=0.1,
+        )
+        return completion.choices[0].message.content or "Storyline generated."
+    except Exception as exc:
+        logger.warning("Azure OpenAI reasoning failed", error=str(exc))
+        return f"Raw Storyline: {storyline}"

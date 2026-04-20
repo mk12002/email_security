@@ -6,6 +6,8 @@
   <title>SOC Analysis Hub — Analyze Email</title>
   <meta name="description" content="Upload .eml, .msg, or .txt email files for full multi-agent phishing analysis." />
   <link rel="stylesheet" href="/ui-assets/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 </head>
 <body>
   <main class="shell" id="app"></main>
@@ -166,7 +168,7 @@
           </div>`;
 
         if (explanation) {
-          html += `<div class="result-section"><div class="result-header">🧠 LLM Explanation</div><div class="result-body"><p style="color:var(--ink-soft);font-size:0.88rem;line-height:1.6">${esc(explanation)}</p></div></div>`;
+          html += `<div class="result-section"><div class="result-header">🧠 SOC Analysis</div><div class="result-body"><p style="color:var(--ink-soft);font-size:0.88rem;line-height:1.6">${esc(explanation)}</p></div></div>`;
         }
 
         if (agents.length) {
@@ -174,13 +176,28 @@
           html += `<div class="result-section"><div class="result-header">🔬 Agent Results</div><div class="result-body"><table><thead><tr><th>Agent</th><th>Risk</th><th>Confidence</th><th>Indicators</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
         }
 
-        if (storyline.length) {
-          let items = storyline.map(s => `<tr><td><span class="verdict-badge ${s.severity==='high'?'danger':s.severity==='medium'?'suspicious':'safe'}" style="padding:3px 10px;font-size:0.72rem">${s.phase}</span></td><td style="font-size:0.84rem">${esc(s.description)}</td><td>${(s.confidence??0).toFixed(2)}</td></tr>`).join("");
-          html += `<div class="result-section"><div class="result-header">📖 Threat Storyline</div><div class="result-body"><table><thead><tr><th>Phase</th><th>Description</th><th>Confidence</th></tr></thead><tbody>${items}</tbody></table></div></div>`;
+        if (storyline) {
+          if (typeof storyline === "string") {
+            let renderedHtml = "";
+            if (window.marked) {
+               renderedHtml = marked.parse(storyline);
+               renderedHtml = renderedHtml.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g, '<div class="mermaid">$1</div>');
+            } else {
+               renderedHtml = `<div style="white-space:pre-wrap">${esc(storyline)}</div>`;
+            }
+            html += `<div class="result-section"><div class="result-header">📖 Threat Storyline</div><div class="result-body"><div class="markdown-body" style="font-size:0.88rem;color:var(--ink-soft);line-height:1.6">${renderedHtml}</div></div></div>`;
+          } else if (storyline.length) {
+            let items = storyline.map(s => `<tr><td><span class="verdict-badge ${s.severity==='high'?'danger':s.severity==='medium'?'suspicious':'safe'}" style="padding:3px 10px;font-size:0.72rem">${s.phase}</span></td><td style="font-size:0.84rem">${esc(s.description)}</td><td>${(s.confidence??0).toFixed(2)}</td></tr>`).join("");
+            html += `<div class="result-section"><div class="result-header">📖 Threat Storyline</div><div class="result-body"><table><thead><tr><th>Phase</th><th>Description</th><th>Confidence</th></tr></thead><tbody>${items}</tbody></table></div></div>`;
+          }
         }
 
         if (counterfactual) {
-          html += `<div class="result-section"><div class="result-header">🔀 Counterfactual Analysis</div><div class="result-body"><pre style="margin:0;border:0;padding:8px;max-height:200px">${AgentUI.jsonPretty(counterfactual)}</pre></div></div>`;
+          if (typeof counterfactual === "string") {
+            html += `<div class="result-section"><div class="result-header">🔀 Counterfactual Analysis</div><div class="result-body"><p style="font-size:0.88rem;color:var(--ink-soft);white-space:pre-wrap;line-height:1.6">${esc(counterfactual)}</p></div></div>`;
+          } else {
+            html += `<div class="result-section"><div class="result-header">🔀 Counterfactual Analysis</div><div class="result-body"><pre style="margin:0;border:0;padding:8px;max-height:200px">${AgentUI.jsonPretty(counterfactual)}</pre></div></div>`;
+          }
         }
 
         if (actions.length) {
@@ -207,6 +224,12 @@
           document.getElementById("finalReport").style.display = "none";
           document.getElementById("reportStructured").style.display = "block";
           document.getElementById("rawToggle").textContent = "Show Raw JSON";
+
+          if (window.mermaid) {
+              setTimeout(() => {
+                  try { mermaid.init(undefined, document.querySelectorAll('.mermaid')); } catch(e){}
+              }, 50);
+          }
 
           AgentUI.showStatus(statusEl, `✅ Report ready for ${activeAnalysisId}`, "ok");
           setStep(3);

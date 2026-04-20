@@ -17,6 +17,13 @@ logger = get_agent_logger("user_behavior_agent")
 FAMILIAR_DOMAINS = {"company.com", "microsoft.com", "google.com", "github.com"}
 URGENCY_TERMS = {"urgent", "immediately", "verify", "final notice", "action required"}
 
+# High-risk TLDs commonly abused for phishing / malware staging
+HIGH_RISK_TLDS = {
+    ".xyz", ".tk", ".ml", ".ga", ".cf", ".gq",
+    ".ru", ".top", ".click", ".online", ".site",
+    ".pw", ".cc", ".ws", ".info",
+}
+
 
 
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
@@ -34,6 +41,28 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     click_probability = 0.2
     click_probability += 0.25 * min(2, urgency_hits)
     click_probability += 0.2 * (1.0 - sender_familiarity)
+
+    # High-risk TLD check
+    sender_tld = "." + sender_domain.rsplit(".", 1)[-1] if "." in sender_domain else ""
+    if sender_tld and sender_tld in HIGH_RISK_TLDS:
+        click_probability += 0.20
+        indicators.append(f"high_risk_tld:{sender_tld}")
+
+    # Domain-age check via WHOIS (optional — degrades gracefully if library unavailable)
+    try:
+        import whois  # type: ignore
+        import datetime
+        w = whois.whois(sender_domain)
+        creation = w.creation_date
+        if isinstance(creation, list):
+            creation = creation[0]
+        if isinstance(creation, datetime.datetime):
+            age_days = (datetime.datetime.utcnow() - creation).days
+            if age_days < 90:
+                click_probability += 0.25
+                indicators.append(f"new_domain_age:{age_days}d")
+    except Exception:
+        pass  # WHOIS lookup unavailable or timed out — skip silently
 
     if legitimacy.level == "strong" and legitimacy.credential_bait_hits == 0:
         click_probability -= 0.15

@@ -52,6 +52,18 @@ def run() -> None:
     if agent_name not in AGENT_FUNCTIONS:
         raise ValueError(f"Unsupported AGENT_NAME={agent_name}. Expected one of: {sorted(AGENT_FUNCTIONS)}")
 
+    # Pre-warm ML models before connecting to RabbitMQ to prevent heartbeat timeouts
+    import importlib
+    import logging
+    logger = logging.getLogger(agent_name)
+    try:
+        model_loader_mod = importlib.import_module(f"email_security.agents.{agent_name}.model_loader")
+        if hasattr(model_loader_mod, "load_model"):
+            logger.info("Pre-warming ML models before connecting to RabbitMQ...")
+            model_loader_mod.load_model()
+    except (ModuleNotFoundError, ImportError):
+        pass
+
     agent = FunctionalAgent(agent_name=agent_name, fn=AGENT_FUNCTIONS[agent_name])
     agent.run()
 

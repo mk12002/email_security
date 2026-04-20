@@ -7,7 +7,7 @@ from typing import Any, Callable
 from langgraph.graph import END, StateGraph
 
 from email_security.garuda_integration.bridge import trigger_garuda_investigation
-from email_security.orchestrator.llm_reasoner import generate_reasoning
+from email_security.orchestrator.llm_reasoner import generate_reasoning, explain_counterfactual, explain_storyline
 from email_security.orchestrator.scoring_engine import calculate_threat_score
 from email_security.orchestrator.threat_correlation import correlate_threats
 from email_security.orchestrator.langgraph_state import OrchestratorState
@@ -144,12 +144,78 @@ class LangGraphOrchestrator:
         }
 
     def _reason_node(self, state: OrchestratorState) -> OrchestratorState:
+        agent_results = state.get("agent_results", [])
+        overall_score = float(state.get("normalized_score", 0.0))
+        verdict = state.get("verdict", "unknown")
+
+        # Generate counterfactual if malicious or high_risk
+        counterfactual = None
+        if verdict in {"malicious", "high_risk"} and agent_results:
+            top_agent = max(agent_results, key=lambda x: x.get("risk_score", 0.0))
+            cf_results = [r for r in agent_results if r.get("agent_name") != top_agent.get("agent_name")]
+            cf_score = calculate_threat_score(cf_results)
+            new_normalized = min(1.0, float(cf_score.get("overall_score", 0.0)))
+            counterfactual = {
+                "is_counterfactual": True,
+                "agents_altered": [top_agent.get("agent_name")],
+                "original_score": overall_score,
+                "new_normalized_score": new_normalized,
+                "would_deliver": new_normalized < 0.6
+            }
+
+        # Generate threat storyline
+        storyline = []
+        if agent_results:
+            header = next((a for a in agent_results if a.get("agent_name") == "header_agent"), None)
+            if header:
+                storyline.append({
+                    "phase": "Delivery & Auth",
+                    "description": f"Email delivered. SPF/DKIM/DMARC status affected by: {', '.join(header.get('indicators', [])[:2]) or 'Normal'}.",
+                    "severity": "medium" if header.get("risk_score", 0) > 0.4 else "safe",
+                    "confidence": header.get("confidence", 0.8)
+                })
+            
+            content = next((a for a in agent_results if a.get("agent_name") == "content_agent"), None)
+            user_beh = next((a for a in agent_results if a.get("agent_name") == "user_behavior_agent"), None)
+            if content or user_beh:
+                c_ind = content.get("indicators", [])[:2] if content else []
+                u_ind = user_beh.get("indicators", [])[:2] if user_beh else []
+                c_risk = max(content.get("risk_score", 0) if content else 0, user_beh.get("risk_score", 0) if user_beh else 0)
+                storyline.append({
+                    "phase": "User Context & Intent",
+                    "description": f"Social engineering & behavioral analysis detected: {', '.join(c_ind + u_ind)}.",
+                    "severity": "high" if c_risk > 0.7 else ("medium" if c_risk > 0.4 else "safe"),
+                    "confidence": 0.85
+                })
+
+            payloads = [a for a in agent_results if a.get("agent_name") in {"attachment_agent", "url_agent", "sandbox_agent"}]
+            if payloads:
+                p_inds = []
+                p_risk = 0
+                for p in payloads:
+                    p_inds.extend(p.get("indicators", [])[:2])
+                    p_risk = max(p_risk, p.get("risk_score", 0))
+                storyline.append({
+                    "phase": "Payload Execution",
+                    "description": f"Analyzed malicious links or attachments. Observations: {', '.join(set(p_inds))}.",
+                    "severity": "high" if p_risk > 0.7 else ("medium" if p_risk > 0.4 else "safe"),
+                    "confidence": 0.9
+                })
+
         explanation = generate_reasoning(
-            state.get("agent_results", []),
-            float(state.get("normalized_score", 0.0)),
+            agent_results,
+            overall_score,
+            counterfactual=counterfactual
         )
+        counterfactual_explanation = explain_counterfactual(counterfactual) if counterfactual else None
+        storyline_explanation = explain_storyline(storyline) if storyline else None
+
         logger.info("LangGraph node complete", node="reason", analysis_id=state.get("analysis_id"))
-        return {"llm_explanation": explanation}
+        return {
+            "llm_explanation": explanation,
+            "counterfactual_result": counterfactual_explanation,
+            "threat_storyline": storyline_explanation
+        }
 
     def _needs_garuda(self, state: OrchestratorState) -> str:
         return "garuda" if float(state.get("overall_risk_score", 0.0)) > 0.7 else "persist"
@@ -196,6 +262,8 @@ class LangGraphOrchestrator:
             "received_agents": state.get("received_agents", []),
             "missing_agents": state.get("missing_agents", []),
             "is_partial": bool(state.get("is_partial", False)),
+            "threat_storyline": state.get("threat_storyline", []),
+            "counterfactual_result": state.get("counterfactual_result", None),
         }
         if state.get("garuda_feedback"):
             decision["garuda_feedback"] = state.get("garuda_feedback")

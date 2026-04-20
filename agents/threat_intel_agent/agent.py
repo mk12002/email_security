@@ -25,6 +25,9 @@ logger = get_agent_logger("threat_intel_agent")
 IOC_SOURCE_ROOT = Path("datasets/threat_intelligence")
 URL_FALLBACK_ROOT = Path("datasets/url_dataset/malicious")
 
+# Curated static IOC seed list — always available regardless of feed state
+from email_security.agents.threat_intel_agent.seed_iocs import SEED_IOCS
+
 
 class IOCStore:
     """Persistent local IOC database backed by SQLite for fast membership checks."""
@@ -267,6 +270,18 @@ def _collect_iocs_from_feeds() -> list[tuple[str, str, str]]:
 _STORE = IOCStore(settings.ioc_db_path)
 
 
+def _seed_store_if_empty() -> None:
+    """Seed the IOC store with curated static entries if it is empty."""
+    if _STORE.count() < 10:
+        rows = [(indicator, ioc_type, "static_seed") for indicator, ioc_type in SEED_IOCS]
+        seeded = _STORE.upsert_many(rows)
+        logger.info("Seeded IOC store from curated static list", seeded=seeded)
+
+
+# Seed on module load so the store is never empty
+_seed_store_if_empty()
+
+
 def _clamp(value: float) -> float:
     return max(0.0, min(1.0, round(value, 4)))
 
@@ -497,6 +512,12 @@ def _malwarebazaar_score(hashes: list[str]) -> tuple[float, list[str]]:
             if status == "ok" and payload.get("data"):
                 scores.append(0.95)
                 indicators.append(f"malwarebazaar_hit:{file_hash[:16]}")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code in {401, 403}:
+                indicators.append("malwarebazaar_unauthorized")
+            else:
+                indicators.append("malwarebazaar_unavailable")
+            break
         except Exception:
             indicators.append("malwarebazaar_unavailable")
             break

@@ -56,6 +56,13 @@ def calculate_threat_score(
             "contribution": contribution,
         }
 
+    max_single_risk = max([c["risk_score"] for c in contributions.values()] or [0.0])
+    
+    if max_single_risk >= 0.85:
+        weighted_sum = max(weighted_sum, max_single_risk)
+    elif max_single_risk >= 0.7:
+        weighted_sum = max(weighted_sum, 0.7)
+
     # Determine threat level
     if weighted_sum >= 0.8:
         threat_level = "critical"

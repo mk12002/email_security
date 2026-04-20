@@ -204,7 +204,7 @@ def _openphish_score(url: str) -> tuple[float, list[str]]:
         cached_urls = _OPENPHISH_CACHE.get("urls")
 
         if not isinstance(cached_urls, set) or not cached_urls or cache_age > ttl:
-            with httpx.Client(timeout=_request_timeout()) as client:
+            with httpx.Client(timeout=_request_timeout(), follow_redirects=True) as client:
                 response = client.get(feed_url)
                 response.raise_for_status()
                 lines = response.text.splitlines()
@@ -253,6 +253,10 @@ def _urlhaus_score(url: str) -> tuple[float, list[str]]:
         if isinstance(tags, list) and tags:
             indicators.append(f"urlhaus_tag={str(tags[0]).lower()}")
         return _clamp(score), indicators
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code in {401, 403}:
+            return 0.0, ["urlhaus_unauthorized"]
+        return 0.0, ["urlhaus_unavailable"]
     except Exception:
         return 0.0, ["urlhaus_unavailable"]
 

@@ -115,6 +115,16 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     if not auth:
         missing_data_indicators.append("authentication_results_missing")
         indicators.append("missing_data:authentication_results_missing")
+        # Explicit uplift: sender exists but zero authentication headers present
+        if sender_domain:
+            risk += 0.15
+            indicators.append("no_auth_headers_with_domain")
+            malicious_evidence_indicators.append("no_auth_headers_with_domain")
+    elif "spf=" not in auth:
+        # SPF silently absent (auth header exists but no SPF record)
+        risk += 0.10
+        indicators.append("spf_record_absent")
+        malicious_evidence_indicators.append("spf_record_absent")
 
     heuristic_confidence = _clamp(0.65 + min(0.25, len(indicators) * 0.05))
 
@@ -148,7 +158,12 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
         and len(missing_data_indicators) > 0
     )
     if insufficient_evidence:
-        final_risk = _clamp(min(final_risk, 0.18))
+        # Floor at 0.25 when auth is completely absent but domain is present;
+        # previously this was capped at 0.18 which is too conservative.
+        if "authentication_results_missing" in missing_data_indicators and sender_domain:
+            final_risk = _clamp(max(final_risk, 0.25))
+        else:
+            final_risk = _clamp(min(final_risk, 0.18))
 
     if final_risk >= 0.8:
         header_verdict = "malicious"

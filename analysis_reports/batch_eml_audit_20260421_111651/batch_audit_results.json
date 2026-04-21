@@ -1,0 +1,368 @@
+{
+  "generated_at": "2026-04-21T11:16:52.123754+00:00",
+  "base_url": "http://127.0.0.1:8000",
+  "email_drop_dir": "/home/LabsKraft/new_work/email_security/email_drop",
+  "adjudicated_labels_file": "/home/LabsKraft/new_work/email_security/configs/adjudicated_labels.json",
+  "tested_files": [
+    "/home/LabsKraft/new_work/email_security/email_drop/Dabur & Sony invite you to AINCAT'26.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00317.22fe43af6f4c707c4f1bdc56af959a8e.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00318.7ce7e3cbbf4fa9c30a67b7ecdda2342e.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00319.a99dff9c010e00ec182ed5701556d330.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00320.20dcbb5b047b8e2f212ee78267ee27ad.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00321.22ec127de780c31da00ae5e1c1aa32e4.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00322.7d39d31fb7aad32c15dff84c14019b8c.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00323.9e36bf05304c99f2133a4c03c49533a9.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00337.813498483bc80a24c002e6e7e8e0f2cb.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01416.dd0b9717ec7e25f4adb5a5aefa204ba1.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01417.ce7b07a2114218dbac682b599785820d.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01418.de6a5fe900081a0492fb84f6bfae46a1.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01419.97da4f8a986b55cbe1f81bb22836ac58.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01420.4ee4b7db2ca10b3f5ec512d26bf8b3f9.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01421.e01ad8fa7bcb36e969c838578051d684.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01636.07c82f37d072bce96820af0bbef80eff.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01701.a28b76746a64d3d352375a462f4f8404.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/attachment_heavy_malware/00256.edd9bfb44729edf3c4f177814fd8c9e1.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/attachment_heavy_malware/00260.c75ce8b8d8bfc55723426979d260bf61.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/attachment_heavy_malware/00330.c5f7346dec1e6fe6ed324d8e78a2b46e.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/transactional_urgent_edge/01637.cd9dec755fc9e6d819137b8e0111e031.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/attachment_heavy_malware/00256.edd9bfb44729edf3c4f177814fd8c9e1.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/attachment_heavy_malware/00260.c75ce8b8d8bfc55723426979d260bf61.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/attachment_heavy_malware/00330.c5f7346dec1e6fe6ed324d8e78a2b46e.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/transactional_urgent_edge/01637.cd9dec755fc9e6d819137b8e0111e031.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/live_check_sample.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_bec_wire_transfer.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_legit_github.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_malspam_invoice.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_spearphishing_creds.eml"
+  ],
+  "results": [
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/Dabur & Sony invite you to AINCAT'26.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00317.22fe43af6f4c707c4f1bdc56af959a8e.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00318.7ce7e3cbbf4fa9c30a67b7ecdda2342e.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00319.a99dff9c010e00ec182ed5701556d330.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00320.20dcbb5b047b8e2f212ee78267ee27ad.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00321.22ec127de780c31da00ae5e1c1aa32e4.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00322.7d39d31fb7aad32c15dff84c14019b8c.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00323.9e36bf05304c99f2133a4c03c49533a9.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00337.813498483bc80a24c002e6e7e8e0f2cb.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01416.dd0b9717ec7e25f4adb5a5aefa204ba1.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01417.ce7b07a2114218dbac682b599785820d.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01418.de6a5fe900081a0492fb84f6bfae46a1.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01419.97da4f8a986b55cbe1f81bb22836ac58.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01420.4ee4b7db2ca10b3f5ec512d26bf8b3f9.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01421.e01ad8fa7bcb36e969c838578051d684.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01636.07c82f37d072bce96820af0bbef80eff.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01701.a28b76746a64d3d352375a462f4f8404.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/attachment_heavy_malware/00256.edd9bfb44729edf3c4f177814fd8c9e1.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/attachment_heavy_malware/00260.c75ce8b8d8bfc55723426979d260bf61.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/attachment_heavy_malware/00330.c5f7346dec1e6fe6ed324d8e78a2b46e.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_105008/transactional_urgent_edge/01637.cd9dec755fc9e6d819137b8e0111e031.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/attachment_heavy_malware/00256.edd9bfb44729edf3c4f177814fd8c9e1.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/attachment_heavy_malware/00260.c75ce8b8d8bfc55723426979d260bf61.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/attachment_heavy_malware/00330.c5f7346dec1e6fe6ed324d8e78a2b46e.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/hard_set/hard_set_20260421_111454/transactional_urgent_edge/01637.cd9dec755fc9e6d819137b8e0111e031.eml",
+      "analysis_id": null,
+      "expected_label": "unknown",
+      "expected_label_source": "heuristic",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/live_check_sample.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_bec_wire_transfer.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_legit_github.eml",
+      "analysis_id": null,
+      "expected_label": "benign",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_malspam_invoice.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_spearphishing_creds.eml",
+      "analysis_id": null,
+      "expected_label": "malicious",
+      "expected_label_source": "adjudicated",
+      "status": "error",
+      "message": "URLError: <urlopen error [Errno 111] Connection refused>",
+      "checks": {},
+      "report": null
+    }
+  ],
+  "repetitive_score_diagnostics": {},
+  "reliability_metrics": {
+    "agents": {},
+    "overall_system": {
+      "count": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "accuracy": null,
+      "brier": null,
+      "ece": null,
+      "tp": 0,
+      "fp": 0,
+      "tn": 0,
+      "fn": 0
+    }
+  }
+}

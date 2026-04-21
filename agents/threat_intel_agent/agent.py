@@ -22,6 +22,9 @@ from email_security.agents.threat_intel_agent.inference import predict
 
 logger = get_agent_logger("threat_intel_agent")
 
+SQLITE_BUSY_TIMEOUT_MS = 30_000
+SQLITE_SCHEMA_RETRIES = 6
+
 IOC_SOURCE_ROOT = Path("datasets/threat_intelligence")
 URL_FALLBACK_ROOT = Path("datasets/url_dataset/malicious")
 
@@ -40,30 +43,60 @@ class IOCStore:
         self._ensure_schema()
 
     def _connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(str(self.db_path))
+        conn = sqlite3.connect(str(self.db_path), timeout=30.0)
+        conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
+        return conn
 
     def _ensure_schema(self) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS iocs (
-                    indicator TEXT PRIMARY KEY,
-                    ioc_type TEXT,
-                    source TEXT,
-                    first_seen_ts INTEGER,
-                    updated_ts INTEGER
-                );
-                """
-            )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS metadata (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                );
-                """
-            )
-            conn.commit()
+        for attempt in range(1, SQLITE_SCHEMA_RETRIES + 1):
+            try:
+                with self._connect() as conn:
+                    conn.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS iocs (
+                            indicator TEXT PRIMARY KEY,
+                            ioc_type TEXT,
+                            source TEXT,
+                            first_seen_ts INTEGER,
+                            updated_ts INTEGER
+                        );
+                        """
+                    )
+                    conn.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS metadata (
+                            key TEXT PRIMARY KEY,
+                            value TEXT NOT NULL
+                        );
+                        """
+                    )
+                    conn.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS external_cache (
+                            provider TEXT NOT NULL,
+                            indicator TEXT NOT NULL,
+                            score REAL NOT NULL,
+                            indicators_json TEXT NOT NULL,
+                            updated_ts INTEGER NOT NULL,
+                            PRIMARY KEY (provider, indicator)
+                        );
+                        """
+                    )
+                    conn.commit()
+                    return
+            except sqlite3.OperationalError as exc:
+                if "locked" not in str(exc).lower() or attempt == SQLITE_SCHEMA_RETRIES:
+                    raise
+                sleep_seconds = 0.2 * attempt
+                logger.warning(
+                    "IOC schema init retry due to sqlite lock",
+                    db_path=str(self.db_path),
+                    attempt=attempt,
+                    sleep_seconds=sleep_seconds,
+                )
+                time.sleep(sleep_seconds)
 
     def get_last_refresh_ts(self) -> int:
         with self._connect() as conn:
@@ -131,6 +164,80 @@ class IOCStore:
         with self._connect() as conn:
             row = conn.execute("SELECT COUNT(*) FROM iocs").fetchone()
             return int(row[0]) if row else 0
+
+    def get_external_cache(
+        self,
+        provider: str,
+        indicator: str,
+        max_age_seconds: int | None,
+    ) -> tuple[float, list[str]] | None:
+        key_provider = str(provider).strip().lower()
+        key_indicator = str(indicator).strip().lower()
+        if not key_provider or not key_indicator:
+            return None
+
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT score, indicators_json, updated_ts
+                FROM external_cache
+                WHERE provider = ? AND indicator = ?
+                """,
+                (key_provider, key_indicator),
+            ).fetchone()
+
+        if not row:
+            return None
+
+        score = float(row[0] or 0.0)
+        indicators_json = str(row[1] or "[]")
+        updated_ts = int(row[2] or 0)
+        if max_age_seconds is not None and updated_ts > 0:
+            age = int(time.time()) - updated_ts
+            if age > int(max_age_seconds):
+                return None
+
+        try:
+            indicators = json.loads(indicators_json)
+            if not isinstance(indicators, list):
+                indicators = []
+        except Exception:
+            indicators = []
+        return score, [str(item) for item in indicators]
+
+    def set_external_cache(
+        self,
+        provider: str,
+        indicator: str,
+        score: float,
+        indicators: list[str],
+    ) -> None:
+        key_provider = str(provider).strip().lower()
+        key_indicator = str(indicator).strip().lower()
+        if not key_provider or not key_indicator:
+            return
+
+        now = int(time.time())
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO external_cache(provider, indicator, score, indicators_json, updated_ts)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(provider, indicator)
+                DO UPDATE SET
+                  score = excluded.score,
+                  indicators_json = excluded.indicators_json,
+                  updated_ts = excluded.updated_ts
+                """,
+                (
+                    key_provider,
+                    key_indicator,
+                    float(score),
+                    json.dumps([str(item) for item in indicators]),
+                    now,
+                ),
+            )
+            conn.commit()
 
 
 def _extract_domain(value: str) -> str:
@@ -244,27 +351,44 @@ def _collect_iocs_from_feeds() -> list[tuple[str, str, str]]:
         unified_path = PROJECT_ROOT / unified_path
 
     if not unified_path.exists():
-        logger.warning(f"Unified IOC reference not found at {unified_path}. Run preprocessing first.")
-        return rows
+        logger.warning(f"Unified IOC reference not found at {unified_path}. Falling back to source folders.")
 
-    try:
-        with unified_path.open("r", encoding="utf-8", errors="ignore") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                indicator = (row.get("indicator") or "").strip().lower()
-                ioc_type = (row.get("ioc_type") or "").strip().lower()
-                source = (row.get("source") or "unified_reference").strip()
-                
-                if not indicator or not ioc_type:
-                    continue
-                    
-                rows.append((indicator, ioc_type, source))
-                # Note: No need to derive domains from URLs here because the 
-                # preprocessing built-in logic already derived and saved them explicitly.
-    except Exception as e:
-        logger.error(f"Failed to read unified IOC reference: {e}")
-        
-    return rows
+    if unified_path.exists():
+        try:
+            with unified_path.open("r", encoding="utf-8", errors="ignore") as handle:
+                reader = csv.DictReader(handle)
+                for row in reader:
+                    indicator = (row.get("indicator") or "").strip().lower()
+                    ioc_type = (row.get("ioc_type") or "").strip().lower()
+                    source = (row.get("source") or "unified_reference").strip()
+                    if not indicator or not ioc_type:
+                        continue
+                    rows.append((indicator, ioc_type, source))
+        except Exception as e:
+            logger.error(f"Failed to read unified IOC reference: {e}")
+
+    # Broaden IOC coverage with direct source-feed harvesting and URL fallback datasets.
+    for root in (IOC_SOURCE_ROOT, URL_FALLBACK_ROOT):
+        if not root.exists():
+            continue
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            suffix = path.suffix.lower()
+            if suffix == ".csv":
+                rows.extend(_read_csv_iocs(path))
+            elif suffix == ".json":
+                rows.extend(_read_json_iocs(path))
+            elif suffix in {".txt", ".log", ".ioc"}:
+                rows.extend(_read_txt_iocs(path))
+
+    # Stable dedupe to reduce DB churn and preserve first source attribution.
+    dedup: dict[str, tuple[str, str, str]] = {}
+    for indicator, ioc_type, source in rows:
+        key = str(indicator).strip().lower()
+        if key and key not in dedup:
+            dedup[key] = (key, str(ioc_type).strip().lower(), str(source).strip())
+    return list(dedup.values())
 
 
 _STORE = IOCStore(settings.ioc_db_path)
@@ -434,6 +558,19 @@ def _otx_score(candidates: list[str]) -> tuple[float, list[str]]:
 
     for indicator in _limit_indicators(candidates):
         indicator_type = _otx_indicator_type(indicator)
+        cache_key = f"{indicator_type}:{indicator}"
+        cached = _STORE.get_external_cache(
+            provider="otx",
+            indicator=cache_key,
+            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+        )
+        if cached is not None:
+            cached_score, cached_indicators = cached
+            if cached_score > 0.0:
+                scores.append(cached_score)
+            indicators.extend(cached_indicators)
+            continue
+
         endpoint = f"{base_url}/api/v1/indicators/{indicator_type}/{quote(indicator, safe='')}/general"
         try:
             with httpx.Client(timeout=_request_timeout()) as client:
@@ -441,10 +578,24 @@ def _otx_score(candidates: list[str]) -> tuple[float, list[str]]:
                 response.raise_for_status()
                 payload = response.json()
             pulse_count = int((payload.get("pulse_info", {}) or {}).get("count", 0) or 0)
+            provider_score = 0.0
+            provider_indicators: list[str] = []
             if pulse_count > 0:
-                scores.append(min(1.0, 0.3 + (0.1 * pulse_count)))
-                indicators.append(f"otx_hit:{indicator_type.lower()}:{indicator}")
+                provider_score = min(1.0, 0.3 + (0.1 * pulse_count))
+                provider_indicators.append(f"otx_hit:{indicator_type.lower()}:{indicator}")
+            _STORE.set_external_cache("otx", cache_key, provider_score, provider_indicators)
+            if provider_score > 0.0:
+                scores.append(provider_score)
+            indicators.extend(provider_indicators)
         except Exception:
+            fallback = _STORE.get_external_cache("otx", cache_key, None)
+            if fallback is not None:
+                fb_score, fb_indicators = fallback
+                if fb_score > 0.0:
+                    scores.append(fb_score)
+                indicators.extend(fb_indicators)
+                indicators.append("otx_cache_fallback")
+                continue
             indicators.append("otx_unavailable")
             break
 
@@ -468,6 +619,18 @@ def _abuseipdb_score(ips: list[str]) -> tuple[float, list[str]]:
     indicators: list[str] = []
 
     for ip in _limit_indicators(ips):
+        cached = _STORE.get_external_cache(
+            provider="abuseipdb",
+            indicator=ip,
+            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+        )
+        if cached is not None:
+            cached_score, cached_indicators = cached
+            if cached_score > 0.0:
+                scores.append(cached_score)
+            indicators.extend(cached_indicators)
+            continue
+
         params = {"ipAddress": ip, "maxAgeInDays": "90"}
         try:
             with httpx.Client(timeout=_request_timeout()) as client:
@@ -476,11 +639,22 @@ def _abuseipdb_score(ips: list[str]) -> tuple[float, list[str]]:
                 payload = response.json().get("data", {}) or {}
             abuse_score = float(payload.get("abuseConfidenceScore", 0.0) or 0.0)
             normalized = _clamp(abuse_score / 100.0)
+            provider_indicators: list[str] = []
             if normalized > 0.0:
                 scores.append(normalized)
             if abuse_score >= 25.0:
-                indicators.append(f"abuseipdb_high_confidence:{ip}:{int(abuse_score)}")
+                provider_indicators.append(f"abuseipdb_high_confidence:{ip}:{int(abuse_score)}")
+            _STORE.set_external_cache("abuseipdb", ip, normalized, provider_indicators)
+            indicators.extend(provider_indicators)
         except Exception:
+            fallback = _STORE.get_external_cache("abuseipdb", ip, None)
+            if fallback is not None:
+                fb_score, fb_indicators = fallback
+                if fb_score > 0.0:
+                    scores.append(fb_score)
+                indicators.extend(fb_indicators)
+                indicators.append("abuseipdb_cache_fallback")
+                continue
             indicators.append("abuseipdb_unavailable")
             break
 
@@ -501,6 +675,18 @@ def _malwarebazaar_score(hashes: list[str]) -> tuple[float, list[str]]:
     indicators: list[str] = []
 
     for file_hash in _limit_indicators(hashes):
+        cached = _STORE.get_external_cache(
+            provider="malwarebazaar",
+            indicator=file_hash,
+            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+        )
+        if cached is not None:
+            cached_score, cached_indicators = cached
+            if cached_score > 0.0:
+                scores.append(cached_score)
+            indicators.extend(cached_indicators)
+            continue
+
         body = {"query": "get_info", "hash": file_hash}
         try:
             with httpx.Client(timeout=_request_timeout()) as client:
@@ -509,16 +695,38 @@ def _malwarebazaar_score(hashes: list[str]) -> tuple[float, list[str]]:
                 payload = response.json()
 
             status = str(payload.get("query_status", "")).lower()
+            provider_score = 0.0
+            provider_indicators: list[str] = []
             if status == "ok" and payload.get("data"):
-                scores.append(0.95)
-                indicators.append(f"malwarebazaar_hit:{file_hash[:16]}")
+                provider_score = 0.95
+                provider_indicators.append(f"malwarebazaar_hit:{file_hash[:16]}")
+            _STORE.set_external_cache("malwarebazaar", file_hash, provider_score, provider_indicators)
+            if provider_score > 0.0:
+                scores.append(provider_score)
+            indicators.extend(provider_indicators)
         except httpx.HTTPStatusError as e:
             if e.response.status_code in {401, 403}:
+                fallback = _STORE.get_external_cache("malwarebazaar", file_hash, None)
+                if fallback is not None:
+                    fb_score, fb_indicators = fallback
+                    if fb_score > 0.0:
+                        scores.append(fb_score)
+                    indicators.extend(fb_indicators)
+                    indicators.append("malwarebazaar_cache_fallback")
+                    continue
                 indicators.append("malwarebazaar_unauthorized")
             else:
                 indicators.append("malwarebazaar_unavailable")
             break
         except Exception:
+            fallback = _STORE.get_external_cache("malwarebazaar", file_hash, None)
+            if fallback is not None:
+                fb_score, fb_indicators = fallback
+                if fb_score > 0.0:
+                    scores.append(fb_score)
+                indicators.extend(fb_indicators)
+                indicators.append("malwarebazaar_cache_fallback")
+                continue
             indicators.append("malwarebazaar_unavailable")
             break
 
@@ -538,6 +746,18 @@ def _virustotal_hash_score(hashes: list[str]) -> tuple[float, list[str]]:
     indicators: list[str] = []
 
     for file_hash in _limit_indicators(hashes):
+        cached = _STORE.get_external_cache(
+            provider="virustotal_hash",
+            indicator=file_hash,
+            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+        )
+        if cached is not None:
+            cached_score, cached_indicators = cached
+            if cached_score > 0.0:
+                scores.append(cached_score)
+            indicators.extend(cached_indicators)
+            continue
+
         endpoint = f"https://www.virustotal.com/api/v3/files/{quote(file_hash, safe='')}"
         try:
             with httpx.Client(timeout=_request_timeout()) as client:
@@ -548,12 +768,23 @@ def _virustotal_hash_score(hashes: list[str]) -> tuple[float, list[str]]:
             suspicious = float(stats.get("suspicious", 0.0) or 0.0)
             total = max(1.0, sum(float(v) for v in stats.values()))
             score = min(1.0, (malicious + (0.5 * suspicious)) / total)
+            provider_indicators: list[str] = []
             if score > 0.0:
                 scores.append(score)
-                indicators.append(
+                provider_indicators.append(
                     f"virustotal_hash_hit:{file_hash[:16]}:{int(malicious)}:{int(suspicious)}"
                 )
+            _STORE.set_external_cache("virustotal_hash", file_hash, score, provider_indicators)
+            indicators.extend(provider_indicators)
         except Exception:
+            fallback = _STORE.get_external_cache("virustotal_hash", file_hash, None)
+            if fallback is not None:
+                fb_score, fb_indicators = fallback
+                if fb_score > 0.0:
+                    scores.append(fb_score)
+                indicators.extend(fb_indicators)
+                indicators.append("virustotal_hash_cache_fallback")
+                continue
             indicators.append("virustotal_hash_unavailable")
             break
 

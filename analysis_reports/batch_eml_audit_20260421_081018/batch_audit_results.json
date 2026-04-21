@@ -1,0 +1,140 @@
+{
+  "generated_at": "2026-04-21T08:30:23.807123Z",
+  "base_url": "http://127.0.0.1:8000",
+  "email_drop_dir": "/home/LabsKraft/new_work/email_security/email_drop",
+  "tested_files": [
+    "/home/LabsKraft/new_work/email_security/email_drop/Dabur & Sony invite you to AINCAT'26.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00317.22fe43af6f4c707c4f1bdc56af959a8e.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00323.9e36bf05304c99f2133a4c03c49533a9.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00337.813498483bc80a24c002e6e7e8e0f2cb.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01420.4ee4b7db2ca10b3f5ec512d26bf8b3f9.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01636.07c82f37d072bce96820af0bbef80eff.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01701.a28b76746a64d3d352375a462f4f8404.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/live_check_sample.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_bec_wire_transfer.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_legit_github.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_malspam_invoice.eml",
+    "/home/LabsKraft/new_work/email_security/email_drop/test_spearphishing_creds.eml"
+  ],
+  "results": [
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/Dabur & Sony invite you to AINCAT'26.eml",
+      "analysis_id": "9df680cf-f99a-4ea1-9dcf-d27eafce665e",
+      "expected_label": "benign",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml",
+      "analysis_id": "fe08e9fa-c406-4fba-87ed-a1ae3f7a78e9",
+      "expected_label": "malicious",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00317.22fe43af6f4c707c4f1bdc56af959a8e.eml",
+      "analysis_id": "0f86cb29-e5a7-4f60-bffa-282d3b103c35",
+      "expected_label": "malicious",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00323.9e36bf05304c99f2133a4c03c49533a9.eml",
+      "analysis_id": "55665443-49c1-41f4-bcb6-b24521efdf92",
+      "expected_label": "malicious",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/00337.813498483bc80a24c002e6e7e8e0f2cb.eml",
+      "analysis_id": "f35624ba-c80a-49fe-b675-f453ed495b84",
+      "expected_label": "malicious",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01420.4ee4b7db2ca10b3f5ec512d26bf8b3f9.eml",
+      "analysis_id": "800b5b84-dca7-4656-8645-5bafe29d36ce",
+      "expected_label": "benign",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01636.07c82f37d072bce96820af0bbef80eff.eml",
+      "analysis_id": "924de53e-751b-4ef2-a277-a535b7c3eebf",
+      "expected_label": "benign",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/dataset_samples/01701.a28b76746a64d3d352375a462f4f8404.eml",
+      "analysis_id": "b310cb7d-637d-4ac8-b2b2-a4213e68a3ca",
+      "expected_label": "benign",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/live_check_sample.eml",
+      "analysis_id": "a648c27f-a0ed-467c-af74-902f167069c5",
+      "expected_label": "benign",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_bec_wire_transfer.eml",
+      "analysis_id": "2475e883-ad97-4ddf-afd8-a02b5574547c",
+      "expected_label": "malicious",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_legit_github.eml",
+      "analysis_id": "6cd2c540-1220-4cf4-b0ed-89f1dc902619",
+      "expected_label": "benign",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_malspam_invoice.eml",
+      "analysis_id": "d46285f9-9a78-4782-92c9-c73601189a8d",
+      "expected_label": "malicious",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    },
+    {
+      "file_path": "/home/LabsKraft/new_work/email_security/email_drop/test_spearphishing_creds.eml",
+      "analysis_id": "c78c3248-3a74-4054-9e13-bc638e5f261a",
+      "expected_label": "malicious",
+      "status": "timeout",
+      "message": "report_not_ready_within_timeout",
+      "checks": {},
+      "report": null
+    }
+  ],
+  "repetitive_score_diagnostics": {}
+}

@@ -1,0 +1,16 @@
+{
+  "timestamp_utc": "2026-04-21T11:14:57.304302+00:00",
+  "orchestrator_partial_timeout_seconds": 90.0,
+  "samples": 600,
+  "latency_seconds": {
+    "min": 1.021,
+    "avg": 63.712,
+    "p95": 92.821,
+    "p99": 92.947,
+    "max": 92.99
+  },
+  "slo": {
+    "p95_max_seconds": 95.0,
+    "passed": true
+  }
+}

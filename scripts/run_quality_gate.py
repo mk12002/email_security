@@ -39,10 +39,20 @@ TEST_GROUPS = {
         "tests/test_threat_intel_smoke.py",
         "tests/test_user_behavior_smoke.py",
     ],
+    "regression_contracts": [
+        "tests/test_langgraph_orchestrator.py",
+        "tests/test_counterfactual.py",
+        "tests/test_storyline.py",
+        "tests/test_audit_reliability_metrics.py",
+        "tests/test_orchestrator_slo.py",
+        "tests/test_threat_intel_cache.py",
+    ],
 }
 
 COMMAND_CHECKS = {
     "sandbox_hardening": [sys.executable, "scripts/check_sandbox_hardening.py"],
+    "hard_set_builder_dry_run": [sys.executable, "scripts/build_hard_set_pack.py", "--per-category", "5"],
+    "degraded_mode_slo": [sys.executable, "scripts/run_degraded_mode_slo.py"],
 }
 
 

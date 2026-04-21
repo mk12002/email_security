@@ -7,8 +7,10 @@ from typing import Any, Callable
 from langgraph.graph import END, StateGraph
 
 from email_security.garuda_integration.bridge import trigger_garuda_investigation
-from email_security.orchestrator.llm_reasoner import generate_reasoning, explain_counterfactual, explain_storyline
+from email_security.orchestrator.counterfactual_engine import calculate_counterfactual, threshold_for_verdict
+from email_security.orchestrator.llm_reasoner import generate_reasoning
 from email_security.orchestrator.scoring_engine import calculate_threat_score
+from email_security.orchestrator.storyline_engine import generate_storyline
 from email_security.orchestrator.threat_correlation import correlate_threats
 from email_security.orchestrator.langgraph_state import OrchestratorState
 from email_security.services.logging_service import get_service_logger
@@ -44,6 +46,53 @@ def _has_strong_transactional_legitimacy(agent_results: list[dict[str, Any]]) ->
         if _contains_indicator(item, "transactional_legitimacy_profile:strong"):
             strong_votes += 1
     return strong_votes >= 2
+
+
+def _has_spam_campaign_pattern(agent_results: list[dict[str, Any]]) -> bool:
+    content = next((item for item in agent_results if str(item.get("agent_name")) == "content_agent"), None)
+    header = next((item for item in agent_results if str(item.get("agent_name")) == "header_agent"), None)
+    if not content:
+        return False
+
+    content_risk = float(content.get("risk_score") or 0.0)
+    content_indicators = [str(item).lower() for item in (content.get("indicators") or [])]
+    has_spam_content = any(ind.startswith("ml_slm_label:spam") for ind in content_indicators) or any(
+        ind.startswith("spam_marketing_signals:") for ind in content_indicators
+    )
+    if not has_spam_content or content_risk < 0.55:
+        return False
+
+    header_indicators = [str(item).lower() for item in ((header or {}).get("indicators") or [])]
+    has_delivery_anomaly = any(
+        token in indicator
+        for indicator in header_indicators
+        for token in ("authentication_results_missing", "short_smtp_trace", "no_auth_headers_with_domain")
+    )
+    return has_delivery_anomaly
+
+
+def _has_uncertain_conflict_pattern(agent_results: list[dict[str, Any]], normalized_score: float) -> bool:
+    """Identify evidence disagreement strong enough to force manual review.
+
+    Trigger only below blocking threshold to avoid overriding clear malicious outcomes.
+    """
+    if normalized_score >= 0.4:
+        return False
+
+    informative = [
+        item
+        for item in agent_results
+        if float(item.get("confidence") or 0.0) >= 0.7
+    ]
+    if len(informative) < 3:
+        return False
+
+    scores = [float(item.get("risk_score") or 0.0) for item in informative]
+    high_votes = sum(1 for score in scores if score >= 0.65)
+    low_votes = sum(1 for score in scores if score <= 0.2)
+    spread = max(scores) - min(scores)
+
+    return high_votes >= 1 and low_votes >= 2 and spread >= 0.45
 
 
 class LangGraphOrchestrator:
@@ -125,6 +174,7 @@ class LangGraphOrchestrator:
         else:
             verdict = "likely_safe"
             actions = ["deliver_with_banner"]
+        decision_notes: list[str] = []
 
         if (
             verdict == "suspicious"
@@ -133,6 +183,23 @@ class LangGraphOrchestrator:
         ):
             verdict = "likely_safe"
             actions = ["deliver_with_banner"]
+            decision_notes.append("downgraded_by_transactional_legitimacy")
+
+        if (
+            verdict == "likely_safe"
+            and _has_spam_campaign_pattern(agent_results)
+            and not _has_strong_transactional_legitimacy(agent_results)
+        ):
+            verdict = "suspicious"
+            actions = ["manual_review", "soc_alert"]
+            normalized_score = max(normalized_score, 0.42)
+            decision_notes.append("escalated_by_spam_campaign_pattern")
+
+        if verdict == "likely_safe" and _has_uncertain_conflict_pattern(agent_results, normalized_score):
+            verdict = "suspicious"
+            actions = ["manual_review"]
+            normalized_score = max(normalized_score, 0.4)
+            decision_notes.append("escalated_by_uncertain_conflict_guardrail")
 
         logger.info("LangGraph node complete", node="decide", analysis_id=state.get("analysis_id"))
         return {
@@ -141,80 +208,40 @@ class LangGraphOrchestrator:
             "verdict": verdict,
             "recommended_actions": actions,
             "threat_level": score_data.get("threat_level", "unknown"),
+            "decision_notes": decision_notes,
         }
 
     def _reason_node(self, state: OrchestratorState) -> OrchestratorState:
         agent_results = state.get("agent_results", [])
         overall_score = float(state.get("normalized_score", 0.0))
+        correlation = state.get("correlation", {})
         verdict = state.get("verdict", "unknown")
+        actions = state.get("recommended_actions", [])
 
-        # Generate counterfactual if malicious or high_risk
-        counterfactual = None
-        if verdict in {"malicious", "high_risk"} and agent_results:
-            top_agent = max(agent_results, key=lambda x: x.get("risk_score", 0.0))
-            cf_results = [r for r in agent_results if r.get("agent_name") != top_agent.get("agent_name")]
-            cf_score = calculate_threat_score(cf_results)
-            new_normalized = min(1.0, float(cf_score.get("overall_score", 0.0)))
-            counterfactual = {
-                "is_counterfactual": True,
-                "agents_altered": [top_agent.get("agent_name")],
-                "original_score": overall_score,
-                "new_normalized_score": new_normalized,
-                "would_deliver": new_normalized < 0.6
-            }
+        threshold = threshold_for_verdict(verdict)
+        if threshold is not None and agent_results:
+            counterfactual = calculate_counterfactual(
+                agent_results=agent_results,
+                correlation=correlation,
+                current_normalized_score=overall_score,
+                threshold=threshold,
+            )
+        else:
+            counterfactual = {"is_counterfactual": False, "reason": "no_blocking_boundary"}
 
-        # Generate threat storyline
-        storyline = []
-        if agent_results:
-            header = next((a for a in agent_results if a.get("agent_name") == "header_agent"), None)
-            if header:
-                storyline.append({
-                    "phase": "Delivery & Auth",
-                    "description": f"Email delivered. SPF/DKIM/DMARC status affected by: {', '.join(header.get('indicators', [])[:2]) or 'Normal'}.",
-                    "severity": "medium" if header.get("risk_score", 0) > 0.4 else "safe",
-                    "confidence": header.get("confidence", 0.8)
-                })
-            
-            content = next((a for a in agent_results if a.get("agent_name") == "content_agent"), None)
-            user_beh = next((a for a in agent_results if a.get("agent_name") == "user_behavior_agent"), None)
-            if content or user_beh:
-                c_ind = content.get("indicators", [])[:2] if content else []
-                u_ind = user_beh.get("indicators", [])[:2] if user_beh else []
-                c_risk = max(content.get("risk_score", 0) if content else 0, user_beh.get("risk_score", 0) if user_beh else 0)
-                storyline.append({
-                    "phase": "User Context & Intent",
-                    "description": f"Social engineering & behavioral analysis detected: {', '.join(c_ind + u_ind)}.",
-                    "severity": "high" if c_risk > 0.7 else ("medium" if c_risk > 0.4 else "safe"),
-                    "confidence": 0.85
-                })
-
-            payloads = [a for a in agent_results if a.get("agent_name") in {"attachment_agent", "url_agent", "sandbox_agent"}]
-            if payloads:
-                p_inds = []
-                p_risk = 0
-                for p in payloads:
-                    p_inds.extend(p.get("indicators", [])[:2])
-                    p_risk = max(p_risk, p.get("risk_score", 0))
-                storyline.append({
-                    "phase": "Payload Execution",
-                    "description": f"Analyzed malicious links or attachments. Observations: {', '.join(set(p_inds))}.",
-                    "severity": "high" if p_risk > 0.7 else ("medium" if p_risk > 0.4 else "safe"),
-                    "confidence": 0.9
-                })
+        storyline = generate_storyline(agent_results, verdict, actions) if agent_results else []
 
         explanation = generate_reasoning(
             agent_results,
             overall_score,
             counterfactual=counterfactual
         )
-        counterfactual_explanation = explain_counterfactual(counterfactual) if counterfactual else None
-        storyline_explanation = explain_storyline(storyline) if storyline else None
 
         logger.info("LangGraph node complete", node="reason", analysis_id=state.get("analysis_id"))
         return {
             "llm_explanation": explanation,
-            "counterfactual_result": counterfactual_explanation,
-            "threat_storyline": storyline_explanation
+            "counterfactual_result": counterfactual,
+            "threat_storyline": storyline,
         }
 
     def _needs_garuda(self, state: OrchestratorState) -> str:
@@ -264,6 +291,7 @@ class LangGraphOrchestrator:
             "is_partial": bool(state.get("is_partial", False)),
             "threat_storyline": state.get("threat_storyline", []),
             "counterfactual_result": state.get("counterfactual_result", None),
+            "decision_notes": state.get("decision_notes", []),
         }
         if state.get("garuda_feedback"):
             decision["garuda_feedback"] = state.get("garuda_feedback")

@@ -151,6 +151,10 @@ class Settings(BaseSettings):
     external_lookup_max_indicators: int = Field(
         default=10, description="Max indicators per type for external intel lookups"
     )
+    external_lookup_cache_ttl_seconds: int = Field(
+        default=21600,
+        description="TTL for cached external reputation lookups to improve resilience",
+    )
     openphish_feed_url: str = Field(
         default="https://openphish.com/feed.txt", description="OpenPhish feed URL"
     )

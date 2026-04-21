@@ -1,0 +1,70 @@
+{
+  "timestamp_utc": "2026-04-21T11:15:03.983659+00:00",
+  "python": "/home/LabsKraft/new_work/venv/bin/python",
+  "groups": {
+    "core_orchestrator": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python -m pytest -q tests/test_langgraph_orchestrator.py tests/test_orchestrator_partial_finalization.py tests/test_operational_flow_e2e.py",
+      "started_utc": "2026-04-21T11:15:03.983685+00:00",
+      "finished_utc": "2026-04-21T11:15:14.558893+00:00",
+      "exit_code": 0,
+      "stdout": "............                                                             [100%]\n12 passed in 6.18s\n",
+      "stderr": "",
+      "passed": true
+    },
+    "sandbox_safety": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python -m pytest -q tests/test_sandbox_agent_behavior.py tests/test_sandbox_model_inference.py tests/test_sandbox_isolation_hardening.py tests/test_sandbox_executor_service.py tests/test_sandbox_detonation_hardening.py tests/test_sandbox_additional_paths.py tests/test_sandbox_hardening_check.py",
+      "started_utc": "2026-04-21T11:15:14.558932+00:00",
+      "finished_utc": "2026-04-21T11:15:26.091980+00:00",
+      "exit_code": 0,
+      "stdout": ".........................                                                [100%]\n25 passed in 7.62s\n",
+      "stderr": "",
+      "passed": true
+    },
+    "data_and_model_smoke": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python -m pytest -q tests/test_content_preprocessing.py tests/test_url_model_smoke.py tests/test_attachment_ensemble_smoke.py tests/test_threat_intel_smoke.py tests/test_user_behavior_smoke.py",
+      "started_utc": "2026-04-21T11:15:26.092026+00:00",
+      "finished_utc": "2026-04-21T11:16:30.856745+00:00",
+      "exit_code": 0,
+      "stdout": ".....                                                                    [100%]\n=============================== warnings summary ===============================\ntests/test_user_behavior_smoke.py::test_user_behavior_smoke_risk_ordering\n  /home/LabsKraft/new_work/email_security/agents/user_behavior_agent/agent.py:60: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n    age_days = (datetime.datetime.utcnow() - creation).days\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n5 passed, 1 warning in 60.72s (0:01:00)\n",
+      "stderr": "",
+      "passed": true
+    },
+    "regression_contracts": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python -m pytest -q tests/test_langgraph_orchestrator.py tests/test_counterfactual.py tests/test_storyline.py tests/test_audit_reliability_metrics.py tests/test_orchestrator_slo.py tests/test_threat_intel_cache.py",
+      "started_utc": "2026-04-21T11:16:30.856782+00:00",
+      "finished_utc": "2026-04-21T11:16:39.919375+00:00",
+      "exit_code": 0,
+      "stdout": "....................                                                     [100%]\n20 passed in 4.56s\n",
+      "stderr": "",
+      "passed": true
+    },
+    "sandbox_hardening": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python scripts/check_sandbox_hardening.py",
+      "started_utc": "2026-04-21T11:16:39.919413+00:00",
+      "finished_utc": "2026-04-21T11:16:39.994332+00:00",
+      "exit_code": 0,
+      "stdout": "{\n  \"timestamp_utc\": \"2026-04-21T11:16:39.984084+00:00\",\n  \"checks\": [\n    {\n      \"name\": \"no_docker_sock_mount\",\n      \"passed\": true,\n      \"details\": {\n        \"compose\": \"/home/LabsKraft/new_work/email_security/docker/docker-compose.yml\",\n        \"docker_sock_mounted\": false,\n        \"allow_docker_sock\": false\n      }\n    },\n    {\n      \"name\": \"sandbox_executor_token_required_when_url_set\",\n      \"passed\": true,\n      \"details\": {\n        \"sandbox_executor_url_configured\": true,\n        \"sandbox_executor_shared_token_set\": true\n      }\n    }\n  ],\n  \"violations\": [],\n  \"passed\": true\n}\n",
+      "stderr": "",
+      "passed": true
+    },
+    "hard_set_builder_dry_run": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python scripts/build_hard_set_pack.py --per-category 5",
+      "started_utc": "2026-04-21T11:16:39.994362+00:00",
+      "finished_utc": "2026-04-21T11:16:40.400620+00:00",
+      "exit_code": 0,
+      "stdout": "Found candidates from 170 source emails\nattachment_heavy_malware: 3 selected\nioc_hit_phishing: 0 selected\nbenign_high_link_marketing: 0 selected\ntransactional_urgent_edge: 1 selected\nDry run complete. Re-run with --apply to copy files into hard_set.\n",
+      "stderr": "",
+      "passed": true
+    },
+    "degraded_mode_slo": {
+      "command": "/home/LabsKraft/new_work/venv/bin/python scripts/run_degraded_mode_slo.py",
+      "started_utc": "2026-04-21T11:16:40.400691+00:00",
+      "finished_utc": "2026-04-21T11:16:42.666088+00:00",
+      "exit_code": 0,
+      "stdout": "SLO report written to: /home/LabsKraft/new_work/email_security/analysis_reports/degraded_slo_20260421_111642\n",
+      "stderr": "",
+      "passed": true
+    }
+  },
+  "overall_passed": true
+}

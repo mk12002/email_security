@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-04-21T11:14:54.180179+00:00",
+  "source_root": "/home/LabsKraft/new_work/datasets/email_content",
+  "ioc_unified_reference": "/home/LabsKraft/new_work/email_security/datasets_processed/threat_intel/unified_ioc_reference.csv",
+  "per_category_target": 5,
+  "categories": {
+    "attachment_heavy_malware": [
+      {
+        "source_path": "/home/LabsKraft/new_work/datasets/email_content/spam/spamassassin/00256.edd9bfb44729edf3c4f177814fd8c9e1.eml",
+        "label": "malicious",
+        "attachment_markers": 3,
+        "url_count": 5,
+        "ioc_hits": 0
+      },
+      {
+        "source_path": "/home/LabsKraft/new_work/datasets/email_content/spam/spamassassin/00330.c5f7346dec1e6fe6ed324d8e78a2b46e.eml",
+        "label": "malicious",
+        "attachment_markers": 3,
+        "url_count": 4,
+        "ioc_hits": 0
+      },
+      {
+        "source_path": "/home/LabsKraft/new_work/datasets/email_content/spam/spamassassin/00260.c75ce8b8d8bfc55723426979d260bf61.eml",
+        "label": "malicious",
+        "attachment_markers": 3,
+        "url_count": 3,
+        "ioc_hits": 0
+      }
+    ],
+    "ioc_hit_phishing": [],
+    "benign_high_link_marketing": [],
+    "transactional_urgent_edge": [
+      {
+        "source_path": "/home/LabsKraft/new_work/datasets/email_content/legitimate/spamassassin_ham/01637.cd9dec755fc9e6d819137b8e0111e031.eml",
+        "label": "benign",
+        "attachment_markers": 0,
+        "url_count": 1,
+        "ioc_hits": 0
+      }
+    ]
+  }
+}

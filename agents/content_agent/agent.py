@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from email_security.agents.content_agent.feature_extractor import extract_features
@@ -18,6 +19,17 @@ PHISHING_PATTERNS = {
     "credential": ["verify account", "password", "login", "confirm identity", "mfa"],
     "financial": ["invoice", "payment", "wire", "bank", "refund"],
 }
+
+SPAM_MARKETING_PATTERNS = [
+    "investment properties",
+    "pay cash",
+    "full commission",
+    "to unsubscribe",
+    "pre-qualified",
+    "project home",
+    "contact me",
+    "best wishes",
+]
 
 
 
@@ -46,6 +58,16 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     if "http" in combined and "click" in combined:
         risk += 0.12
         indicators.append("click_through_language")
+
+    spam_hits = [term for term in SPAM_MARKETING_PATTERNS if term in combined]
+    if spam_hits:
+        indicators.append(f"spam_marketing_signals:{','.join(spam_hits[:4])}")
+        risk += min(0.55, 0.12 * len(spam_hits))
+
+    # Common phone-number pattern in unsolicited marketing emails.
+    if re.search(r"\b\d{3}[\.-]\d{3}[\.-]\d{4}\b", combined):
+        indicators.append("marketing_phone_pattern")
+        risk += 0.15
 
     heuristic_result = {
         "agent_name": "content_agent",

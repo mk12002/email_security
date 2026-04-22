@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime, timezone
 from typing import Any
 
 from email_security.agents.user_behavior_agent.feature_extractor import extract_features
@@ -41,6 +42,7 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     click_probability = 0.2
     click_probability += 0.25 * min(2, urgency_hits)
     click_probability += 0.2 * (1.0 - sender_familiarity)
+    indicators: list[str] = []
 
     # High-risk TLD check
     sender_tld = "." + sender_domain.rsplit(".", 1)[-1] if "." in sender_domain else ""
@@ -51,13 +53,16 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     # Domain-age check via WHOIS (optional — degrades gracefully if library unavailable)
     try:
         import whois  # type: ignore
-        import datetime
         w = whois.whois(sender_domain)
         creation = w.creation_date
         if isinstance(creation, list):
             creation = creation[0]
-        if isinstance(creation, datetime.datetime):
-            age_days = (datetime.datetime.utcnow() - creation).days
+        if isinstance(creation, datetime):
+            created_at = creation
+            # Normalize naive datetimes to UTC to keep subtraction timezone-safe.
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            age_days = (datetime.now(timezone.utc) - created_at).days
             if age_days < 90:
                 click_probability += 0.25
                 indicators.append(f"new_domain_age:{age_days}d")
@@ -69,7 +74,6 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
     elif legitimacy.level == "moderate" and legitimacy.credential_bait_hits == 0:
         click_probability -= 0.08
 
-    indicators = []
     if urgency_hits:
         indicators.append(f"subject_urgency_hits:{urgency_hits}")
     if sender_familiarity < 1.0:

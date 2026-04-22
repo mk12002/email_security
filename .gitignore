@@ -50,6 +50,9 @@ logs/
 # Runtime/generated project artifacts
 dataset_report.json
 datasets_processed/
+analysis_reports/
+email_drop/hard_set/
+email_drop/dataset_samples/
 
 # Local data stores
 data/

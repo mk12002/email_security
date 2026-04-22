@@ -64,6 +64,19 @@ def _http_json(url: str, method: str = "GET", data: bytes | None = None, headers
         return json.loads(resp.read().decode("utf-8"))
 
 
+def _api_reachable() -> tuple[bool, str]:
+    probe_paths = ("/health", "/openapi.json", "/docs")
+    for path in probe_paths:
+        probe_url = f"{BASE_URL}{path}"
+        try:
+            req = request.Request(probe_url, method="GET")
+            with request.urlopen(req, timeout=5):
+                return True, probe_url
+        except Exception:
+            continue
+    return False, ""
+
+
 def _ingest_eml(path: Path) -> dict[str, Any]:
     boundary = "----EmailBoundary" + uuid.uuid4().hex
     with path.open("rb") as handle:
@@ -418,6 +431,12 @@ def _build_markdown(results: list[EmailAuditResult], repetitive: dict[str, Any],
 
 
 def main() -> int:
+    reachable, probe_url = _api_reachable()
+    if not reachable:
+        print(f"API preflight failed. Could not reach service at {BASE_URL} (probes: /health, /openapi.json, /docs)")
+        return 2
+    print(f"API preflight passed via: {probe_url}")
+
     email_files = sorted(EMAIL_DROP_DIR.rglob("*.eml"))
     if not email_files:
         print("No .eml files found under email_drop.")
@@ -485,6 +504,7 @@ def main() -> int:
                     "report": report,
                     "file_path": meta["file_path"],
                     "expected_label": meta["expected_label"],
+                    "expected_label_source": meta["expected_label_source"],
                 }
                 just_completed.append(analysis_id)
             except error.HTTPError as exc:
@@ -494,6 +514,7 @@ def main() -> int:
                         "error": f"HTTPError: {exc}",
                         "file_path": meta["file_path"],
                         "expected_label": meta["expected_label"],
+                        "expected_label_source": meta["expected_label_source"],
                     }
             except Exception as exc:  # pragma: no cover
                 just_completed.append(analysis_id)
@@ -501,6 +522,7 @@ def main() -> int:
                     "error": f"{type(exc).__name__}: {exc}",
                     "file_path": meta["file_path"],
                     "expected_label": meta["expected_label"],
+                    "expected_label_source": meta["expected_label_source"],
                 }
 
         for analysis_id in just_completed:
@@ -676,6 +698,16 @@ def main() -> int:
     print(f"REPORT_MD={md_path}")
     print(f"REPORT_JSON={json_path}")
     print(f"RELIABILITY_HISTORY={RELIABILITY_HISTORY_PATH}")
+    status_counts: dict[str, int] = defaultdict(int)
+    for item in results:
+        status_counts[item.status] += 1
+
+    completed_ok = status_counts.get("ok", 0)
+    failures = status_counts.get("error", 0) + status_counts.get("timeout", 0)
+    if completed_ok == 0 or failures > 0:
+        print(f"Batch audit failed quality criteria: ok={completed_ok}, failures={failures}, status_counts={dict(status_counts)}")
+        return 1
+
     return 0
 
 

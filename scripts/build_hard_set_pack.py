@@ -57,6 +57,8 @@ class Candidate:
     attachment_markers: int
     url_count: int
     ioc_hits: int
+    marketing_hits: int
+    transactional_hits: int
 
 
 def _label_for(path: Path) -> str:
@@ -122,19 +124,18 @@ def _score_candidate(path: Path, ioc_domains: set[str]) -> Candidate | None:
     url_count = len(urls)
     domains = _extract_domains(payload)
     ioc_hits = len(domains & ioc_domains)
+    marketing_hits = sum(1 for token in MARKETING_TOKENS if token in lowered)
+    transactional_hits = sum(1 for token in TRANSACTIONAL_URGENT_TOKENS if token in lowered)
 
     category_hits: list[str] = []
     if label == "malicious" and attachment_markers >= 2:
         category_hits.append("attachment_heavy_malware")
     if label == "malicious" and ioc_hits >= 1:
         category_hits.append("ioc_hit_phishing")
-    if label == "benign" and url_count >= 8 and any(token in lowered for token in MARKETING_TOKENS):
+    if label == "benign" and url_count >= 6 and marketing_hits >= 1:
         category_hits.append("benign_high_link_marketing")
-    if any(token in lowered for token in TRANSACTIONAL_URGENT_TOKENS):
+    if transactional_hits >= 1:
         category_hits.append("transactional_urgent_edge")
-
-    if not category_hits:
-        return None
 
     return Candidate(
         source_path=path,
@@ -143,7 +144,25 @@ def _score_candidate(path: Path, ioc_domains: set[str]) -> Candidate | None:
         attachment_markers=attachment_markers,
         url_count=url_count,
         ioc_hits=ioc_hits,
+        marketing_hits=marketing_hits,
+        transactional_hits=transactional_hits,
     )
+
+
+def _fallback_rank(candidates: list[Candidate], category: str) -> list[Candidate]:
+    if category == "attachment_heavy_malware":
+        pool = [c for c in candidates if c.label == "malicious"]
+        return sorted(pool, key=lambda c: (c.attachment_markers, c.url_count), reverse=True)
+    if category == "ioc_hit_phishing":
+        pool = [c for c in candidates if c.label == "malicious"]
+        return sorted(pool, key=lambda c: (c.ioc_hits, c.url_count, c.attachment_markers), reverse=True)
+    if category == "benign_high_link_marketing":
+        pool = [c for c in candidates if c.label == "benign"]
+        return sorted(pool, key=lambda c: (c.url_count, c.marketing_hits), reverse=True)
+    if category == "transactional_urgent_edge":
+        pool = [c for c in candidates if c.transactional_hits > 0]
+        return sorted(pool, key=lambda c: (c.transactional_hits, c.url_count), reverse=True)
+    return []
 
 
 def _all_eml_files(root: Path) -> list[Path]:
@@ -174,8 +193,18 @@ def main() -> int:
             categories[category].append(candidate)
 
     selected: dict[str, list[Candidate]] = {}
+    all_candidates: list[Candidate] = []
     used: set[Path] = set()
+    # Build a complete candidate map for adaptive fallback.
+    for path in files:
+        candidate = _score_candidate(path, ioc_domains)
+        if candidate:
+            all_candidates.append(candidate)
+
+    unique_candidates = {c.source_path: c for c in all_candidates}
+
     for category, items in categories.items():
+        target = max(1, int(args.per_category))
         ranked = sorted(
             items,
             key=lambda c: (c.ioc_hits, c.attachment_markers, c.url_count),
@@ -187,8 +216,29 @@ def main() -> int:
                 continue
             chosen.append(item)
             used.add(item.source_path)
-            if len(chosen) >= max(1, int(args.per_category)):
+            if len(chosen) >= target:
                 break
+
+        ranked_fallback = _fallback_rank(list(unique_candidates.values()), category)
+
+        # Top up from best unused fallback candidates.
+        if len(chosen) < target:
+            for item in ranked_fallback:
+                if item.source_path in used:
+                    continue
+                chosen.append(item)
+                used.add(item.source_path)
+                if len(chosen) >= target:
+                    break
+
+        # If still under target, allow reuse to meet requested per-category depth.
+        if len(chosen) < target:
+            if ranked_fallback:
+                idx = 0
+                while len(chosen) < target:
+                    chosen.append(ranked_fallback[idx % len(ranked_fallback)])
+                    idx += 1
+
         selected[category] = chosen
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -212,6 +262,8 @@ def main() -> int:
                 "attachment_markers": item.attachment_markers,
                 "url_count": item.url_count,
                 "ioc_hits": item.ioc_hits,
+                "marketing_hits": item.marketing_hits,
+                "transactional_hits": item.transactional_hits,
             }
             for item in items
         ]

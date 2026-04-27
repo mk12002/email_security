@@ -13,43 +13,44 @@ This document contains a comprehensive slide-by-slide writeup for your presentat
 ---
 
 ## Slide 2: The State of Existing Email Security Solutions
-**Title:** The Limits of Current Industry Giants
+**Title:** How Current Industrial Systems Work & Their Limitations
 **Bullets:**
-- **Legacy Industry Giants:** Solutions perfectly adapted for the past decade, but struggling against AI-generated attacks (e.g., *Proofpoint, Barracuda Networks, Mimecast, Cisco Secure Email, Microsoft Defender for Office 365*).
-- **Linear Processing Bottlenecks:** Emails are scanned iteratively (e.g., Header -> Body -> Attachment), creating severe latency and missed contextual correlation.
-- **Black-Box Machine Learning:** Systems provide a generic "Malicious (98%)" score with zero mathematical transparency or interpretability for the SOC.
-- **Signature Reliance:** High dependence on known SHA256 hashes and static regex keywords. Attackers easily bypass this by compiling unique payloads dynamically per target.
-- **Visual Evasion Blindspots:** Advanced attackers embed phishing links inside image invoices (PNG/PDF) to bypass standard text parsers completely.
+- **The Traditional SEG Model:** Current leaders (Proofpoint, Barracuda, Microsoft) operate as Secure Email Gateways using a **Single-Pass Linear Pipeline** (Ingest → Check Signatures → Scan Text → Sandbox).
+- **Linear Processing Bottlenecks:** Because emails are scanned step-by-step, systems cannot correlate context simultaneously, creating blindspots and latency.
+- **Signature & Regex Reliance:** Heavily dependent on known SHA256 hashes and static rules—easily bypassed by zero-day, polymorphic payloads compiled per target.
+- **Black-Box Machine Learning:** When ML is used, it provides a generic score (e.g., "98% Malicious") with zero mathematical transparency or interpretability for the SOC.
+- **Visual Evasion Blindspots:** Legacy text parsers completely miss phishing URLs embedded directly inside image-based invoices (PNG/PDF/JPEG).
 
 **Speaker Notes:**
-> "When we evaluate current market leaders like Proofpoint, Barracuda, Mimecast, and Microsoft Defender, we see solutions built for the threats of yesterday. They primarily operate on linear pipelines and rely heavily on known signatures. When they do use ML, it's a 'black box'—the system flags an email as malicious, but analysts are left guessing exactly which threshold triggered the alert. Furthermore, modern attackers have learned to bypass their text parsers entirely by embedding URLs within images, a blindspot traditional scanners continue to miss."
+> "To understand the value of our architecture, we first need to look at how current industry giants like Proofpoint, Mimecast, and Microsoft Defender work. They operate on a traditional Secure Email Gateway (SEG) model, which relies on a 'Single-Pass Linear Pipeline.' An email comes in, they check known malicious signatures, parse the text, and maybe run it in a sandbox—one step at a time. This linear approach misses contextual correlation between steps. Furthermore, they rely heavily on static signatures—meaning they only catch what they've seen before. When they do use AI, it's a 'black box' providing a score without showing its work, leaving SOC analysts guessing. And crucially, their text-only scanners are completely blind to modern evasion tactics like embedding phishing links directly inside images."
 
 ---
 
 ## Slide 3: Features of Our Agentic System
-**Title:** Core Platform Capabilities
+**Title:** The Proper Features of the System (Agentic Architecture)
 **Bullets:**
-- **Fully Containerized Architecture:** 13-container microservice cluster orchestrated by Docker Compose.
-- **Parallel Message Bus Execution:** RabbitMQ seamlessly decouples ingestion, allowing 7 distinct AI agents to evaluate the email simultaneously.
-- **Multi-Modal Detection:** Combines standard text NLP, gradient-boosted lexical URL analysis, and dynamic Docker-in-Docker sandbox execution.
-- **Deep Inspection Pre-Processing:** Automated OCR (Optical Character Recognition) transparently intercepts attachments to capture text/links hidden in pixels.
-- **Real-Time SOC Dashboard:** Complete WebSocket-driven frontend mapping the threat telemetry live.
+- **Seven Specialized AI Agents:** Dedicated models for URLs (XGBoost/RF), Content NLP (TinyBERT), Headers, Attachments, Threat Intel, Sandbox, and User Behavior.
+- **Fully Containerized Microservices:** 13-container cluster orchestrated by Docker Compose (`api_service`, `parser_worker`, `runner_worker`, `postgres`, `redis`, `rabbitmq`).
+- **Deep Visual Pre-Processing (OCR):** Automatically cracks open image-based attachments (PNG, PDF) to extract hidden red flags before AI analysis begins.
+- **Asynchronous Message Bus:** RabbitMQ seamlessly decouples ingestion, allowing all 7 AI agents to evaluate the email simultaneously without blocking each other.
+- **Real-Time SOC Dashboard:** Complete WebSocket-driven frontend mapping the live orchestration, threat telemetry, and scores as they happen.
 
 **Speaker Notes:**
-> "My system mitigates these flaws instantly by adopting a cloud-native microservice approach. By routing payloads through RabbitMQ, seven distinct intelligence agents score the email in parallel. Before the agents even see the message, our ingestion engine actively runs deep OCR on attachments, cracking open visual-evasion techniques. Finally, the SOC observes this entire pipeline execute in real-time under a WebSocket dashboard."
+> "To combat these legacy flaws, I built an Agentic Email Security System from the ground up as a cloud-native microservice architecture. Here are its proper features: First, it houses seven specialized AI and ML agents—each highly tuned for a specific vector like URL lexical analysis, Semantic NLP, or Dynamic Sandboxing. Second, everything runs inside a robust 13-container Docker ecosystem. Third, it features deep visual pre-processing using OCR to stop image-based phishing dead in its tracks. All of this is driven by an asynchronous RabbitMQ message bus, meaning all seven agents analyze the email at the exact same time, streaming the results live to the SOC via a WebSocket-powered dashboard."
 
 ---
 
 ## Slide 4: Differentiators (Why This System is Unique)
-**Title:** The Agentic Advantage
+**Title:** How My System is Unique and Better (The Agentic Advantage)
 **Bullets:**
-- 🔀 **Counterfactual Explainability Engine:** Calculates the strict mathematical boundary of the verdict. (e.g., *"This email was blocked. However, if the URL Agent score dropped from 0.8 to 0.3, the verdict would flip to SAFE."*)
-- 📖 **Chronological Threat Storylines:** Translates disconnected JSON indicators into an ATT&CK-style narrative (Delivery → Lure → Weaponization → Containment).
-- 🧠 **Determinate Orchestration:** Uses LangGraph as a finite-state machine to strictly govern how AI models interact, preventing LLM hallucination.
-- ⚡ **Zero-Trust URL Extraction:** Discovered OCR URLs are injected *back* into the extraction pipeline, subjecting them to SLM and Threat Intel enrichment just like standard text bounds.
+- 🔀 **Parallel Execution vs. Linear Scanning:** Replaces the slow, linear SEG pipeline with asynchronous, multi-agent orchestration, drastically improving speed and correlation capabilities.
+- 🧠 **Determinate Orchestration (LangGraph):** Uses a strict finite-state machine to govern agent interactions and calculate risk multipliers (e.g., *Suspicious URL + Urgent NLP = Critical*).
+- 🔍 **Counterfactual Explainability Engine:** Eliminates the "Black Box." Calculates the exact mathematical boundary of the verdict (e.g., *"If the URL Agent score dropped by 0.3, this would be Safe."*)
+- 📖 **Chronological Threat Storylines:** Translates separated JSON indicators into a human-readable, ATT&CK-style narrative (Delivery → Lure → Weaponization) via Azure OpenAI.
+- ⚡ **Zero-Trust URL Extraction:** URLs discovered via OCR are immediately injected *back* into the extraction pipeline, subjected to the same rigorous ML checks as standard text.
 
 **Speaker Notes:**
-> "What makes this system truly unique compared to commercial offerings is our explainability. Instead of a black box, our Counterfactual Engine mathematically proves to the SOC exactly what variable caused the block. Furthermore, the Threat Storyline engine takes disparate red flags—like a spoofed IP and an unknown URL—and builds a chronological narrative, isolating the explicit Delivery phase from the Lure & Weaponization phases automatically."
+> "So, how is this system fundamentally unique or better than the market leaders? First, it abandons linear scanning for Parallel Execution—our agents collaborate asynchronously. Second, the brain of our system, LangGraph Orchestration, acts as a definitive state machine, correlating weak signals from multiple agents into high-confidence detections. Third, we completely eliminate the ML Black Box problem with our Counterfactual Explainability Engine. Instead of just blocking an email, the system mathematically proves to the SOC exactly *why* it was blocked. Finally, it uses an LLM Reasoner to translate raw data into a chronological Threat Storyline, instantly doing the triage work a Tier 1 SOC analyst would normally spend hours on."
 
 ---
 

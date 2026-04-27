@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import sqlite3
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -393,6 +394,11 @@ def _collect_iocs_from_feeds() -> list[tuple[str, str, str]]:
 
 _STORE = IOCStore(settings.ioc_db_path)
 
+# Background refresh state — refresh is always run in a daemon thread so
+# analyze() is never blocked by the slow feed-scan + bulk-upsert.
+_refresh_lock = threading.Lock()
+_refresh_in_progress = False
+
 
 def _seed_store_if_empty() -> None:
     """Seed the IOC store with curated static entries if it is empty."""
@@ -436,7 +442,52 @@ def _evaluate_ioc_health(last_refresh_age_seconds: int | None, total_iocs: int) 
     return level, violations
 
 
+def _do_background_refresh() -> None:
+    """Blocking refresh — always called from a background daemon thread."""
+    global _refresh_in_progress
+    try:
+        now = int(time.time())
+        harvested = _collect_iocs_from_feeds()
+        upserted = _STORE.upsert_many(harvested)
+        _STORE._set_last_refresh_ts(now)
+        total = _STORE.count()
+        logger.info(
+            "IOC store refreshed (background)",
+            harvested=len(harvested),
+            upserted=upserted,
+            total=total,
+            db_path=str(_STORE.db_path),
+        )
+    except Exception as exc:
+        logger.warning("Background IOC refresh failed", error=str(exc))
+    finally:
+        with _refresh_lock:
+            _refresh_in_progress = False
+
+
+def _schedule_background_refresh_if_needed() -> None:
+    """Check if a refresh is due; if so fire it off in a daemon thread.
+
+    This function returns immediately — analyze() is never blocked.
+    """
+    global _refresh_in_progress
+    now = int(time.time())
+    last_refresh = _STORE.get_last_refresh_ts()
+    if last_refresh and (now - last_refresh) < max(30, settings.ioc_refresh_seconds):
+        return  # still fresh
+
+    with _refresh_lock:
+        if _refresh_in_progress:
+            return  # already running
+        _refresh_in_progress = True
+
+    t = threading.Thread(target=_do_background_refresh, daemon=True, name="ioc-refresh")
+    t.start()
+    logger.info("IOC refresh scheduled in background thread")
+
+
 def _refresh_ioc_store_if_needed() -> int:
+    """Legacy synchronous call used by the API-layer periodic task only."""
     now = int(time.time())
     last_refresh = _STORE.get_last_refresh_ts()
     if last_refresh and (now - last_refresh) < max(30, settings.ioc_refresh_seconds):
@@ -521,6 +572,16 @@ def _request_timeout() -> float:
     return max(1.0, float(settings.external_lookup_timeout_seconds))
 
 
+def _provider_time_budget_seconds() -> float:
+    """Cap total wall time spent per external provider call chain.
+
+    This keeps threat-intel analysis responsive under slow external APIs and
+    prevents a single provider from stalling agent completion.
+    """
+    per_request = _request_timeout()
+    return max(per_request, min(12.0, per_request * 2.0))
+
+
 def _limit_indicators(values: list[str]) -> list[str]:
     max_items = max(1, int(settings.external_lookup_max_indicators))
     deduped: list[str] = []
@@ -556,48 +617,53 @@ def _otx_score(candidates: list[str]) -> tuple[float, list[str]]:
     scores: list[float] = []
     indicators: list[str] = []
 
-    for indicator in _limit_indicators(candidates):
-        indicator_type = _otx_indicator_type(indicator)
-        cache_key = f"{indicator_type}:{indicator}"
-        cached = _STORE.get_external_cache(
-            provider="otx",
-            indicator=cache_key,
-            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
-        )
-        if cached is not None:
-            cached_score, cached_indicators = cached
-            if cached_score > 0.0:
-                scores.append(cached_score)
-            indicators.extend(cached_indicators)
-            continue
+    started_at = time.monotonic()
+    with httpx.Client(timeout=_request_timeout()) as client:
+        for indicator in _limit_indicators(candidates):
+            if (time.monotonic() - started_at) >= _provider_time_budget_seconds():
+                indicators.append("otx_time_budget_exceeded")
+                break
 
-        endpoint = f"{base_url}/api/v1/indicators/{indicator_type}/{quote(indicator, safe='')}/general"
-        try:
-            with httpx.Client(timeout=_request_timeout()) as client:
+            indicator_type = _otx_indicator_type(indicator)
+            cache_key = f"{indicator_type}:{indicator}"
+            cached = _STORE.get_external_cache(
+                provider="otx",
+                indicator=cache_key,
+                max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+            )
+            if cached is not None:
+                cached_score, cached_indicators = cached
+                if cached_score > 0.0:
+                    scores.append(cached_score)
+                indicators.extend(cached_indicators)
+                continue
+
+            endpoint = f"{base_url}/api/v1/indicators/{indicator_type}/{quote(indicator, safe='')}/general"
+            try:
                 response = client.get(endpoint, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
-            pulse_count = int((payload.get("pulse_info", {}) or {}).get("count", 0) or 0)
-            provider_score = 0.0
-            provider_indicators: list[str] = []
-            if pulse_count > 0:
-                provider_score = min(1.0, 0.3 + (0.1 * pulse_count))
-                provider_indicators.append(f"otx_hit:{indicator_type.lower()}:{indicator}")
-            _STORE.set_external_cache("otx", cache_key, provider_score, provider_indicators)
-            if provider_score > 0.0:
-                scores.append(provider_score)
-            indicators.extend(provider_indicators)
-        except Exception:
-            fallback = _STORE.get_external_cache("otx", cache_key, None)
-            if fallback is not None:
-                fb_score, fb_indicators = fallback
-                if fb_score > 0.0:
-                    scores.append(fb_score)
-                indicators.extend(fb_indicators)
-                indicators.append("otx_cache_fallback")
-                continue
-            indicators.append("otx_unavailable")
-            break
+                pulse_count = int((payload.get("pulse_info", {}) or {}).get("count", 0) or 0)
+                provider_score = 0.0
+                provider_indicators: list[str] = []
+                if pulse_count > 0:
+                    provider_score = min(1.0, 0.3 + (0.1 * pulse_count))
+                    provider_indicators.append(f"otx_hit:{indicator_type.lower()}:{indicator}")
+                _STORE.set_external_cache("otx", cache_key, provider_score, provider_indicators)
+                if provider_score > 0.0:
+                    scores.append(provider_score)
+                indicators.extend(provider_indicators)
+            except Exception:
+                fallback = _STORE.get_external_cache("otx", cache_key, None)
+                if fallback is not None:
+                    fb_score, fb_indicators = fallback
+                    if fb_score > 0.0:
+                        scores.append(fb_score)
+                    indicators.extend(fb_indicators)
+                    indicators.append("otx_cache_fallback")
+                    continue
+                indicators.append("otx_unavailable")
+                break
 
     if not scores:
         return 0.0, indicators
@@ -618,45 +684,50 @@ def _abuseipdb_score(ips: list[str]) -> tuple[float, list[str]]:
     scores: list[float] = []
     indicators: list[str] = []
 
-    for ip in _limit_indicators(ips):
-        cached = _STORE.get_external_cache(
-            provider="abuseipdb",
-            indicator=ip,
-            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
-        )
-        if cached is not None:
-            cached_score, cached_indicators = cached
-            if cached_score > 0.0:
-                scores.append(cached_score)
-            indicators.extend(cached_indicators)
-            continue
+    started_at = time.monotonic()
+    with httpx.Client(timeout=_request_timeout()) as client:
+        for ip in _limit_indicators(ips):
+            if (time.monotonic() - started_at) >= _provider_time_budget_seconds():
+                indicators.append("abuseipdb_time_budget_exceeded")
+                break
 
-        params = {"ipAddress": ip, "maxAgeInDays": "90"}
-        try:
-            with httpx.Client(timeout=_request_timeout()) as client:
+            cached = _STORE.get_external_cache(
+                provider="abuseipdb",
+                indicator=ip,
+                max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+            )
+            if cached is not None:
+                cached_score, cached_indicators = cached
+                if cached_score > 0.0:
+                    scores.append(cached_score)
+                indicators.extend(cached_indicators)
+                continue
+
+            params = {"ipAddress": ip, "maxAgeInDays": "90"}
+            try:
                 response = client.get(api_url, headers=headers, params=params)
                 response.raise_for_status()
                 payload = response.json().get("data", {}) or {}
-            abuse_score = float(payload.get("abuseConfidenceScore", 0.0) or 0.0)
-            normalized = _clamp(abuse_score / 100.0)
-            provider_indicators: list[str] = []
-            if normalized > 0.0:
-                scores.append(normalized)
-            if abuse_score >= 25.0:
-                provider_indicators.append(f"abuseipdb_high_confidence:{ip}:{int(abuse_score)}")
-            _STORE.set_external_cache("abuseipdb", ip, normalized, provider_indicators)
-            indicators.extend(provider_indicators)
-        except Exception:
-            fallback = _STORE.get_external_cache("abuseipdb", ip, None)
-            if fallback is not None:
-                fb_score, fb_indicators = fallback
-                if fb_score > 0.0:
-                    scores.append(fb_score)
-                indicators.extend(fb_indicators)
-                indicators.append("abuseipdb_cache_fallback")
-                continue
-            indicators.append("abuseipdb_unavailable")
-            break
+                abuse_score = float(payload.get("abuseConfidenceScore", 0.0) or 0.0)
+                normalized = _clamp(abuse_score / 100.0)
+                provider_indicators: list[str] = []
+                if normalized > 0.0:
+                    scores.append(normalized)
+                if abuse_score >= 25.0:
+                    provider_indicators.append(f"abuseipdb_high_confidence:{ip}:{int(abuse_score)}")
+                _STORE.set_external_cache("abuseipdb", ip, normalized, provider_indicators)
+                indicators.extend(provider_indicators)
+            except Exception:
+                fallback = _STORE.get_external_cache("abuseipdb", ip, None)
+                if fallback is not None:
+                    fb_score, fb_indicators = fallback
+                    if fb_score > 0.0:
+                        scores.append(fb_score)
+                    indicators.extend(fb_indicators)
+                    indicators.append("abuseipdb_cache_fallback")
+                    continue
+                indicators.append("abuseipdb_unavailable")
+                break
 
     if not scores:
         return 0.0, indicators
@@ -674,38 +745,56 @@ def _malwarebazaar_score(hashes: list[str]) -> tuple[float, list[str]]:
     scores: list[float] = []
     indicators: list[str] = []
 
-    for file_hash in _limit_indicators(hashes):
-        cached = _STORE.get_external_cache(
-            provider="malwarebazaar",
-            indicator=file_hash,
-            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
-        )
-        if cached is not None:
-            cached_score, cached_indicators = cached
-            if cached_score > 0.0:
-                scores.append(cached_score)
-            indicators.extend(cached_indicators)
-            continue
+    started_at = time.monotonic()
+    with httpx.Client(timeout=_request_timeout()) as client:
+        for file_hash in _limit_indicators(hashes):
+            if (time.monotonic() - started_at) >= _provider_time_budget_seconds():
+                indicators.append("malwarebazaar_time_budget_exceeded")
+                break
 
-        body = {"query": "get_info", "hash": file_hash}
-        try:
-            with httpx.Client(timeout=_request_timeout()) as client:
+            cached = _STORE.get_external_cache(
+                provider="malwarebazaar",
+                indicator=file_hash,
+                max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+            )
+            if cached is not None:
+                cached_score, cached_indicators = cached
+                if cached_score > 0.0:
+                    scores.append(cached_score)
+                indicators.extend(cached_indicators)
+                continue
+
+            body = {"query": "get_info", "hash": file_hash}
+            try:
                 response = client.post(api_url, data=body)
                 response.raise_for_status()
                 payload = response.json()
 
-            status = str(payload.get("query_status", "")).lower()
-            provider_score = 0.0
-            provider_indicators: list[str] = []
-            if status == "ok" and payload.get("data"):
-                provider_score = 0.95
-                provider_indicators.append(f"malwarebazaar_hit:{file_hash[:16]}")
-            _STORE.set_external_cache("malwarebazaar", file_hash, provider_score, provider_indicators)
-            if provider_score > 0.0:
-                scores.append(provider_score)
-            indicators.extend(provider_indicators)
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code in {401, 403}:
+                status = str(payload.get("query_status", "")).lower()
+                provider_score = 0.0
+                provider_indicators: list[str] = []
+                if status == "ok" and payload.get("data"):
+                    provider_score = 0.95
+                    provider_indicators.append(f"malwarebazaar_hit:{file_hash[:16]}")
+                _STORE.set_external_cache("malwarebazaar", file_hash, provider_score, provider_indicators)
+                if provider_score > 0.0:
+                    scores.append(provider_score)
+                indicators.extend(provider_indicators)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in {401, 403}:
+                    fallback = _STORE.get_external_cache("malwarebazaar", file_hash, None)
+                    if fallback is not None:
+                        fb_score, fb_indicators = fallback
+                        if fb_score > 0.0:
+                            scores.append(fb_score)
+                        indicators.extend(fb_indicators)
+                        indicators.append("malwarebazaar_cache_fallback")
+                        continue
+                    indicators.append("malwarebazaar_unauthorized")
+                else:
+                    indicators.append("malwarebazaar_unavailable")
+                break
+            except Exception:
                 fallback = _STORE.get_external_cache("malwarebazaar", file_hash, None)
                 if fallback is not None:
                     fb_score, fb_indicators = fallback
@@ -714,21 +803,8 @@ def _malwarebazaar_score(hashes: list[str]) -> tuple[float, list[str]]:
                     indicators.extend(fb_indicators)
                     indicators.append("malwarebazaar_cache_fallback")
                     continue
-                indicators.append("malwarebazaar_unauthorized")
-            else:
                 indicators.append("malwarebazaar_unavailable")
-            break
-        except Exception:
-            fallback = _STORE.get_external_cache("malwarebazaar", file_hash, None)
-            if fallback is not None:
-                fb_score, fb_indicators = fallback
-                if fb_score > 0.0:
-                    scores.append(fb_score)
-                indicators.extend(fb_indicators)
-                indicators.append("malwarebazaar_cache_fallback")
-                continue
-            indicators.append("malwarebazaar_unavailable")
-            break
+                break
 
     if not scores:
         return 0.0, indicators
@@ -745,48 +821,53 @@ def _virustotal_hash_score(hashes: list[str]) -> tuple[float, list[str]]:
     scores: list[float] = []
     indicators: list[str] = []
 
-    for file_hash in _limit_indicators(hashes):
-        cached = _STORE.get_external_cache(
-            provider="virustotal_hash",
-            indicator=file_hash,
-            max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
-        )
-        if cached is not None:
-            cached_score, cached_indicators = cached
-            if cached_score > 0.0:
-                scores.append(cached_score)
-            indicators.extend(cached_indicators)
-            continue
+    started_at = time.monotonic()
+    with httpx.Client(timeout=_request_timeout()) as client:
+        for file_hash in _limit_indicators(hashes):
+            if (time.monotonic() - started_at) >= _provider_time_budget_seconds():
+                indicators.append("virustotal_hash_time_budget_exceeded")
+                break
 
-        endpoint = f"https://www.virustotal.com/api/v3/files/{quote(file_hash, safe='')}"
-        try:
-            with httpx.Client(timeout=_request_timeout()) as client:
+            cached = _STORE.get_external_cache(
+                provider="virustotal_hash",
+                indicator=file_hash,
+                max_age_seconds=max(60, int(settings.external_lookup_cache_ttl_seconds)),
+            )
+            if cached is not None:
+                cached_score, cached_indicators = cached
+                if cached_score > 0.0:
+                    scores.append(cached_score)
+                indicators.extend(cached_indicators)
+                continue
+
+            endpoint = f"https://www.virustotal.com/api/v3/files/{quote(file_hash, safe='')}"
+            try:
                 response = client.get(endpoint, headers=headers)
                 response.raise_for_status()
                 stats = response.json().get("data", {}).get("attributes", {}).get("last_analysis_stats", {})
-            malicious = float(stats.get("malicious", 0.0) or 0.0)
-            suspicious = float(stats.get("suspicious", 0.0) or 0.0)
-            total = max(1.0, sum(float(v) for v in stats.values()))
-            score = min(1.0, (malicious + (0.5 * suspicious)) / total)
-            provider_indicators: list[str] = []
-            if score > 0.0:
-                scores.append(score)
-                provider_indicators.append(
-                    f"virustotal_hash_hit:{file_hash[:16]}:{int(malicious)}:{int(suspicious)}"
-                )
-            _STORE.set_external_cache("virustotal_hash", file_hash, score, provider_indicators)
-            indicators.extend(provider_indicators)
-        except Exception:
-            fallback = _STORE.get_external_cache("virustotal_hash", file_hash, None)
-            if fallback is not None:
-                fb_score, fb_indicators = fallback
-                if fb_score > 0.0:
-                    scores.append(fb_score)
-                indicators.extend(fb_indicators)
-                indicators.append("virustotal_hash_cache_fallback")
-                continue
-            indicators.append("virustotal_hash_unavailable")
-            break
+                malicious = float(stats.get("malicious", 0.0) or 0.0)
+                suspicious = float(stats.get("suspicious", 0.0) or 0.0)
+                total = max(1.0, sum(float(v) for v in stats.values()))
+                score = min(1.0, (malicious + (0.5 * suspicious)) / total)
+                provider_indicators: list[str] = []
+                if score > 0.0:
+                    scores.append(score)
+                    provider_indicators.append(
+                        f"virustotal_hash_hit:{file_hash[:16]}:{int(malicious)}:{int(suspicious)}"
+                    )
+                _STORE.set_external_cache("virustotal_hash", file_hash, score, provider_indicators)
+                indicators.extend(provider_indicators)
+            except Exception:
+                fallback = _STORE.get_external_cache("virustotal_hash", file_hash, None)
+                if fallback is not None:
+                    fb_score, fb_indicators = fallback
+                    if fb_score > 0.0:
+                        scores.append(fb_score)
+                    indicators.extend(fb_indicators)
+                    indicators.append("virustotal_hash_cache_fallback")
+                    continue
+                indicators.append("virustotal_hash_unavailable")
+                break
 
     if not scores:
         return 0.0, indicators
@@ -827,10 +908,12 @@ def _external_enrichment_score(iocs: dict[str, list[str]]) -> tuple[float, list[
 
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting analysis", agent="threat_intel_agent")
-    
-    # Ensure offline DB is fresh and loaded
-    ioc_count = _refresh_ioc_store_if_needed()
-    
+
+    # Schedule an IOC refresh in a daemon background thread if the store is stale.
+    # This never blocks analyze() — we always query the live (or slightly stale) store.
+    _schedule_background_refresh_if_needed()
+    ioc_count = _STORE.count()
+
     # Aggregate candidates
     iocs = data.get("iocs", {}) or {}
     candidates = []

@@ -186,14 +186,7 @@ async def lifespan(app: FastAPI):
         )
     
     # Warm up large ML models to prevent cold-start latency for the first API request
-    logger.info("Pre-warming ML models...")
-    from email_security.agents.content_agent.model_loader import load_model as load_content_model
-    try:
-        load_content_model()
-        logger.info("Content ML model warmed up successfully.")
-    except Exception as e:
-        logger.warning(f"Failed to pre-warm content model: {e}")
-
+    logger.info("Skipping ML model pre-warming for faster startup...")
     yield
     # --- Shutdown ---
     stop_event.set()

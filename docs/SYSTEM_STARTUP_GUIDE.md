@@ -9,11 +9,7 @@
 1. [Prerequisites](#prerequisites)
 2. [Architecture Overview](#architecture-overview)
 3. [Step 1 — Environment Configuration](#step-1--environment-configuration)
-4. [Step 2 — Start Infrastructure (Docker)](#step-2--start-infrastructure-docker)
-5. [Step 3 — Start the API Server](#step-3--start-the-api-server)
-6. [Step 4 — Start Agent Workers](#step-4--start-agent-workers)
-7. [Step 5 — Start the Orchestrator](#step-5--start-the-orchestrator)
-8. [Step 6 — (Optional) Start the Parser Worker](#step-6--optional-start-the-parser-worker)
+4. [Step 2 — Start the Complete System](#step-2--start-the-complete-system)
 9. [Accessing the Frontend](#accessing-the-frontend)
 10. [Testing with .eml Files](#testing-with-eml-files)
 11. [Full Docker Deployment (Alternative)](#full-docker-deployment-alternative)
@@ -104,163 +100,29 @@ ATTACHMENT_VOLUME_DIR=./attachments
 
 ---
 
-## Step 2 — Start Infrastructure (Docker)
+## Step 2 — Start the Complete System
 
-Start **only** the infrastructure containers (PostgreSQL, Redis, RabbitMQ):
-
-```bash
-cd /home/LabsKraft/new_work/email_security/docker
-
-# Start infrastructure services only
-docker compose up -d database redis rabbitmq
-```
-
-**Verify all 3 are healthy:**
-
-```bash
-docker ps --format "table {{.Names}}\t{{.Status}}"
-```
-
-Expected output:
-
-```
-NAMES                     STATUS
-email-security-db         Up X minutes (healthy)
-email-security-rabbitmq   Up X minutes (healthy)
-email-security-redis      Up X minutes (healthy)
-```
-
-Wait until all show `(healthy)` before proceeding (can take 30–60 seconds on first boot).
-
-### Quick Health Checks
-
-```bash
-# PostgreSQL
-docker exec email-security-db pg_isready -U postgres
-
-# Redis
-docker exec email-security-redis redis-cli ping
-
-# RabbitMQ (management UI available at http://localhost:15672, guest/guest)
-docker exec email-security-rabbitmq rabbitmq-diagnostics -q ping
-```
-
----
-
-## Step 3 — Start the API Server
-
-Open **Terminal 1**:
+The system comes with an optimized startup script that starts the infrastructure, API server, ML models, agents, and orchestrator in a stable, sequential manner. This script automatically handles waiting for services to initialize and loading ML models sequentially to prevent crashes or Out-Of-Memory (OOM) errors.
 
 ```bash
 cd /home/LabsKraft/new_work
-source venv/bin/activate
-export PYTHONPATH=/home/LabsKraft/new_work
-
-uvicorn email_security.api.main:app --host 0.0.0.0 --port 8000
+./start_system.sh
 ```
 
-**What happens during startup:**
+**What the script does automatically:**
+1. **Starts Infrastructure:** Boots Docker containers for PostgreSQL, Redis, and RabbitMQ.
+2. **Waits for Readiness:** Continuously pings RabbitMQ until it is ready to accept connections.
+3. **Starts API & Warms up ML:** Boots the Uvicorn-based API Server. It pauses execution until the API server reports healthy (which includes warming up the large Content Phishing detection transformer).
+4. **Starts Core Workers:** Launces Orchestrator, Sandbox Executor, and Parser Worker in the background.
+5. **Starts Agents Sequentially:** Loops through the 7 agents and launches them with a pause in between, ensuring that concurrent ML initialization and DB queries do not cause the system to freeze or crash.
 
-1. Logging system initializes
-2. RabbitMQ connection test (declares exchanges/queues)
-3. Runtime bootstrap (IOC store refresh, results queue declaration)
-4. **ML model warm-up** — loads the content phishing detection transformer model (~60–120 seconds on first run)
-5. Threat-intel auto-refresh loop starts
+All microservices write logs to `/tmp/emailsec_logs/`.
 
-**Wait for this line:**
-
-```
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-```
-
-**Verify:**
-
+**Verify it is running:**
 ```bash
-curl http://localhost:8000/health
-# {"status":"healthy","version":"0.1.0","environment":"development"}
+tail -f /tmp/emailsec_logs/api.log
+# Look for: "Application startup complete."
 ```
-
----
-
-## Step 4 — Start Agent Workers
-
-Open **Terminal 2**. Each of the 7 agents runs as a separate background process:
-
-```bash
-cd /home/LabsKraft/new_work
-source venv/bin/activate
-export PYTHONPATH=/home/LabsKraft/new_work
-
-# Start all 7 agents as background processes
-for agent in header_agent content_agent url_agent attachment_agent sandbox_agent threat_intel_agent user_behavior_agent; do
-    AGENT_NAME=$agent nohup python -m email_security.agents.service_runner \
-        > /tmp/${agent}.log 2>&1 &
-    echo "Started $agent (PID=$!)"
-done
-```
-
-**Verify all 7 are running:**
-
-```bash
-ps aux | grep service_runner | grep -v grep | wc -l
-# Should output: 7
-```
-
-**Check individual agent logs:**
-
-```bash
-tail -20 /tmp/header_agent.log
-tail -20 /tmp/content_agent.log
-# etc.
-```
-
-> **Note:** Each agent connects to RabbitMQ, declares its own queue (`header_agent.queue`, etc.), and begins consuming messages.
-
----
-
-## Step 5 — Start the Orchestrator
-
-Open **Terminal 3**:
-
-```bash
-cd /home/LabsKraft/new_work
-source venv/bin/activate
-export PYTHONPATH=/home/LabsKraft/new_work
-
-python -m email_security.orchestrator.runner
-```
-
-**Expected output:**
-
-```
-Logging system initialized
-RabbitMQ connected
-Consuming queue
-```
-
-The orchestrator:
-- Creates the `threat_reports` table in PostgreSQL (if it doesn't exist)
-- Declares and consumes from `email.results.queue`
-- Waits for all 7 agent results per `analysis_id`, then runs the LangGraph pipeline
-- Saves the final report to PostgreSQL
-
----
-
-## Step 6 — (Optional) Start the Parser Worker
-
-If you want the system to **automatically parse .eml files dropped** into the `email_drop/` directory:
-
-Open **Terminal 4**:
-
-```bash
-cd /home/LabsKraft/new_work
-source venv/bin/activate
-export PYTHONPATH=/home/LabsKraft/new_work
-
-python -m email_security.services.parser_worker
-```
-
-This polls `./email_drop/` every 2 seconds, parses any new `.eml` files, and publishes `NewEmailEvent` to RabbitMQ — triggering the full pipeline automatically.
 
 ---
 
@@ -456,31 +318,18 @@ docker compose down -v     # stop containers AND delete volumes
 
 ---
 
-## Quick Start — TL;DR
+## Quick Start / Summary
 
+To start the system locally:
 ```bash
-# Terminal 1 — Infrastructure
-cd /home/LabsKraft/new_work/email_security/docker
-docker compose up -d database redis rabbitmq
-
-# Terminal 2 — API Server
 cd /home/LabsKraft/new_work
-source venv/bin/activate && export PYTHONPATH=$PWD
-uvicorn email_security.api.main:app --host 0.0.0.0 --port 8000
-
-# Terminal 3 — All 7 Agents
-cd /home/LabsKraft/new_work
-source venv/bin/activate && export PYTHONPATH=$PWD
-for a in header_agent content_agent url_agent attachment_agent \
-         sandbox_agent threat_intel_agent user_behavior_agent; do
-    AGENT_NAME=$a nohup python -m email_security.agents.service_runner \
-        > /tmp/${a}.log 2>&1 &
-done
-
-# Terminal 4 — Orchestrator
-cd /home/LabsKraft/new_work
-source venv/bin/activate && export PYTHONPATH=$PWD
-python -m email_security.orchestrator.runner
-
-# Open browser → http://localhost:8000/ui
+./start_system.sh
 ```
+
+**To Stop the System:**
+```bash
+./stop_system.sh
+```
+
+**Open Browser:**
+Once started, navigate to http://localhost:8000/ui

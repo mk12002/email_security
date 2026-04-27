@@ -5,6 +5,7 @@ Shared base class for all asynchronous email analysis agents.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import time
 from typing import Any
 
 from email_security.configs.settings import settings
@@ -38,8 +39,18 @@ class BaseAgent(ABC):
         )
 
     def run(self) -> None:
-        self.messaging.connect()
-        self.messaging.declare_new_email_fanout(self.queue_name)
-        self.messaging.declare_results_queue(settings.results_queue)
-        self.logger.info("Agent worker started", queue=self.queue_name)
-        self.messaging.consume(self.queue_name, self._handle_message)
+        while True:
+            try:
+                self.messaging.connect()
+                self.messaging.declare_new_email_fanout(self.queue_name)
+                self.messaging.declare_results_queue(settings.results_queue)
+                self.logger.info("Agent worker started", queue=self.queue_name)
+                self.messaging.consume(self.queue_name, self._handle_message)
+            except Exception as exc:
+                self.logger.exception("Agent consumer loop failed; reconnecting", error=str(exc))
+                try:
+                    self.messaging.close()
+                except Exception:
+                    pass
+                self.messaging = RabbitMQClient()
+                time.sleep(2)

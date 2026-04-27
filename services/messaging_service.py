@@ -119,7 +119,17 @@ class RabbitMQClient:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
             except Exception as exc:
                 logger.exception("Message processing failed", error=str(exc), queue=queue_name)
-                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                # If the channel dropped during long processing, nack can fail too.
+                # Guarding this keeps worker loops from crashing due to ack-state races.
+                try:
+                    if ch.is_open:
+                        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+                except Exception as nack_exc:
+                    logger.warning(
+                        "Failed to nack message on closed channel",
+                        queue=queue_name,
+                        error=str(nack_exc),
+                    )
 
         self.channel.basic_consume(queue=queue_name, on_message_callback=_wrapped)
         logger.info("Consuming queue", queue=queue_name)

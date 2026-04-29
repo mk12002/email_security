@@ -181,9 +181,11 @@ async def lifespan(app: FastAPI):
     app.state._threat_intel_refresh_stop = stop_event
     app.state._threat_intel_refresh_task = None
     if settings.threat_intel_auto_refresh_enabled:
-        app.state._threat_intel_refresh_task = asyncio.create_task(
-            _threat_intel_refresh_loop(stop_event)
-        )
+        # NOTE: Disabled — the threat_intel agent worker handles its own
+        # background refresh.  Running a competing refresh from the API
+        # server holds an exclusive SQLite write-lock on ioc_store.db for
+        # minutes, blocking the agent from initializing during analyze().
+        logger.info("Threat-intel auto-refresh delegated to agent worker")
     
     # Warm up large ML models to prevent cold-start latency for the first API request
     logger.info("Skipping ML model pre-warming for faster startup...")

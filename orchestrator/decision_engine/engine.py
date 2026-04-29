@@ -82,9 +82,12 @@ def make_decision(agent_results: list[dict[str, Any]]) -> dict[str, Any]:
     elif normalized_score >= 0.4:
         verdict = "suspicious"
         actions = ["manual_review", "soc_alert"]
-    else:
+    elif normalized_score >= 0.1:
         verdict = "likely_safe"
         actions = ["deliver_with_banner"]
+    else:
+        verdict = "safe"
+        actions = ["deliver"]
 
     if (
         verdict == "suspicious"

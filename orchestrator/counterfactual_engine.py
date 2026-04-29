@@ -27,6 +27,8 @@ def threshold_for_verdict(verdict: str) -> float | None:
         return 0.6
     if value == "suspicious":
         return 0.4
+    if value == "likely_safe":
+        return 0.1
     return None
 
 

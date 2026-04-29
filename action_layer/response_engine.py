@@ -139,6 +139,12 @@ class ResponseEngine:
         if "reset_credentials" in actions:
             print("   -> [ACTION TAKEN] [CREDS] Forced Password Reset for Target User")
 
+        if "deliver_with_banner" in actions:
+            print("   -> [ACTION TAKEN] [DELIVER] Email Delivered with Security Warning Banner")
+
+        if "deliver" in actions:
+            print("   -> [ACTION TAKEN] [DELIVER] Email Delivered Normally — No Threats Detected")
+
         # Generate and print the AI summary
         ai_summary = self._generate_ai_response_summary(decision)
         print("-" * 60)

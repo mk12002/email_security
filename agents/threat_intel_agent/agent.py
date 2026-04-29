@@ -46,14 +46,17 @@ class IOCStore:
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path), timeout=30.0)
         conn.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS};")
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA synchronous=NORMAL;")
         return conn
 
     def _ensure_schema(self) -> None:
         for attempt in range(1, SQLITE_SCHEMA_RETRIES + 1):
             try:
                 with self._connect() as conn:
+                    # Configure SQLite durability/perf pragmas once at init time.
+                    # Setting journal_mode repeatedly on each connection can contend
+                    # with active writers and trigger transient "database is locked".
+                    conn.execute("PRAGMA journal_mode=WAL;")
+                    conn.execute("PRAGMA synchronous=NORMAL;")
                     conn.execute(
                         """
                         CREATE TABLE IF NOT EXISTS iocs (
@@ -569,7 +572,7 @@ def refresh_ioc_store(force: bool = False) -> dict[str, Any]:
 
 
 def _request_timeout() -> float:
-    return max(1.0, float(settings.external_lookup_timeout_seconds))
+    return max(1.0, min(3.0, float(settings.external_lookup_timeout_seconds)))
 
 
 def _provider_time_budget_seconds() -> float:
@@ -579,7 +582,7 @@ def _provider_time_budget_seconds() -> float:
     prevents a single provider from stalling agent completion.
     """
     per_request = _request_timeout()
-    return max(per_request, min(12.0, per_request * 2.0))
+    return max(per_request, min(3.0, per_request * 1.5))
 
 
 def _limit_indicators(values: list[str]) -> list[str]:
@@ -875,31 +878,55 @@ def _virustotal_hash_score(hashes: list[str]) -> tuple[float, list[str]]:
 
 
 def _external_enrichment_score(iocs: dict[str, list[str]]) -> tuple[float, list[str]]:
+    import signal
     domains = [str(item) for item in (iocs.get("domains") or [])]
     ips = [str(item) for item in (iocs.get("ips") or [])]
     hashes = [str(item) for item in (iocs.get("hashes") or [])]
     provider_scores: list[float] = []
     indicators: list[str] = []
 
-    otx_score, otx_indicators = _otx_score(domains + ips + hashes)
-    if otx_score > 0.0:
-        provider_scores.append(otx_score)
-    indicators.extend(otx_indicators)
+    # Set global timeout for entire external enrichment to prevent agent from stalling
+    enrichment_timeout_seconds = 5.0
 
-    abuseipdb_score, abuseipdb_indicators = _abuseipdb_score(ips)
-    if abuseipdb_score > 0.0:
-        provider_scores.append(abuseipdb_score)
-    indicators.extend(abuseipdb_indicators)
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"External enrichment exceeded {enrichment_timeout_seconds}s budget")
 
-    malwarebazaar_score, malwarebazaar_indicators = _malwarebazaar_score(hashes)
-    if malwarebazaar_score > 0.0:
-        provider_scores.append(malwarebazaar_score)
-    indicators.extend(malwarebazaar_indicators)
+    try:
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(int(enrichment_timeout_seconds) + 1)
 
-    vt_hash_score, vt_hash_indicators = _virustotal_hash_score(hashes)
-    if vt_hash_score > 0.0:
-        provider_scores.append(vt_hash_score)
-    indicators.extend(vt_hash_indicators)
+        otx_score, otx_indicators = _otx_score(domains + ips + hashes)
+        if otx_score > 0.0:
+            provider_scores.append(otx_score)
+        indicators.extend(otx_indicators)
+
+        abuseipdb_score, abuseipdb_indicators = _abuseipdb_score(ips)
+        if abuseipdb_score > 0.0:
+            provider_scores.append(abuseipdb_score)
+        indicators.extend(abuseipdb_indicators)
+
+        malwarebazaar_score, malwarebazaar_indicators = _malwarebazaar_score(hashes)
+        if malwarebazaar_score > 0.0:
+            provider_scores.append(malwarebazaar_score)
+        indicators.extend(malwarebazaar_indicators)
+
+        vt_hash_score, vt_hash_indicators = _virustotal_hash_score(hashes)
+        if vt_hash_score > 0.0:
+            provider_scores.append(vt_hash_score)
+        indicators.extend(vt_hash_indicators)
+
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
+    except TimeoutError:
+        logger.warning("External enrichment timeout; skipping for this analysis")
+        indicators.append("external_enrichment_timeout")
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
+    except Exception as exc:
+        logger.warning(f"External enrichment failed: {exc}")
+        indicators.append("external_enrichment_error")
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
 
     if not provider_scores:
         return 0.0, indicators

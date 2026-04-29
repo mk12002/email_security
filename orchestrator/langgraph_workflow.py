@@ -171,9 +171,12 @@ class LangGraphOrchestrator:
         elif normalized_score >= 0.4:
             verdict = "suspicious"
             actions = ["manual_review", "soc_alert"]
-        else:
+        elif normalized_score >= 0.1:
             verdict = "likely_safe"
             actions = ["deliver_with_banner"]
+        else:
+            verdict = "safe"
+            actions = ["deliver"]
         decision_notes: list[str] = []
 
         if (
@@ -186,7 +189,7 @@ class LangGraphOrchestrator:
             decision_notes.append("downgraded_by_transactional_legitimacy")
 
         if (
-            verdict == "likely_safe"
+            verdict in ("likely_safe", "safe")
             and _has_spam_campaign_pattern(agent_results)
             and not _has_strong_transactional_legitimacy(agent_results)
         ):
@@ -195,7 +198,7 @@ class LangGraphOrchestrator:
             normalized_score = max(normalized_score, 0.42)
             decision_notes.append("escalated_by_spam_campaign_pattern")
 
-        if verdict == "likely_safe" and _has_uncertain_conflict_pattern(agent_results, normalized_score):
+        if verdict in ("likely_safe", "safe") and _has_uncertain_conflict_pattern(agent_results, normalized_score):
             verdict = "suspicious"
             actions = ["manual_review"]
             normalized_score = max(normalized_score, 0.4)

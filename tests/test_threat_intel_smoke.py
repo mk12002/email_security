@@ -10,20 +10,10 @@ import pytest
 from email_security.agents.threat_intel_agent.agent import analyze, get_ioc_store_status
 
 
-def _ioc_db_candidates() -> list[Path]:
-    repo_root = Path(__file__).resolve().parents[1]
-    workspace_root = repo_root.parent
-    return [
-        repo_root / "data" / "ioc_store.db",
-        workspace_root / "data" / "ioc_store.db",
-    ]
-
+from email_security.configs import settings
 
 def _find_ioc_db() -> Path:
-    for candidate in _ioc_db_candidates():
-        if candidate.exists():
-            return candidate
-    return _ioc_db_candidates()[0]
+    return Path(settings.ioc_db_path)
 
 
 def _fetch_known_bad(ioc_type: str, limit: int = 2) -> list[str]:

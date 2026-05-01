@@ -107,6 +107,14 @@ class Settings(BaseSettings):
     azure_openai_api_version: str = Field(
         default="2024-02-15-preview", description="Azure OpenAI API version"
     )
+    storyline_enable_llm_mitre_enrichment: bool = Field(
+        default=False,
+        description="Enable Azure OpenAI enrichment for per-indicator ATT&CK mapping in storyline engine",
+    )
+    storyline_llm_max_indicators_per_phase: int = Field(
+        default=8,
+        description="Maximum indicators per phase sent to LLM for ATT&CK enrichment",
+    )
 
     # --- Threat Intelligence API Keys ---
     virustotal_api_key: Optional[str] = Field(
@@ -234,6 +242,107 @@ class Settings(BaseSettings):
     orchestrator_min_agents_for_decision: int = Field(
         default=4,
         description="Minimum agent count required for timeout-based partial finalization",
+    )
+    orchestrator_max_concurrent_analyses: int = Field(
+        default=50,
+        description="Max concurrent analyses in the orchestrator pool (30GB optimization)",
+    )
+    orchestrator_worker_pool_size: int = Field(
+        default=16,
+        description="Worker pool size for orchestrator components",
+    )
+    orchestrator_queue_depth: int = Field(
+        default=500,
+        description="Depth of orchestrator async processing queue",
+    )
+    request_deduplication_enabled: bool = Field(
+        default=True,
+        description="Enable request-level deduplication cache to bypass full analysis",
+    )
+
+    # --- 30GB RAM Optimizations: Caching ---
+    cache_ioc_memory_size_mb: int = Field(
+        default=1024,
+        description="Max memory size in MB for in-memory IOC caching",
+    )
+    cache_url_reputation_size_mb: int = Field(
+        default=512,
+        description="Max memory size in MB for URL reputation caching",
+    )
+    cache_threat_intel_ttl_seconds: int = Field(
+        default=3600,
+        description="TTL for threat intelligence lookups",
+    )
+    cache_model_artifacts_enabled: bool = Field(
+        default=True,
+        description="Keep model tokenizers/vectorizers hot in memory",
+    )
+    enable_model_preloading: bool = Field(
+        default=True,
+        description="Preload all ML models at startup to avoid cold start latency",
+    )
+
+    # --- 30GB RAM Optimizations: Model Training ---
+    slm_max_sequence_length: int = Field(
+        default=256,
+        description="Max sequence length for content SLM model",
+    )
+    slm_max_words_per_sample: int = Field(
+        default=512,
+        description="Max words processed per sample in SLM training",
+    )
+    slm_max_samples_per_class: int = Field(
+        default=500000,
+        description="Max samples per class used for training",
+    )
+
+    # --- 30GB RAM Optimizations: Preprocessing ---
+    preprocessing_chunk_size_mb: int = Field(
+        default=256,
+        description="Chunk size in MB for reading large CSVs in pandas",
+    )
+    preprocessing_workers: int = Field(
+        default=8,
+        description="Number of parallel workers for preprocessing",
+    )
+    preprocessing_keep_features_in_memory: bool = Field(
+        default=True,
+        description="Keep intermediate features in memory instead of disk",
+    )
+
+    # --- External API Integrations (Graph & Azure Search) ---
+    graph_tenant_id: Optional[str] = Field(
+        default=None, description="Microsoft Graph Tenant ID"
+    )
+    graph_client_id: Optional[str] = Field(
+        default=None, description="Microsoft Graph Client ID"
+    )
+    graph_client_secret: Optional[str] = Field(
+        default=None, description="Microsoft Graph Client Secret"
+    )
+    graph_authority: str = Field(
+        default="https://login.microsoftonline.com", description="Graph auth authority"
+    )
+    graph_scopes: str = Field(
+        default="https://graph.microsoft.com/.default", description="Graph scopes"
+    )
+    action_banner_enabled: bool = Field(
+        default=False, description="Enable automated warning banners via Graph"
+    )
+    action_quarantine_enabled: bool = Field(
+        default=False, description="Enable automated email quarantine via Graph"
+    )
+    azure_search_service: Optional[str] = Field(
+        default=None, description="Azure Search service name"
+    )
+    azure_search_api_key: Optional[str] = Field(
+        default=None, description="Azure Search API key"
+    )
+    azure_search_index_name: str = Field(
+        default="threat-indicators", description="Azure Search index name"
+    )
+    azure_search_enabled: bool = Field(
+        default=False, description="Enable Azure Search integration"
     )
 
     # --- Logging ---
@@ -377,6 +486,114 @@ class Settings(BaseSettings):
     )
     sandbox_benign_bootstrap_max_rows: int = Field(
         default=5000, description="Maximum number of local benign bootstrap rows"
+    )
+
+    # --- 30GB RAM Optimizations: SLM Training ---
+    slm_max_seq_len: int = Field(
+        default=256, description="Max sequence length for SLM training (increased for 30GB RAM)"
+    )
+    slm_max_words_per_sample: int = Field(
+        default=512, description="Max words per sample (increased for 30GB RAM)"
+    )
+    slm_max_samples_per_class: int = Field(
+        default=500000, description="Max samples per class during training (increased for 30GB RAM)"
+    )
+    slm_min_samples_per_class: int = Field(
+        default=8000, description="Min samples per class during training"
+    )
+    slm_num_epochs: int = Field(
+        default=15, description="Number of training epochs for SLM (increased for better convergence)"
+    )
+    slm_per_device_batch_size: int = Field(
+        default=32, description="Per-device batch size for SLM training (increased from 8)"
+    )
+    slm_gradient_accumulation_steps: int = Field(
+        default=2, description="Gradient accumulation steps for SLM training"
+    )
+    slm_num_workers: int = Field(
+        default=6, description="Number of tokenization workers (increased from 2)"
+    )
+    slm_logging_steps: int = Field(
+        default=50, description="Logging interval in steps"
+    )
+
+    # --- 30GB RAM Optimizations: Runtime Caching ---
+    enable_model_preloading: bool = Field(
+        default=True, description="Preload all agent models at startup for faster inference"
+    )
+    cache_ioc_memory_size_mb: int = Field(
+        default=1024, description="In-memory IOC cache size in MB (increased from 256)"
+    )
+    cache_url_reputation_size_mb: int = Field(
+        default=512, description="URL reputation cache size in MB"
+    )
+    cache_threat_intel_ttl_seconds: int = Field(
+        default=3600, description="Threat intel lookup cache TTL in seconds"
+    )
+    cache_model_artifacts_enabled: bool = Field(
+        default=True, description="Keep model tokenizers and vectorizers in memory"
+    )
+    request_deduplication_enabled: bool = Field(
+        default=True, description="Enable request-level deduplication for identical emails"
+    )
+
+    # --- 30GB RAM Optimizations: Orchestrator ---
+    orchestrator_max_concurrent_analyses: int = Field(
+        default=50, description="Maximum concurrent email analyses (increased from 10)"
+    )
+    orchestrator_worker_pool_size: int = Field(
+        default=16, description="Orchestrator worker pool size (increased concurrency)"
+    )
+    orchestrator_queue_depth: int = Field(
+        default=500, description="Max queue depth before backpressure (increased from 100)"
+    )
+
+    # --- 30GB RAM Optimizations: Preprocessing ---
+    preprocessing_chunk_size_mb: int = Field(
+        default=256, description="CSV/data chunk size for preprocessing (increased from 50)"
+    )
+    preprocessing_workers: int = Field(
+        default=8, description="Parallel workers for preprocessing (increased from 2)"
+    )
+    preprocessing_keep_features_in_memory: bool = Field(
+        default=True, description="Keep derived feature matrices in memory instead of disk-backing"
+    )
+
+    # --- Microsoft Graph Integration (Action Layer) ---
+    graph_tenant_id: Optional[str] = Field(
+        default=None, description="Azure AD tenant ID for Graph API authentication"
+    )
+    graph_client_id: Optional[str] = Field(
+        default=None, description="Azure AD application (client) ID for Graph API"
+    )
+    graph_client_secret: Optional[str] = Field(
+        default=None, description="Azure AD application secret for Graph API (keep secure)"
+    )
+    graph_authority: str = Field(
+        default="https://login.microsoftonline.com", description="Authority URL for Graph authentication"
+    )
+    graph_scopes: str = Field(
+        default="https://graph.microsoft.com/.default", description="Graph API scopes"
+    )
+    action_banner_enabled: bool = Field(
+        default=False, description="Enable warning banner insertion for medium-risk emails"
+    )
+    action_quarantine_enabled: bool = Field(
+        default=False, description="Enable email quarantine for high-risk emails"
+    )
+
+    # --- Azure Search Integration (Threat Intelligence) ---
+    azure_search_service: Optional[str] = Field(
+        default=None, description="Azure Search service name (e.g., 'contoso-search')"
+    )
+    azure_search_api_key: Optional[str] = Field(
+        default=None, description="Azure Search admin API key (keep secure)"
+    )
+    azure_search_enabled: bool = Field(
+        default=False, description="Enable Azure Search for advanced IOC queries and semantic search"
+    )
+    azure_search_index_name: str = Field(
+        default="threat-indicators", description="Azure Search index name for IOCs"
     )
 
     @property

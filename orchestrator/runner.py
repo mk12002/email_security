@@ -16,6 +16,7 @@ import redis
 from psycopg2.extras import Json
 
 from email_security.action_layer.response_engine import execute_actions
+from email_security.agents.model_warmup import warmup_models_at_startup
 from email_security.configs.settings import settings
 from email_security.orchestrator.langgraph_state import OrchestratorState
 from email_security.orchestrator.langgraph_workflow import LangGraphOrchestrator
@@ -195,6 +196,27 @@ class OrchestratorWorker:
 
         final_state = self.graph.run(initial_state)
         decision = final_state.get("decision", {})
+        
+        # Save to PostgreSQL
+        self._save_report(analysis_id, decision)
+        
+        # Cache to Deduplication Store if enabled
+        if settings.request_deduplication_enabled:
+            try:
+                fingerprint = self.redis_client.get(f"email_dedup_mapping:{analysis_id}")
+                if fingerprint:
+                    from email_security.orchestrator.deduplication import get_dedup_cache
+                    # the decision needs an analysis_id and agent_results to be useful for caching
+                    cache_payload = decision.copy()
+                    cache_payload["analysis_id"] = analysis_id
+                    cache_payload["agent_results"] = merged
+                    
+                    get_dedup_cache().cache_result(fingerprint, cache_payload)
+                    # Clean up mapping
+                    self.redis_client.delete(f"email_dedup_mapping:{analysis_id}")
+            except Exception as e:
+                logger.warning("Failed to cache deduplication result", error=str(e))
+
         self.redis_client.delete(self._cache_key(analysis_id))
         logger.info(
             "Final decision produced",
@@ -227,6 +249,17 @@ class OrchestratorWorker:
 
 def main() -> None:
     setup_logging(settings.log_dir, settings.app_log_level, settings.log_format)
+    
+    # 30GB RAM Optimization: Preload all models at startup
+    logger.info("=" * 60)
+    logger.info("Orchestrator Starting (30GB RAM Optimized)")
+    logger.info("=" * 60)
+    warmup_results = warmup_models_at_startup()
+    logger.info(f"Model warmup complete: {len(warmup_results)} agents processed")
+    logger.info(f"Orchestrator concurrency: {settings.orchestrator_max_concurrent_analyses} max parallel analyses")
+    logger.info(f"Worker pool size: {settings.orchestrator_worker_pool_size}")
+    logger.info("=" * 60)
+    
     OrchestratorWorker().run()
 
 

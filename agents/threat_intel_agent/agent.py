@@ -891,9 +891,13 @@ def _external_enrichment_score(iocs: dict[str, list[str]]) -> tuple[float, list[
     def timeout_handler(signum, frame):
         raise TimeoutError(f"External enrichment exceeded {enrichment_timeout_seconds}s budget")
 
+    supports_alarm = hasattr(signal, "SIGALRM")
+    old_handler = None
+
     try:
-        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(int(enrichment_timeout_seconds) + 1)
+        if supports_alarm:
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(int(enrichment_timeout_seconds) + 1)
 
         otx_score, otx_indicators = _otx_score(domains + ips + hashes)
         if otx_score > 0.0:
@@ -915,18 +919,24 @@ def _external_enrichment_score(iocs: dict[str, list[str]]) -> tuple[float, list[
             provider_scores.append(vt_hash_score)
         indicators.extend(vt_hash_indicators)
 
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
+        if supports_alarm:
+            signal.alarm(0)
+            if old_handler is not None:
+                signal.signal(signal.SIGALRM, old_handler)
     except TimeoutError:
         logger.warning("External enrichment timeout; skipping for this analysis")
         indicators.append("external_enrichment_timeout")
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
+        if supports_alarm:
+            signal.alarm(0)
+            if old_handler is not None:
+                signal.signal(signal.SIGALRM, old_handler)
     except Exception as exc:
         logger.warning(f"External enrichment failed: {exc}")
         indicators.append("external_enrichment_error")
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
+        if supports_alarm:
+            signal.alarm(0)
+            if old_handler is not None:
+                signal.signal(signal.SIGALRM, old_handler)
 
     if not provider_scores:
         return 0.0, indicators

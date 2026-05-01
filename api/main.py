@@ -814,6 +814,46 @@ async def analyze_email(request: EmailAnalysisRequest, _auth: None = Depends(_re
         },
     }
 
+    from email_security.orchestrator.deduplication import dedup_email_analysis
+    dedup_result, was_cached, fingerprint = dedup_email_analysis(payload)
+    
+    if was_cached and dedup_result:
+        cached_analysis_id = dedup_result.get("analysis_id", analysis_id)
+        logger.info(
+            "Email deduplicated from cache",
+            analysis_id=analysis_id,
+            cached_analysis_id=cached_analysis_id,
+            fingerprint=fingerprint,
+        )
+        return EmailAnalysisResponse(
+            status="cached",
+            message="Identical email analysis found in cache. Processing skipped.",
+            analysis_id=cached_analysis_id,
+            agent_results=dedup_result.get("agent_results", []),
+            overall_risk_score=dedup_result.get("overall_risk_score"),
+            verdict=dedup_result.get("verdict"),
+            llm_explanation=dedup_result.get("llm_explanation"),
+            report_endpoint=f"/reports/{cached_analysis_id}",
+            final_report_features=[
+                "agent_results",
+                "overall_risk_score",
+                "verdict",
+                "llm_explanation",
+                "counterfactual_result",
+                "threat_storyline",
+                "recommended_actions",
+            ],
+        )
+
+    # Cache the mapping so runner.py can cache the final result using this fingerprint
+    if fingerprint and settings.request_deduplication_enabled:
+        try:
+            import redis
+            r = redis.from_url(settings.redis_url or "redis://localhost:6379/0")
+            r.setex(f"email_dedup_mapping:{analysis_id}", settings.orchestrator_cache_ttl_seconds, fingerprint)
+        except Exception as e:
+            logger.warning("Failed to store deduplication mapping", error=str(e))
+
     mq_client = RabbitMQClient()
     mq_client.connect()
     mq_client.publish_new_email(payload)

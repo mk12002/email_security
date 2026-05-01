@@ -154,7 +154,7 @@ def _payloads(agent_name: str, files: dict[str, Path]) -> tuple[dict, dict, dict
     if agent_name == "threat_intel_agent":
         positive = {
             "iocs": {
-                "domains": ["b7akksqku1w3.info"],
+                "domains": ["paypa1-secure-login.com"],
                 "ips": [],
                 "hashes": [],
             }

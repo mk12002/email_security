@@ -57,15 +57,30 @@ FINGERPRINT_FILE = OUTPUT_DIR / "data_fingerprint.json"
 
 RANDOM_SEED = 42
 
-# Token-usage controls (override via environment variables when needed).
-MAX_SEQ_LEN = int(os.getenv("SLM_MAX_SEQ_LEN", "96"))
-MAX_WORDS_PER_SAMPLE = int(os.getenv("SLM_MAX_WORDS_PER_SAMPLE", "180"))
-MAX_SAMPLES_PER_CLASS = int(os.getenv("SLM_MAX_SAMPLES_PER_CLASS", "120000"))
-MIN_SAMPLES_PER_CLASS = int(os.getenv("SLM_MIN_SAMPLES_PER_CLASS", "8000"))
-NUM_EPOCHS = int(os.getenv("SLM_NUM_EPOCHS", "10"))
-LOGGING_STEPS = int(os.getenv("SLM_LOGGING_STEPS", "25"))
+# Load settings for 30GB RAM environment
+from email_security.configs.settings import settings
+
+# Token-usage controls (now backed by Pydantic settings with 30GB optimizations).
+MAX_SEQ_LEN = int(os.getenv("SLM_MAX_SEQ_LEN", str(settings.slm_max_seq_len)))
+MAX_WORDS_PER_SAMPLE = int(os.getenv("SLM_MAX_WORDS_PER_SAMPLE", str(settings.slm_max_words_per_sample)))
+MAX_SAMPLES_PER_CLASS = int(os.getenv("SLM_MAX_SAMPLES_PER_CLASS", str(settings.slm_max_samples_per_class)))
+MIN_SAMPLES_PER_CLASS = int(os.getenv("SLM_MIN_SAMPLES_PER_CLASS", str(settings.slm_min_samples_per_class)))
+NUM_EPOCHS = int(os.getenv("SLM_NUM_EPOCHS", str(settings.slm_num_epochs)))
+PER_DEVICE_BATCH_SIZE = int(os.getenv("SLM_PER_DEVICE_BATCH_SIZE", str(settings.slm_per_device_batch_size)))
+GRADIENT_ACCUMULATION_STEPS = int(os.getenv("SLM_GRADIENT_ACCUMULATION_STEPS", str(settings.slm_gradient_accumulation_steps)))
+NUM_WORKERS = int(os.getenv("SLM_NUM_WORKERS", str(settings.slm_num_workers)))
+LOGGING_STEPS = int(os.getenv("SLM_LOGGING_STEPS", str(settings.slm_logging_steps)))
 RESUME_TRAINING = os.getenv("SLM_RESUME", "1") == "1"
 FORCE_RETRAIN = os.getenv("SLM_FORCE_RETRAIN", "0") == "1"
+
+print(f"✓ SLM Training Parameters (30GB RAM Optimized):")
+print(f"  - Max Sequence Length: {MAX_SEQ_LEN} (increased from 96)")
+print(f"  - Max Words per Sample: {MAX_WORDS_PER_SAMPLE} (increased from 180)")
+print(f"  - Max Samples per Class: {MAX_SAMPLES_PER_CLASS} (increased from 120K)")
+print(f"  - Per-Device Batch Size: {PER_DEVICE_BATCH_SIZE} (increased from 8)")
+print(f"  - Gradient Accumulation: {GRADIENT_ACCUMULATION_STEPS}")
+print(f"  - Tokenization Workers: {NUM_WORKERS} (increased from 2)")
+print(f"  - Training Epochs: {NUM_EPOCHS} (increased from 10)")
 
 
 def _file_sha256(path: Path) -> str:
@@ -301,16 +316,16 @@ def main():
         logging_strategy="epoch",         # Logs loss and precision per epoch
         save_total_limit=2,               # Keeps only the 2 most recent checkpoints to save 8GB SSD space
         learning_rate=5e-5,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
-        gradient_accumulation_steps=4, # Simulates batch size of 32
-        num_train_epochs=NUM_EPOCHS,
+        per_device_train_batch_size=PER_DEVICE_BATCH_SIZE,  # Increased to 32 for 30GB RAM
+        per_device_eval_batch_size=PER_DEVICE_BATCH_SIZE,   # Increased to 32 for 30GB RAM
+        gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,  # Reduced to 2 with larger batch
+        num_train_epochs=NUM_EPOCHS,  # Increased to 15 epochs
         seed=RANDOM_SEED,
         data_seed=RANDOM_SEED,
         weight_decay=0.01,
         fp16=False,               # Must be False on CPU!
         use_cpu=True,
-        dataloader_num_workers=2, # Optimally utilizes the 2 vCPUs
+        dataloader_num_workers=NUM_WORKERS,  # Increased to 6 workers for 30GB RAM
         logging_steps=LOGGING_STEPS,
         logging_first_step=True,
         metric_for_best_model="eval_f1",

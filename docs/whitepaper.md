@@ -36,7 +36,8 @@ The system is designed for enterprise/SOC usage with the following goals:
 The runtime pipeline is organized as:
 
 1. API ingress and normalization.
-2. Event fan-out on message bus.
+2. SHA256 request deduplication via Redis cache to bypass redundant inference.
+3. Event fan-out on message bus.
 3. Independent agent execution in parallel.
 4. Result aggregation and stateful orchestration.
 5. Persistence and automated response dispatch.
@@ -128,7 +129,8 @@ Insert diagram: Sandbox Agent Architecture
 ### 4.6 Threat Intelligence Agent
 The threat-intel agent combines local IOC matching and external enrichment:
 
-1. Local IOC store refresh and health policy checks.
+1. Multi-tier SQLite-backed TTL caching (Burst, Common, Long, Negative) for instant in-memory lookups.
+2. Local IOC store refresh and health policy checks.
 2. Candidate matching across domains, IPs, and hashes.
 3. Optional external provider enrichment.
 4. Risk fusion across ML, local-match, and external evidence channels.
@@ -192,7 +194,7 @@ High-risk outcomes can trigger endpoint hunt workflow integration. Delivery fail
 Message durability and dead-letter routing are used for failed processing containment and replay-oriented operations.
 
 ## 8. Data and Training Inputs
-Training and evaluation rely on processed datasets for content, URL, header, sandbox behavior, user behavior, and threat-intelligence feature construction. Attachment training combines static malware-oriented feature extraction with ensemble evaluation.
+Training and evaluation rely on processed datasets for content, URL, header, sandbox behavior, user behavior, and threat-intelligence feature construction. Attachment training combines static malware-oriented feature extraction with ensemble evaluation. To adhere to strict 30GB RAM bounds, all preprocessing pipelines utilize memory-mapped Arrow datasets and chunked CSV iterators, preventing OOM failures during multi-gigabyte dataset ingestions.
 
 ## 9. Quantitative Results
 
@@ -425,6 +427,14 @@ Fill-ready table:
 The system demonstrates a technically credible and practically relevant multi-agent architecture for phishing defense. It combines robust domain specialization, deterministic orchestration, and explainable output generation, while retaining operational controls suitable for SOC workflows.
 
 Based on observed metrics and integration evidence, the platform is mature enough for a strong internship white paper. Remaining work is concentrated in infrastructure hardening and calibration refinement rather than foundational architecture gaps.
+
+
+
+## 19. Future Enhancements & Differentiators
+To extend the system beyond current capabilities, three advanced agentic concepts have been proposed:
+1. **Visual URL Sandboxing Agent:** Bypasses text-based obfuscation by spawning a headless browser (Playwright), screenshotting the rendered DOM, and utilizing perceptual hashing/OCR to detect visual brand impersonation (e.g., fake Microsoft 365 forms).
+2. **Explainable AI (XAI) Attribution:** Integration of SHAP/LIME into the LightGBM/XGBoost agents to provide SOC analysts with exact byte-sequence or header-value attribution that triggered the malware detection.
+3. **Self-Play Adversarial Bot:** An automated red-team agent that generates synthetic, highly evasive phishing emails tailored to organizational behavior, feeding them into the pipeline to dynamically retrain the system's blind spots without human-curated datasets.
 
 ## Appendix A: Artifact and Evidence References
 This appendix lists implementation and evidence artifacts used to support the claims in this paper.

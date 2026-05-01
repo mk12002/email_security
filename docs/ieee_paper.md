@@ -43,7 +43,7 @@ The architecture follows a layered pipeline:
 4. Persistence, response actions, and SOC observability.
 
 ### A. High-Level Dataflow
-Input emails are parsed into normalized artifacts: header fields, body text, URLs, attachment descriptors, and IOC bundles (domains/IPs/hashes). Events are published to a message bus and consumed by independent agent workers. Agent outputs are aggregated in orchestrator state, scored and correlated, then finalized into policy verdicts with recommendations.
+Input emails are parsed into normalized artifacts: header fields, body text, URLs, attachment descriptors, and IOC bundles (domains/IPs/hashes). To optimize for 30GB RAM constraints and high throughput, incoming payloads are passed through a SHA256 deduplication cache (Redis). Unique events are then published to a message bus and consumed by independent agent workers. Agent outputs are aggregated in orchestrator state, scored and correlated, then finalized into policy verdicts with recommendations.
 
 **Figure 1 Placeholder: End-to-End System Architecture**  
 [Insert full architecture figure here]
@@ -134,7 +134,8 @@ This agent contributes dynamic behavioral evidence:
 ### F. Threat Intelligence Agent
 This agent enriches IOC evidence via local and optional external intelligence:
 
-1. Local IOC store matching with freshness policy checks.
+1. Multi-tier SQLite-backed caching (Burst, Common, Long, Negative tiers) to eliminate cold-start latency.
+2. Local IOC store matching with freshness policy checks.
 2. Candidate matching across domain/IP/hash channels.
 3. Optional external provider enrichment.
 4. Multi-source fusion into final intel risk score.
@@ -392,6 +393,14 @@ Template table:
 
 ## XIV. Conclusion
 This work demonstrates a detailed, practical, and technically defensible multi-agent architecture for enterprise email threat triage. It integrates heterogeneous evidence domains, deterministic policy decisioning, and explainability mechanisms needed for real SOC operations. The system is suitable as a white-paper contribution and forms a robust foundation for further production hardening and policy calibration.
+
+
+
+## XV. Future Differentiators
+To address the rapid evolution of generative AI phishing, future iterations of the architecture will integrate three advanced capabilities:
+1. **Visual URL Sandboxing:** Deployment of headless browser agents to screenshot and perceptually hash rendered web pages, defeating HTML-obfuscated credential harvesters.
+2. **XAI Byte-Level Attribution:** Integration of SHAP values to explicitly highlight malicious byte sequences for analysts.
+3. **Adversarial Self-Play:** An autonomous red-team component that generates synthetic evasion payloads to continuously retrain the SLMs against emerging blind spots.
 
 ## Acknowledgment
 This work was developed as part of a cybersecurity internship project at ITC Infotech.

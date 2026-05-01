@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from email_security.configs.settings import settings
+
 try:
     from .sandbox_feature_contract import (
         SANDBOX_FEATURE_VERSION,
@@ -37,6 +39,7 @@ except ImportError:
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 SHELL_MARKERS = {"sh", "bash", "zsh", "cmd", "powershell", "pwsh", "cmd.exe"}
+CSV_CHUNK_ROWS = max(10_000, int(settings.preprocessing_chunk_size_mb) * 1_000)
 
 
 # Windows API ID buckets used by Oliveira-style sequence datasets.
@@ -57,6 +60,15 @@ def _resolve_output_dir(path_value: str) -> Path:
     if path.is_absolute():
         return path
     return WORKSPACE_ROOT / path
+
+
+def _read_csv_chunks(csv_path: Path, **kwargs):
+    read_kwargs = {
+        "low_memory": False,
+        "chunksize": CSV_CHUNK_ROWS,
+        **kwargs,
+    }
+    return pd.read_csv(csv_path, **read_kwargs)
 
 
 def _as_int(value: object, default: int = 0) -> int:
@@ -141,21 +153,22 @@ def _load_runtime_observations(base_dir: Path, use_pseudo_labels: bool) -> list[
         return []
 
     rows: list[dict[str, object]] = []
-    frame = pd.read_csv(csv_path, low_memory=False).fillna("")
-    for idx, row in frame.iterrows():
-        row_dict = row.to_dict()
-        sample_id = str(row_dict.get("sample_id") or f"runtime_{idx:07d}")
+    for frame in _read_csv_chunks(csv_path):
+        chunk = frame.fillna("")
+        for idx, row in chunk.iterrows():
+            row_dict = row.to_dict()
+            sample_id = str(row_dict.get("sample_id") or f"runtime_{idx:07d}")
 
-        explicit_label = _label_to_int(row_dict.get("label"))
-        pseudo_label = _label_to_int(row_dict.get("pseudo_label"))
-        if explicit_label is not None:
-            row_dict["label"] = explicit_label
-        elif use_pseudo_labels and pseudo_label is not None:
-            row_dict["label"] = pseudo_label
-        else:
-            row_dict["label"] = -1
+            explicit_label = _label_to_int(row_dict.get("label"))
+            pseudo_label = _label_to_int(row_dict.get("pseudo_label"))
+            if explicit_label is not None:
+                row_dict["label"] = explicit_label
+            elif use_pseudo_labels and pseudo_label is not None:
+                row_dict["label"] = pseudo_label
+            else:
+                row_dict["label"] = -1
 
-        rows.append(_normalize_row(row_dict, "runtime_detonation", sample_id))
+            rows.append(_normalize_row(row_dict, "runtime_detonation", sample_id))
 
     return rows
 
@@ -166,11 +179,11 @@ def _load_existing_sandbox_logs(base_dir: Path) -> list[dict[str, object]]:
         return []
 
     rows: list[dict[str, object]] = []
-    df = pd.read_csv(csv_path)
-    for idx, row in df.fillna("").iterrows():
-        as_dict = row.to_dict()
-        sample_id = str(as_dict.get("sample_id") or f"synthetic_{idx:06d}")
-        rows.append(_normalize_row(as_dict, "sandbox_logs", sample_id))
+    for frame in _read_csv_chunks(csv_path):
+        for idx, row in frame.fillna("").iterrows():
+            as_dict = row.to_dict()
+            sample_id = str(as_dict.get("sample_id") or f"synthetic_{idx:06d}")
+            rows.append(_normalize_row(as_dict, "sandbox_logs", sample_id))
     return rows
 
 
@@ -205,41 +218,42 @@ def _load_oliveira_api_sequences(base_dir: Path) -> list[dict[str, object]]:
         return []
 
     rows: list[dict[str, object]] = []
-    frame = pd.read_csv(csv_path)
-    t_columns = [col for col in frame.columns if re.fullmatch(r"t_\d+", str(col))]
+    for frame in _read_csv_chunks(csv_path):
+        frame = frame.fillna(0)
+        t_columns = [col for col in frame.columns if re.fullmatch(r"t_\d+", str(col))]
 
-    for _, row in frame.fillna(0).iterrows():
-        seq_raw = [_as_int(row.get(col), -1) for col in t_columns]
-        seq = [val for val in seq_raw if val >= 0]
-        dedup_seq = list(dict.fromkeys(seq))[:100]
+        for _, row in frame.iterrows():
+            seq_raw = [_as_int(row.get(col), -1) for col in t_columns]
+            seq = [val for val in seq_raw if val >= 0]
+            dedup_seq = list(dict.fromkeys(seq))[:100]
 
-        bucket_counts = {"process": 0, "filesystem": 0, "network": 0, "registry": 0, "memory": 0}
-        for call_id in dedup_seq:
-            bucket = _windows_api_id_to_bucket(call_id)
-            if bucket in bucket_counts:
-                bucket_counts[bucket] += 1
+            bucket_counts = {"process": 0, "filesystem": 0, "network": 0, "registry": 0, "memory": 0}
+            for call_id in dedup_seq:
+                bucket = _windows_api_id_to_bucket(call_id)
+                if bucket in bucket_counts:
+                    bucket_counts[bucket] += 1
 
-        normalized = _normalize_row(
-            {
-                "executed": 1,
-                "spawned_processes": bucket_counts["process"],
-                "suspicious_process_count": int(bucket_counts["network"] > 0 and bucket_counts["process"] > 0),
-                "connect_calls": bucket_counts["network"],
-                "execve_calls": bucket_counts["process"],
-                "file_write_calls": bucket_counts["filesystem"],
-                "sequence_length": len(dedup_seq),
-                "sequence_process_calls": bucket_counts["process"],
-                "sequence_network_calls": bucket_counts["network"],
-                "sequence_filesystem_calls": bucket_counts["filesystem"],
-                "sequence_registry_calls": bucket_counts["registry"],
-                "sequence_memory_calls": bucket_counts["memory"],
-                "file_entropy": _entropy_from_tokens([str(v) for v in dedup_seq]),
-                "label": _extract_label({"label": row.get("malware")}, default=1),
-            },
-            source="oliveira_api_sequences",
-            sample_id=str(row.get("hash") or "oliveira_unknown"),
-        )
-        rows.append(normalized)
+            normalized = _normalize_row(
+                {
+                    "executed": 1,
+                    "spawned_processes": bucket_counts["process"],
+                    "suspicious_process_count": int(bucket_counts["network"] > 0 and bucket_counts["process"] > 0),
+                    "connect_calls": bucket_counts["network"],
+                    "execve_calls": bucket_counts["process"],
+                    "file_write_calls": bucket_counts["filesystem"],
+                    "sequence_length": len(dedup_seq),
+                    "sequence_process_calls": bucket_counts["process"],
+                    "sequence_network_calls": bucket_counts["network"],
+                    "sequence_filesystem_calls": bucket_counts["filesystem"],
+                    "sequence_registry_calls": bucket_counts["registry"],
+                    "sequence_memory_calls": bucket_counts["memory"],
+                    "file_entropy": _entropy_from_tokens([str(v) for v in dedup_seq]),
+                    "label": _extract_label({"label": row.get("malware")}, default=1),
+                },
+                source="oliveira_api_sequences",
+                sample_id=str(row.get("hash") or "oliveira_unknown"),
+            )
+            rows.append(normalized)
 
     return rows
 
@@ -254,50 +268,49 @@ def _load_generic_api_sequences(base_dir: Path) -> list[dict[str, object]]:
         if file_path.name == "dynamic_api_call_sequence_per_malware_100_0_306.csv":
             continue
         try:
-            frame = pd.read_csv(file_path)
+            for frame in _read_csv_chunks(file_path):
+                col_map = {str(c).lower(): c for c in frame.columns}
+                seq_col = None
+                for key in ("api_sequence", "api_calls", "sequence", "calls"):
+                    if key in col_map:
+                        seq_col = col_map[key]
+                        break
+                if seq_col is None:
+                    continue
+
+                for idx, row in frame.fillna("").iterrows():
+                    tokens = [tok.strip() for tok in re.split(r"[\s,;|>]+", str(row.get(seq_col, ""))) if tok.strip()]
+                    lowered = [tok.lower() for tok in tokens]
+
+                    process_calls = sum(1 for tok in lowered if "exec" in tok or "process" in tok or "thread" in tok)
+                    network_calls = sum(1 for tok in lowered if "connect" in tok or "socket" in tok or "http" in tok)
+                    filesystem_calls = sum(1 for tok in lowered if "file" in tok or "open" in tok or "write" in tok)
+                    registry_calls = sum(1 for tok in lowered if "reg" in tok)
+                    memory_calls = sum(1 for tok in lowered if "alloc" in tok or "protect" in tok or "map" in tok)
+
+                    normalized = _normalize_row(
+                        {
+                            "executed": 1,
+                            "spawned_processes": max(process_calls, 1 if tokens else 0),
+                            "suspicious_process_count": int(process_calls > 0 and network_calls > 0),
+                            "connect_calls": network_calls,
+                            "execve_calls": process_calls,
+                            "file_write_calls": filesystem_calls,
+                            "sequence_length": len(tokens),
+                            "sequence_process_calls": process_calls,
+                            "sequence_network_calls": network_calls,
+                            "sequence_filesystem_calls": filesystem_calls,
+                            "sequence_registry_calls": registry_calls,
+                            "sequence_memory_calls": memory_calls,
+                            "file_entropy": _entropy_from_tokens(tokens),
+                            "label": _extract_label(row.to_dict(), default=1),
+                        },
+                        source="api_sequences",
+                        sample_id=str(row.get("sample_id") or f"api_{file_path.stem}_{idx:06d}"),
+                    )
+                    rows.append(normalized)
         except Exception:
             continue
-
-        col_map = {str(c).lower(): c for c in frame.columns}
-        seq_col = None
-        for key in ("api_sequence", "api_calls", "sequence", "calls"):
-            if key in col_map:
-                seq_col = col_map[key]
-                break
-        if seq_col is None:
-            continue
-
-        for idx, row in frame.fillna("").iterrows():
-            tokens = [tok.strip() for tok in re.split(r"[\s,;|>]+", str(row.get(seq_col, ""))) if tok.strip()]
-            lowered = [tok.lower() for tok in tokens]
-
-            process_calls = sum(1 for tok in lowered if "exec" in tok or "process" in tok or "thread" in tok)
-            network_calls = sum(1 for tok in lowered if "connect" in tok or "socket" in tok or "http" in tok)
-            filesystem_calls = sum(1 for tok in lowered if "file" in tok or "open" in tok or "write" in tok)
-            registry_calls = sum(1 for tok in lowered if "reg" in tok)
-            memory_calls = sum(1 for tok in lowered if "alloc" in tok or "protect" in tok or "map" in tok)
-
-            normalized = _normalize_row(
-                {
-                    "executed": 1,
-                    "spawned_processes": max(process_calls, 1 if tokens else 0),
-                    "suspicious_process_count": int(process_calls > 0 and network_calls > 0),
-                    "connect_calls": network_calls,
-                    "execve_calls": process_calls,
-                    "file_write_calls": filesystem_calls,
-                    "sequence_length": len(tokens),
-                    "sequence_process_calls": process_calls,
-                    "sequence_network_calls": network_calls,
-                    "sequence_filesystem_calls": filesystem_calls,
-                    "sequence_registry_calls": registry_calls,
-                    "sequence_memory_calls": memory_calls,
-                    "file_entropy": _entropy_from_tokens(tokens),
-                    "label": _extract_label(row.to_dict(), default=1),
-                },
-                source="api_sequences",
-                sample_id=str(row.get("sample_id") or f"api_{file_path.stem}_{idx:06d}"),
-            )
-            rows.append(normalized)
 
     return rows
 
@@ -383,36 +396,36 @@ def _load_polymorphic_dynamics(base_dir: Path) -> list[dict[str, object]]:
         return []
 
     rows: list[dict[str, object]] = []
-    frame = pd.read_csv(csv_path, low_memory=False).fillna(0)
+    for frame in _read_csv_chunks(csv_path):
+        frame = frame.fillna(0)
+        for _, row in frame.iterrows():
+            score = _as_float(row.get("Score"), 0.0)
+            connects = _as_int(row.get("API_connect"), 0) + _as_int(row.get("API_InternetConnectA"), 0)
+            exec_calls = _as_int(row.get("API_CreateProcessInternalW"), 0) + _as_int(row.get("API_CreateThread"), 0)
+            file_writes = _as_int(row.get("file_written"), 0) + _as_int(row.get("API_NtWriteFile"), 0)
+            reg_ops = _as_int(row.get("regkey_read"), 0) + _as_int(row.get("API_RegSetValueExA"), 0)
 
-    for _, row in frame.iterrows():
-        score = _as_float(row.get("Score"), 0.0)
-        connects = _as_int(row.get("API_connect"), 0) + _as_int(row.get("API_InternetConnectA"), 0)
-        exec_calls = _as_int(row.get("API_CreateProcessInternalW"), 0) + _as_int(row.get("API_CreateThread"), 0)
-        file_writes = _as_int(row.get("file_written"), 0) + _as_int(row.get("API_NtWriteFile"), 0)
-        reg_ops = _as_int(row.get("regkey_read"), 0) + _as_int(row.get("API_RegSetValueExA"), 0)
-
-        normalized = _normalize_row(
-            {
-                "executed": 1,
-                "spawned_processes": max(exec_calls, 1),
-                "suspicious_process_count": int(exec_calls > 2) + int(connects > 0),
-                "connect_calls": connects,
-                "execve_calls": exec_calls,
-                "file_write_calls": file_writes,
-                "sequence_length": _as_int(row.get("dll_loaded_count"), 0),
-                "sequence_process_calls": exec_calls,
-                "sequence_network_calls": connects,
-                "sequence_filesystem_calls": _as_int(row.get("file_opened"), 0) + file_writes,
-                "sequence_registry_calls": reg_ops,
-                "sequence_memory_calls": _as_int(row.get("API_NtAllocateVirtualMemory"), 0),
-                "file_entropy": _entropy_from_tokens([str(row.get("pid", "0")), str(row.get("info_id", "0"))]),
-                "label": 1 if score >= 6.0 else 0,
-            },
-            source="polymorphic_dynamics",
-            sample_id=f"poly_{_as_int(row.get('info_id'), 0)}_{_as_int(row.get('pid'), 0)}",
-        )
-        rows.append(normalized)
+            normalized = _normalize_row(
+                {
+                    "executed": 1,
+                    "spawned_processes": max(exec_calls, 1),
+                    "suspicious_process_count": int(exec_calls > 2) + int(connects > 0),
+                    "connect_calls": connects,
+                    "execve_calls": exec_calls,
+                    "file_write_calls": file_writes,
+                    "sequence_length": _as_int(row.get("dll_loaded_count"), 0),
+                    "sequence_process_calls": exec_calls,
+                    "sequence_network_calls": connects,
+                    "sequence_filesystem_calls": _as_int(row.get("file_opened"), 0) + file_writes,
+                    "sequence_registry_calls": reg_ops,
+                    "sequence_memory_calls": _as_int(row.get("API_NtAllocateVirtualMemory"), 0),
+                    "file_entropy": _entropy_from_tokens([str(row.get("pid", "0")), str(row.get("info_id", "0"))]),
+                    "label": 1 if score >= 6.0 else 0,
+                },
+                source="polymorphic_dynamics",
+                sample_id=f"poly_{_as_int(row.get('info_id'), 0)}_{_as_int(row.get('pid'), 0)}",
+            )
+            rows.append(normalized)
 
     return rows
 
@@ -423,38 +436,38 @@ def _load_cic_maldroid(base_dir: Path) -> list[dict[str, object]]:
         return []
 
     rows: list[dict[str, object]] = []
-    frame = pd.read_csv(csv_path, low_memory=False).fillna(0)
+    for frame in _read_csv_chunks(csv_path):
+        frame = frame.fillna(0)
+        for idx, row in frame.iterrows():
+            connects = _as_int(row.get("connect"), 0) + _as_int(row.get("socket"), 0)
+            exec_calls = _as_int(row.get("execve"), 0) + _as_int(row.get("fork"), 0) + _as_int(row.get("clone"), 0)
+            writes = _as_int(row.get("write"), 0) + _as_int(row.get("pwrite64"), 0)
+            reg_like = _as_int(row.get("set"), 0) + _as_int(row.get("get"), 0)
 
-    for idx, row in frame.iterrows():
-        connects = _as_int(row.get("connect"), 0) + _as_int(row.get("socket"), 0)
-        exec_calls = _as_int(row.get("execve"), 0) + _as_int(row.get("fork"), 0) + _as_int(row.get("clone"), 0)
-        writes = _as_int(row.get("write"), 0) + _as_int(row.get("pwrite64"), 0)
-        reg_like = _as_int(row.get("set"), 0) + _as_int(row.get("get"), 0)
+            label_raw = _as_int(row.get("Class"), 0)
+            label = 1 if label_raw > 0 else 0
 
-        label_raw = _as_int(row.get("Class"), 0)
-        label = 1 if label_raw > 0 else 0
-
-        normalized = _normalize_row(
-            {
-                "executed": 1,
-                "spawned_processes": max(exec_calls, 1),
-                "suspicious_process_count": int(exec_calls > 0 and connects > 0),
-                "connect_calls": connects,
-                "execve_calls": exec_calls,
-                "file_write_calls": writes,
-                "sequence_length": int(sum(_as_int(v, 0) for v in row.values if str(v).strip())),
-                "sequence_process_calls": exec_calls,
-                "sequence_network_calls": connects,
-                "sequence_filesystem_calls": _as_int(row.get("open"), 0) + writes,
-                "sequence_registry_calls": reg_like,
-                "sequence_memory_calls": _as_int(row.get("mmap2"), 0) + _as_int(row.get("mprotect"), 0),
-                "file_entropy": 0.0,
-                "label": label,
-            },
-            source="cic_maldroid_2020",
-            sample_id=f"cic_{idx:07d}",
-        )
-        rows.append(normalized)
+            normalized = _normalize_row(
+                {
+                    "executed": 1,
+                    "spawned_processes": max(exec_calls, 1),
+                    "suspicious_process_count": int(exec_calls > 0 and connects > 0),
+                    "connect_calls": connects,
+                    "execve_calls": exec_calls,
+                    "file_write_calls": writes,
+                    "sequence_length": int(sum(_as_int(v, 0) for v in row.values if str(v).strip())),
+                    "sequence_process_calls": exec_calls,
+                    "sequence_network_calls": connects,
+                    "sequence_filesystem_calls": _as_int(row.get("open"), 0) + writes,
+                    "sequence_registry_calls": reg_like,
+                    "sequence_memory_calls": _as_int(row.get("mmap2"), 0) + _as_int(row.get("mprotect"), 0),
+                    "file_entropy": 0.0,
+                    "label": label,
+                },
+                source="cic_maldroid_2020",
+                sample_id=f"cic_{idx:07d}",
+            )
+            rows.append(normalized)
 
     return rows
 
@@ -465,33 +478,33 @@ def _load_avast_subset(base_dir: Path) -> list[dict[str, object]]:
         return []
 
     rows: list[dict[str, object]] = []
-    frame = pd.read_csv(csv_path).fillna("")
-    for _, row in frame.iterrows():
-        fam = str(row.get("classification_family", "")).strip().lower()
-        ctype = str(row.get("classification_type", "")).strip().lower()
-        # This subset is malware-centric; keep as malicious unless explicitly benign.
-        label = 0 if ctype in {"benign", "goodware"} else 1
-        normalized = _normalize_row(
-            {
-                "executed": 1,
-                "spawned_processes": 1,
-                "suspicious_process_count": int(ctype not in {"benign", "goodware"}),
-                "connect_calls": int(ctype in {"banker", "botnet", "backdoor"}),
-                "execve_calls": 1,
-                "file_write_calls": 1,
-                "sequence_length": _as_int(row.get("seq_length"), 0),
-                "sequence_process_calls": int(ctype not in {"benign", "goodware"}),
-                "sequence_network_calls": int(ctype in {"banker", "botnet", "backdoor"}),
-                "sequence_filesystem_calls": 1,
-                "sequence_registry_calls": int(fam in {"trickbot", "qakbot", "zeus"}),
-                "sequence_memory_calls": 1,
-                "file_entropy": 0.0,
-                "label": label,
-            },
-            source="avast_ctu_capev2",
-            sample_id=str(row.get("sha256") or f"avast_{fam}"),
-        )
-        rows.append(normalized)
+    for frame in _read_csv_chunks(csv_path):
+        for _, row in frame.fillna("").iterrows():
+            fam = str(row.get("classification_family", "")).strip().lower()
+            ctype = str(row.get("classification_type", "")).strip().lower()
+            # This subset is malware-centric; keep as malicious unless explicitly benign.
+            label = 0 if ctype in {"benign", "goodware"} else 1
+            normalized = _normalize_row(
+                {
+                    "executed": 1,
+                    "spawned_processes": 1,
+                    "suspicious_process_count": int(ctype not in {"benign", "goodware"}),
+                    "connect_calls": int(ctype in {"banker", "botnet", "backdoor"}),
+                    "execve_calls": 1,
+                    "file_write_calls": 1,
+                    "sequence_length": _as_int(row.get("seq_length"), 0),
+                    "sequence_process_calls": int(ctype not in {"benign", "goodware"}),
+                    "sequence_network_calls": int(ctype in {"banker", "botnet", "backdoor"}),
+                    "sequence_filesystem_calls": 1,
+                    "sequence_registry_calls": int(fam in {"trickbot", "qakbot", "zeus"}),
+                    "sequence_memory_calls": 1,
+                    "file_entropy": 0.0,
+                    "label": label,
+                },
+                source="avast_ctu_capev2",
+                sample_id=str(row.get("sha256") or f"avast_{fam}"),
+            )
+            rows.append(normalized)
 
     return rows
 

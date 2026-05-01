@@ -28,6 +28,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 
+from email_security.configs.settings import settings
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -42,8 +44,11 @@ except ImportError:
     HAS_LGBM = False
 
 
-def _load_ember_data(max_samples: int = 100_000) -> tuple:
+def _load_ember_data(max_samples: int | None = None) -> tuple:
     """Load EMBER parquet and extract features + labels."""
+    if max_samples is None:
+        max_samples = max(100_000, int(settings.preprocessing_chunk_size_mb) * 1_000)
+
     train_path = DATASET_DIR / "train_ember_2018_v2_features.parquet"
     if not train_path.exists():
         print(f"ERROR: EMBER training data not found at {train_path}")

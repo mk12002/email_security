@@ -1,5 +1,8 @@
 """
 Action layer for quarantine and alert responses.
+
+Now supports both simulated mode and real Microsoft Graph-backed actions
+for email remediation including quarantine and banner insertion.
 """
 
 from __future__ import annotations
@@ -8,6 +11,7 @@ from typing import Any
 
 import httpx
 
+from email_security.action_layer.graph_client import get_graph_client, GraphActionResult
 from email_security.configs.settings import settings
 from email_security.services.logging_service import get_service_logger
 
@@ -24,20 +28,38 @@ def _safe_call(url: str, payload: dict[str, Any]) -> None:
 
 class ResponseEngine:
     """
-    Final Action Layer responsible for taking automated responses based on
-    orchestrator decisions. Currently in 'Simulated Mode' where actions and 
-    reasons are printed instead of executing external API calls.
+    Action Layer responsible for taking automated responses based on orchestrator decisions.
+    
+    Supports two modes:
+    1. **Simulated Mode** (default): Actions are logged and printed for testing/audit
+    2. **Live Mode**: Real Graph API calls for email quarantine and banner insertion
+    
+    With 30GB RAM optimizations, we can now afford real Graph actions with proper
+    error handling and audit trails.
     """
     
     def __init__(self):
-        # Placeholders for Azure OpenAI configuration
+        # Azure OpenAI configuration
         self.azure_openai_endpoint = settings.azure_openai_endpoint
         self.azure_openai_api_key = settings.azure_openai_api_key
         self.azure_openai_deployment = settings.azure_openai_deployment
         self.azure_openai_api_version = settings.azure_openai_api_version
         
-        # Simulated mode defaults to safe behavior unless explicitly disabled.
+        # Action layer mode: simulate first, then go live
         self.simulated_mode = bool(settings.action_simulated_mode)
+        self.banner_enabled = settings.action_banner_enabled
+        self.quarantine_enabled = settings.action_quarantine_enabled
+        
+        # Graph client for real actions
+        self.graph = get_graph_client()
+        
+        logger.info(
+            "Action Layer Initialized",
+            simulated_mode=self.simulated_mode,
+            graph_configured=self.graph.is_configured(),
+            banner_enabled=self.banner_enabled,
+            quarantine_enabled=self.quarantine_enabled,
+        )
 
     @staticmethod
     def _iter_agent_risks(agent_results: Any) -> list[tuple[str, float]]:
@@ -85,11 +107,14 @@ class ResponseEngine:
         score = decision.get("overall_risk_score", 0.0)
         verdict = decision.get("verdict", "unknown")
         
-        # Extract reasons. Sometimes they are in nested agent results or a top-level summary.
-        # Fallback to a composite string if no explicit reasons list exists.
+        # Graph identity fields for real actions
+        user_principal_name = decision.get("user_principal_name")
+        internet_message_id = decision.get("internet_message_id")
+        graph_message_id = decision.get("graph_message_id")
+        
+        # Extract reasons
         reasons = decision.get("reasons", [])
         if not reasons:
-            # Try to build reasons from the decision payload
             reasons = [f"Verdict is {verdict} with a risk score of {score:.2f}"]
             for agent_name, risk in self._iter_agent_risks(decision.get("agent_results", {})):
                 if risk > 0.6:
@@ -102,54 +127,119 @@ class ResponseEngine:
             "actions": actions,
         }
 
-        print("\n" + "="*60)
-        print(f"[LOCK] ACTION LAYER INVOKED FOR ANALYSIS: {analysis_id}")
-        print(f"[SCORE] Verdict: {verdict.upper()} | Risk Score: {score:.2f}")
-        print("-" * 60)
+        print("\n" + "="*70)
+        print(f"[ACTION LAYER] Analysis: {analysis_id}")
+        print(f"[VERDICT] {verdict.upper()} | Risk Score: {score:.2f}")
+        print("-" * 70)
         
         if reasons:
-            print("[!] REASONS FOR ACTIONS:")
+            print("[REASONS]:")
             for r in reasons:
-                print(f"   - {r}")
-        print("-" * 60)
+                print(f"  • {r}")
+        print("-" * 70)
 
         if not actions:
-            print("[OK] No specific actions recommended.")
-            print("="*60 + "\n")
+            print("[✓] No specific actions recommended.")
+            print("="*70 + "\n")
             return
 
-        print("[>>] EXECUTING ACTIONS (SIMULATED MODE):")
-
-        if "quarantine" in actions:
-            print("   -> [ACTION TAKEN] [QUARANTINE] Email Moved to Quarantine")
-            # External API logic kept but disabled conditionally if simulated_mode is active
-            if not self.simulated_mode and settings.quarantine_api_url:
-                _safe_call(settings.quarantine_api_url, payload)
-                logger.info("Quarantine action emitted", analysis_id=analysis_id)
-
-        if "soc_alert" in actions or "trigger_garuda" in actions:
-            print("   -> [ACTION TAKEN] [ALERT] Alert Sent to SOC Team / Garuda Agent")
-            if not self.simulated_mode and settings.soc_alert_api_url:
-                _safe_call(settings.soc_alert_api_url, payload)
-                logger.info("SOC alert action emitted", analysis_id=analysis_id)
-                
-        if "block_sender" in actions:
-            print("   -> [ACTION TAKEN] [BLOCK] Sender Email / Domain Blocked Locally")
-            
-        if "reset_credentials" in actions:
-            print("   -> [ACTION TAKEN] [CREDS] Forced Password Reset for Target User")
-
-        if "deliver_with_banner" in actions:
-            print("   -> [ACTION TAKEN] [DELIVER] Email Delivered with Security Warning Banner")
-
-        if "deliver" in actions:
-            print("   -> [ACTION TAKEN] [DELIVER] Email Delivered Normally — No Threats Detected")
+        # If in live mode and we have Graph identity, attempt real actions
+        if not self.simulated_mode and self.graph.is_configured() and user_principal_name:
+            self._execute_graph_actions(
+                actions, analysis_id, verdict, score,
+                user_principal_name, internet_message_id, graph_message_id
+            )
+        else:
+            # Simulated mode: just print actions
+            self._execute_simulated_actions(actions, analysis_id)
 
         # Generate and print the AI summary
         ai_summary = self._generate_ai_response_summary(decision)
-        print("-" * 60)
-        print(f"[AI] Response Summary: {ai_summary}")
-        print("="*60 + "\n")
+        print("-" * 70)
+        print(f"[AI SUMMARY] {ai_summary}")
+        print("="*70 + "\n")
+
+    def _execute_graph_actions(
+        self,
+        actions: list[str],
+        analysis_id: str,
+        verdict: str,
+        score: float,
+        upn: str,
+        internet_message_id: str | None,
+        graph_message_id: str | None,
+    ) -> None:
+        """Execute real Graph API actions for email remediation."""
+        print("[LIVE MODE] Executing via Microsoft Graph...")
+        
+        # Resolve message ID if not provided
+        if not graph_message_id and internet_message_id:
+            resolved = self.graph.resolve_message_id(upn, internet_message_id)
+            if resolved:
+                graph_message_id = resolved
+                logger.info("Resolved message ID via Graph", analysis_id=analysis_id, upn=upn)
+            else:
+                logger.warning("Failed to resolve message ID", analysis_id=analysis_id, upn=upn)
+                return
+
+        if not graph_message_id:
+            logger.warning(
+                "Cannot execute actions: no graph_message_id available",
+                analysis_id=analysis_id,
+            )
+            return
+
+        # Execute quarantine for high-risk emails
+        if "quarantine" in actions and self.quarantine_enabled:
+            result = self.graph.quarantine_email(upn, graph_message_id)
+            status_icon = "✓" if result.ok else "✗"
+            print(f"  {status_icon} Quarantine: {result.detail or 'success'}")
+            logger.info("Quarantine action executed", analysis_id=analysis_id, ok=result.ok)
+
+        # Apply warning banner for medium-risk emails
+        if "deliver_with_banner" in actions and self.banner_enabled:
+            severity = "Critical" if score >= 0.85 else "High" if score >= 0.60 else "Medium"
+            result = self.graph.apply_warning_banner(upn, graph_message_id, severity=severity)
+            status_icon = "✓" if result.ok else "✗"
+            print(f"  {status_icon} Banner ({severity}): {result.detail or 'success'}")
+            logger.info("Banner action executed", analysis_id=analysis_id, ok=result.ok, severity=severity)
+
+        # Add categories for classification
+        if "categorize" in actions:
+            categories = ["PhishingLure"] if verdict == "phishing" else ["Suspicious"] if verdict == "suspicious" else []
+            if categories:
+                result = self.graph.add_categories(upn, graph_message_id, categories)
+                status_icon = "✓" if result.ok else "✗"
+                print(f"  {status_icon} Categorized: {result.detail or 'success'}")
+
+    def _execute_simulated_actions(self, actions: list[str], analysis_id: str) -> None:
+        """Execute simulated actions (logging only, no external calls)."""
+        print("[SIMULATED MODE] Logging actions (no external calls)...")
+
+        if "quarantine" in actions:
+            print("  → [QUARANTINE] Would move email to Junk folder")
+            if not self.quarantine_enabled:
+                print("     (quarantine disabled in settings)")
+
+        if "deliver_with_banner" in actions:
+            print("  → [BANNER] Would insert security warning banner")
+            if not self.banner_enabled:
+                print("     (banner disabled in settings)")
+
+        if "soc_alert" in actions or "trigger_garuda" in actions:
+            print("  → [ALERT] Would notify SOC team / Garuda agent")
+
+        if "block_sender" in actions:
+            print("  → [BLOCK] Would add sender to local blocklist")
+            
+        if "reset_credentials" in actions:
+            print("  → [CREDS] Would trigger forced password reset")
+
+        if "deliver" in actions:
+            print("  → [DELIVER] Email would be delivered normally")
+
+        if "categorize" in actions:
+            print("  → [CATEGORIZE] Would apply classification tags")
 
 
 # Replace the old functional entrypoint with the class-based one

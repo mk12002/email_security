@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from email_security.configs.settings import settings
+
 def _install_ember_module():
     """Install the official lief/ember module required to vectorize the raw JSONL."""
     try:
@@ -18,6 +20,34 @@ def _install_ember_module():
             sys.executable, "-m", "pip", "install", 
             "git+https://github.com/elastic/ember.git"
         ])
+
+
+def _rows_per_chunk(num_columns: int) -> int:
+    chunk_mb = max(1, int(getattr(settings, "preprocessing_chunk_size_mb", 256)))
+    approx_row_bytes = max(1, num_columns * np.dtype(np.float32).itemsize)
+    return max(1_000, (chunk_mb * 1024 * 1024) // approx_row_bytes)
+
+
+def _write_parquet_in_chunks(df: pd.DataFrame, output_parquet: Path) -> None:
+    try:
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+    except Exception:
+        df.to_parquet(output_parquet, engine="pyarrow", compression="snappy")
+        return
+
+    writer = None
+    try:
+        rows_per_chunk = _rows_per_chunk(len(df.columns) - 1)
+        for start in range(0, len(df), rows_per_chunk):
+            chunk = df.iloc[start : start + rows_per_chunk]
+            table = pa.Table.from_pandas(chunk, preserve_index=False)
+            if writer is None:
+                writer = pq.ParquetWriter(output_parquet, table.schema, compression="snappy")
+            writer.write_table(table)
+    finally:
+        if writer is not None:
+            writer.close()
         
 def convert_ember_jsonl_to_parquet(ember_dir: Path, output_parquet: Path):
     """
@@ -62,13 +92,11 @@ def convert_ember_jsonl_to_parquet(ember_dir: Path, output_parquet: Path):
     print(f"Shape after removing unlabeled samples: {X_train.shape}")
 
     # Convert to DataFrame
-    print("Building pandas DataFrame for Parquet export...")
-    # Because 2381 columns taking float32 is huge, we specify dtype explicitly
+    print(f"Saving Parquet to {output_parquet}...")
+    # Build and write the parquet file in smaller row groups to keep peak RAM lower.
     df = pd.DataFrame(X_train, dtype=np.float32)
     df["label"] = y_train.astype(np.int8)
-    
-    print(f"Saving Parquet to {output_parquet}...")
-    df.to_parquet(output_parquet, engine="pyarrow", compression="snappy")
+    _write_parquet_in_chunks(df, output_parquet)
     print("EMBER Parquet conversion completed successfully!")
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@
             <p class="hero-subtitle">Production-grade, multi-agent phishing defense powered by LangGraph orchestration, 7 parallel AI agents, counterfactual explainability, and chronological attack storyline timelines.</p>
             <div class="hero-actions">
               <a href="/ui/analyze" class="btn btn-primary" style="text-decoration:none;color:#fff">📤 Analyze Email</a>
+              <a href="/soc/dashboard" class="btn btn-primary" style="text-decoration:none;color:#fff;background:#3B82F6;border-color:#3B82F6">📊 SOC Dashboard</a>
               <a href="/ui/agents" class="btn btn-outline" style="text-decoration:none">🧪 Test Agents</a>
               <a href="/docs" target="_blank" rel="noreferrer" class="btn btn-ghost" style="text-decoration:none">📄 Swagger Docs</a>
             </div>
@@ -159,47 +160,142 @@
         </section>
 
         <!-- Live SOC Snapshot -->
-        <section class="panel animate-in-d4">
+        <section class="panel animate-in-d4 mb-md">
           <h2 class="section-title"><span class="icon">📊</span> Live SOC Snapshot</h2>
           <div id="metricsGrid" class="metrics-grid mb-md"></div>
-          <div id="overviewStatus" class="status-msg mt-sm"></div>
-          <pre id="overviewData" style="margin-top:14px">Loading /soc/overview …</pre>
+          
+          <div class="chart-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+            <div style="background: var(--bg-surface); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <h3 style="font-size: 0.9rem; color: var(--ink-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Verdict Distribution</h3>
+              <div style="position: relative; height: 200px; width: 100%;">
+                <canvas id="uiVerdictChart"></canvas>
+              </div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <h3 style="font-size: 0.9rem; color: var(--ink-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Automated Response Actions</h3>
+              <div style="position: relative; height: 200px; width: 100%;">
+                <canvas id="uiActionChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div id="overviewStatus" class="status-msg mt-sm" style="text-align: center;"></div>
         </section>
       `;
 
       AgentUI.initSettingsDropdown();
-      loadOverview();
+      
+      // Load Chart.js dynamically if not present
+      if (!window.Chart) {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+          script.onload = () => { initUICharts(); loadOverview(); };
+          document.head.appendChild(script);
+      } else {
+          initUICharts();
+          loadOverview();
+      }
     });
+
+    let uiVerdictChart = null;
+    let uiActionChart = null;
+
+    function initUICharts() {
+        Chart.defaults.color = '#8E9BB0'; // var(--ink-muted)
+        Chart.defaults.font.family = "ui-sans-serif, system-ui, -apple-system, sans-serif";
+
+        const ctx1 = document.getElementById('uiVerdictChart');
+        if (ctx1) {
+            uiVerdictChart = new Chart(ctx1.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Malicious', 'High Risk', 'Suspicious', 'Safe'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#EF4444', '#F59E0B', '#FCD34D', '#10B981'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8 } } }
+                }
+            });
+        }
+
+        const ctx2 = document.getElementById('uiActionChart');
+        if (ctx2) {
+            const gradient = ctx2.getContext('2d').createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+            
+            uiActionChart = new Chart(ctx2.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Count',
+                        data: [],
+                        backgroundColor: gradient,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    }
 
     async function loadOverview() {
       const statusEl = document.getElementById("overviewStatus");
-      const pre = document.getElementById("overviewData");
       const grid = document.getElementById("metricsGrid");
       try {
         const res = await AgentUI.apiFetch("/soc/overview");
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "HTTP " + res.status);
 
-        pre.textContent = AgentUI.jsonPretty(data);
-        AgentUI.showStatus(statusEl, "✅ SOC overview loaded successfully.", "ok");
+        AgentUI.showStatus(statusEl, "✅ Live telemetry updated.", "ok");
 
         const count = data?.reports?.count || 0;
-        const avg = (data?.reports?.avg_risk_score ?? 0).toFixed(3);
+        const avg = (data?.reports?.avg_risk_score ?? 0).toFixed(2);
         const v = data?.reports?.verdict_counts || {};
         const queues = (data?.queue_health || []).filter(x => x.exists).length;
 
         grid.innerHTML = `
-          <div class="metric-card"><div class="metric-label">Reports</div><div class="metric-value">${count}</div></div>
-          <div class="metric-card"><div class="metric-label">Avg Risk</div><div class="metric-value">${avg}</div></div>
-          <div class="metric-card"><div class="metric-label">Active Queues</div><div class="metric-value">${queues}</div></div>
+          <div class="metric-card"><div class="metric-label">Analyzed</div><div class="metric-value" style="color:var(--accent-blue)">${count}</div></div>
+          <div class="metric-card"><div class="metric-label">Avg Risk</div><div class="metric-value" style="color:var(--accent-amber)">${avg}</div></div>
+          <div class="metric-card"><div class="metric-label">Active Queues</div><div class="metric-value" style="color:var(--accent-green)">${queues}</div></div>
           <div class="metric-card"><div class="metric-label">Malicious</div><div class="metric-value" style="color:var(--accent-red)">${v.malicious || 0}</div></div>
-          <div class="metric-card"><div class="metric-label">High Risk</div><div class="metric-value" style="color:var(--accent-amber)">${v.high_risk || 0}</div></div>
-          <div class="metric-card"><div class="metric-label">Suspicious</div><div class="metric-value" style="color:var(--accent-amber)">${v.suspicious || 0}</div></div>
-          <div class="metric-card"><div class="metric-label">Safe</div><div class="metric-value" style="color:var(--accent-green)">${v.safe || 0}</div></div>
         `;
+
+        if (uiVerdictChart && window.Chart) {
+            uiVerdictChart.data.datasets[0].data = [
+                v.malicious || 0,
+                v.high_risk || 0,
+                v.suspicious || 0,
+                (v.safe || 0) + (v.likely_safe || 0)
+            ];
+            uiVerdictChart.update();
+        }
+
+        if (uiActionChart && window.Chart && data.response_actions) {
+            const actionEntries = Object.entries(data.response_actions).sort((a,b) => b[1] - a[1]);
+            uiActionChart.data.labels = actionEntries.map(e => e[0].replace(/_/g, ' '));
+            uiActionChart.data.datasets[0].data = actionEntries.map(e => e[1]);
+            uiActionChart.update();
+        }
+
       } catch (err) {
-        AgentUI.showStatus(statusEl, "⚠ Could not load SOC overview — server may be offline.", "warn");
-        grid.innerHTML = `<div class="metric-card"><div class="metric-label">Status</div><div class="metric-value" style="font-size:0.9rem;color:var(--ink-muted)">Offline</div></div>`;
+        AgentUI.showStatus(statusEl, "⚠ Could not load telemetry data.", "warn");
       }
     }
   </script>

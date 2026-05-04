@@ -146,14 +146,12 @@ Complete implementation of quick-win optimizations for 30GB RAM system. This doc
 - Benefit: Peak RAM reduced during EMBER parquet conversion
 
 #### Sandbox Preprocessing (sandbox_preprocessing.py):
-> ✅ **MODIFIED & OPTIMIZED** — Config parameters exist but chunked CSV reading has not been implemented yet. The 9 loader functions still use default pandas CSV loading.
+> ✅ **MODIFIED & OPTIMIZED** — Chunked CSV reading has been fully implemented natively. All 9 loader functions now use `_read_csv_chunks` based on configuration chunk sizes.
 
 #### Attachment Model Training (train_attachment_model.py):
-> ✅ **MODIFIED & OPTIMIZED** — The `_load_ember_data()` function does not yet accept `max_samples` parameter or use `settings.preprocessing_chunk_size_mb`.
+> ✅ **MODIFIED & OPTIMIZED** — The `_load_ember_data()` function successfully accepts a `max_samples` parameter and applies `settings.preprocessing_chunk_size_mb` constraints.
 
 **Remaining Work:**
-- Implement chunked CSV reading in `sandbox_preprocessing.py`
-- Add `max_samples` parameter to `train_attachment_model.py`
 - Benchmark before/after preprocessing time
 
 ---

@@ -185,6 +185,18 @@ class OrchestratorWorker:
         received_agents = sorted(
             {entry.get("agent_name") for entry in merged if entry.get("agent_name")}
         )
+
+        # Extract Graph identity fields from the first agent that carries them
+        user_principal_name = ""
+        internet_message_id = ""
+        for entry in merged:
+            if not user_principal_name and entry.get("user_principal_name"):
+                user_principal_name = entry["user_principal_name"]
+            if not internet_message_id and entry.get("internet_message_id"):
+                internet_message_id = entry["internet_message_id"]
+            if user_principal_name and internet_message_id:
+                break
+
         initial_state: OrchestratorState = {
             "analysis_id": analysis_id,
             "agent_results": merged,
@@ -192,6 +204,8 @@ class OrchestratorWorker:
             "received_agents": received_agents,
             "missing_agents": sorted(EXPECTED_AGENTS - set(received_agents)),
             "is_partial": reason != "complete",
+            "user_principal_name": user_principal_name,
+            "internet_message_id": internet_message_id,
         }
 
         final_state = self.graph.run(initial_state)

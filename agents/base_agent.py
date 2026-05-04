@@ -31,6 +31,11 @@ class BaseAgent(ABC):
         self.logger.info("Processing event", analysis_id=analysis_id)
         result = self.analyze(payload)
         result["analysis_id"] = analysis_id
+        # Forward Graph identity fields for the action layer
+        if payload.get("internet_message_id"):
+            result["internet_message_id"] = payload["internet_message_id"]
+        if payload.get("user_principal_name"):
+            result["user_principal_name"] = payload["user_principal_name"]
         self.messaging.publish_to_queue(settings.results_queue, result)
         self.logger.info(
             "Published agent result",

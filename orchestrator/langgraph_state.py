@@ -14,6 +14,11 @@ class OrchestratorState(TypedDict, total=False):
     missing_agents: list[str]
     is_partial: bool
 
+    # Email identity (for Graph action layer)
+    user_principal_name: str
+    internet_message_id: str
+    graph_message_id: str
+
     # Derived scoring/correlation
     score_data: dict[str, Any]
     correlation: dict[str, Any]
@@ -27,6 +32,7 @@ class OrchestratorState(TypedDict, total=False):
     threat_level: str
     llm_explanation: str
     threat_storyline: list[dict[str, Any]]
+    decision_notes: list[str]
 
     # Side-effect outputs
     garuda_feedback: dict[str, Any]

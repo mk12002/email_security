@@ -295,6 +295,9 @@ class LangGraphOrchestrator:
             "threat_storyline": state.get("threat_storyline", []),
             "counterfactual_result": state.get("counterfactual_result", None),
             "decision_notes": state.get("decision_notes", []),
+            # Email identity for Graph action layer
+            "user_principal_name": state.get("user_principal_name", ""),
+            "internet_message_id": state.get("internet_message_id", ""),
         }
         if state.get("garuda_feedback"):
             decision["garuda_feedback"] = state.get("garuda_feedback")

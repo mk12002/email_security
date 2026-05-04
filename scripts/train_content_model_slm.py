@@ -1,14 +1,15 @@
 """
 Optimized SLM (Small Language Model) Training for Phishing Content.
 
-Optimized for AWS t3.large (2 vCPUs, 8GB RAM, NO GPU):
-1. Model: `prajjwal1/bert-tiny` (Only 4.4M parameters). Runs incredibly fast on 2 CPU cores.
-2. Memory: Uses the HuggingFace `datasets` Arrow-backed framework. It maps the 1.7GB CSV
+Optimized for 30GB RAM / 4 vCPUs (NO GPU):
+1. Model: `prajjwal1/bert-small` (29M parameters). Capable model that fits comfortably
+   in 30GB RAM and runs efficiently on 4 CPU cores.
+2. Memory: Uses the HuggingFace `datasets` Arrow-backed framework. It maps the CSV
    to disk instead of RAM, entirely preventing Out-Of-Memory (OOM) crashes.
-3. Checkpointing: Integrates HuggingFace `Trainer` to save progress every 500 steps.
-   If training stops, just re-run this script and it mathematically resumes where it crashed.
-4. Batching: Uses `per_device_train_batch_size=8` and `gradient_accumulation_steps=4` 
-   to simulate a batch of 32 without holding 32 text tensors in RAM simultaneously.
+3. Checkpointing: Integrates HuggingFace `Trainer` to save progress every epoch.
+   If training stops, just re-run this script and it resumes where it stopped.
+4. Batching: Uses `per_device_train_batch_size=32` and `gradient_accumulation_steps=2`
+   to simulate effective batch of 64, fully utilizing available RAM.
 """
 
 import os
@@ -19,11 +20,14 @@ import hashlib
 from pathlib import Path
 from datetime import datetime, timezone
 
-# Important: Limit thread counts to prevent CPU context-switch thrashing on 2 cores
-os.environ["OMP_NUM_THREADS"] = "2"
-os.environ["OPENBLAS_NUM_THREADS"] = "2"
-os.environ["MKL_NUM_THREADS"] = "2"
+# Set thread counts to match available CPU cores (4 cores on 30GB system)
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["OPENBLAS_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
 
+# IMPORTANT: Import third-party packages BEFORE modifying sys.path.
+# The parent directory contains a local `datasets/` package that would
+# shadow the HuggingFace `datasets` library if it were on sys.path first.
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -39,15 +43,19 @@ from datasets import Dataset
 from tqdm.auto import tqdm
 from transformers import (
     AutoModelForSequenceClassification,
+    AutoTokenizer,
     BertTokenizer,
+    BertForSequenceClassification,
     DataCollatorWithPadding,
     Trainer,
     TrainingArguments,
 )
 from transformers.trainer_utils import get_last_checkpoint
 
+# Now add parent directory to sys.path for email_security imports.
+# This MUST come after HuggingFace `datasets` import above.
 REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT.parent))
 
 PROCESSED_DIR = REPO_ROOT.parent / "datasets_processed"
 OUTPUT_DIR = REPO_ROOT.parent / "models" / "content_agent_slm_checkpoints"
@@ -66,7 +74,7 @@ MAX_WORDS_PER_SAMPLE = int(os.getenv("SLM_MAX_WORDS_PER_SAMPLE", str(settings.sl
 MAX_SAMPLES_PER_CLASS = int(os.getenv("SLM_MAX_SAMPLES_PER_CLASS", str(settings.slm_max_samples_per_class)))
 MIN_SAMPLES_PER_CLASS = int(os.getenv("SLM_MIN_SAMPLES_PER_CLASS", str(settings.slm_min_samples_per_class)))
 NUM_EPOCHS = int(os.getenv("SLM_NUM_EPOCHS", str(settings.slm_num_epochs)))
-PER_DEVICE_BATCH_SIZE = int(os.getenv("SLM_PER_DEVICE_BATCH_SIZE", str(settings.slm_per_device_batch_size)))
+PER_DEVICE_BATCH_SIZE = int(os.getenv("SLM_PER_DEVICE_BATCH_SIZE", str(settings.slm_per_device_train_batch_size)))
 GRADIENT_ACCUMULATION_STEPS = int(os.getenv("SLM_GRADIENT_ACCUMULATION_STEPS", str(settings.slm_gradient_accumulation_steps)))
 NUM_WORKERS = int(os.getenv("SLM_NUM_WORKERS", str(settings.slm_num_workers)))
 LOGGING_STEPS = int(os.getenv("SLM_LOGGING_STEPS", str(settings.slm_logging_steps)))
@@ -166,7 +174,7 @@ def main():
     print("1. Loading TinyBERT tokenizer...")
     # Use a stable tiny BERT checkpoint with explicit bert model_type.
     # Can be overridden if needed: export SLM_MODEL_ID=...
-    model_id = os.getenv("SLM_MODEL_ID", "google/bert_uncased_L-2_H-128_A-2")
+    model_id = os.getenv("SLM_MODEL_ID", "prajjwal1/bert-tiny")
     # bert-tiny uses BERT vocabulary; loading a stable slow tokenizer avoids
     # fast-tokenizer backend issues in minimal environments.
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", do_lower_case=True)
@@ -238,9 +246,9 @@ def main():
         # Truncate to a strict token budget; no global max-length padding here.
         return tokenizer(examples["text"], truncation=True, max_length=MAX_SEQ_LEN)
 
-    print("3. Tokenizing dataset (multi-processing limited to 2 cores)...")
+    print(f"3. Tokenizing dataset (multi-processing with {NUM_WORKERS} workers)...")
     tokenized_datasets = {
-        split: dataset[split].map(tokenize_function, batched=True, num_proc=2)
+        split: dataset[split].map(tokenize_function, batched=True, num_proc=NUM_WORKERS)
         for split in ("train", "test")
     }
     
@@ -251,19 +259,19 @@ def main():
         tokenized_datasets[split].set_format("torch")
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-    print("4. Initializing BERT-Tiny Model for Sequence Classification...")
+    print("4. Initializing BERT Model for Sequence Classification...")
     num_labels = len(label_values)
     try:
-        model = AutoModelForSequenceClassification.from_pretrained(
+        model = BertForSequenceClassification.from_pretrained(
             model_id, num_labels=num_labels
         )
     except Exception as exc:
         print(
-            f"WARNING: Failed to load '{model_id}' ({exc}). "
-            "Falling back to 'bert-base-uncased'."
+            f"WARNING: Failed to load '{model_id}' directly ({exc}). "
+            "Attempting fallback to AutoModelForSequenceClassification..."
         )
         model = AutoModelForSequenceClassification.from_pretrained(
-            "bert-base-uncased", num_labels=num_labels
+            model_id, num_labels=num_labels
         )
 
     def compute_metrics(eval_pred):

@@ -2417,4 +2417,41 @@ Do not treat the 30 GB machine as a reason to simply raise every limit. Use the 
 
 The best version of this system is not just larger; it is **faster, more accurate, and more predictable**.
 
-**Next action:** Start with Task 1.1 (Request Deduplication). It has the highest ROI and takes only 1-2 hours to implement.
+**Next action:** The core system, Action Layer wiring, and SOC Dashboard are complete! 
+
+---
+
+## Phase 6: Remaining Future Upgrades (What's Left to be Done)
+
+The following items are optional, high-value future enhancements to elevate the system further:
+
+1. **Visual URL Sandboxing Agent (Playwright + Vision OCR)**
+   - Spawns a headless browser to screenshot suspicious URLs and uses a vision model to detect visual brand impersonation (e.g., fake Microsoft login buttons) to defeat text-evasion kits.
+2. **Self-Play Adversarial Training Agent (Red Team Bot)**
+   - Generates highly evasive, synthetic phishing emails to test the system and auto-retrain the SLM on blind spots.
+3. **Explainable AI (XAI) Byte-Level Highlights**
+   - Highlights the exact byte sequences or headers that triggered the machine learning models using SHAP/LIME.
+4. **Adaptive Mitigation Policies**
+   - Dynamically adjust Response Engine thresholds based on the user's historical click-rate profile (e.g., quarantine at 0.6 risk for the CFO, 0.8 for IT).
+
+---
+
+## Appendix: Action Layer Gateway Alternatives (Non-Microsoft 365)
+
+If you do not have a Microsoft 365 or Exchange Online license, the Microsoft Graph API cannot be used. Here are the 3 architectural options to replace it:
+
+### Option 1: Local File-Based Quarantine & Blocklist (Best for Frontend Uploads)
+Because you upload `.eml` files through your frontend, the files sit directly on your server (`email_drop/`). We can build a **`LocalActionBot`**:
+- **Quarantine:** Moves the physical `.eml` file from the `processed/` directory into a secure `quarantine_vault/` directory and renames it to `.quarantined`.
+- **Deliver:** Safe files are moved to an `inbox/` directory.
+- **Block Sender/IP:** We implement a local SQLite database (`local_blocklist.db`). The Action Layer writes malicious IPs/Senders to this database, and the Parser drops them instantly upon upload.
+
+### Option 2: Standard IMAP/SMTP Integration (Works with Gmail, Yahoo, etc.)
+If you want to act on real user inboxes without Microsoft Graph, use standard internet protocols. We build an **`IMAPActionBot`**:
+- **How it works:** The bot logs into the user's mailbox using standard IMAP credentials (or App Passwords). 
+- **Quarantine:** It searches the mailbox for the `Message-ID` and uses the IMAP `UID MOVE` command to transfer the malicious email from the `INBOX` to the `Junk` folder.
+
+### Option 3: Mail Transfer Agent (MTA) Gateway (Enterprise Grade)
+Place your AI system directly in the network traffic flow as a **Secure Email Gateway (SEG)** using an open-source mail server like Postfix.
+- **How it works:** You install Postfix. All emails from the outside world hit Postfix first. Postfix passes the raw email to your Python AI system via a milter interface.
+- **Action:** If the system scores it as safe, it tells Postfix to route it to the company mail server. If it's malicious, your system tells Postfix to "Reject" the email at the protocol level or hold it in an MTA quarantine queue.

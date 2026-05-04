@@ -14,7 +14,7 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassifica
 
 MODEL_DIR = Path(__file__).resolve().parents[2] / "models" / "content_agent"
 
-MAX_WORDS_PER_SAMPLE = 180
+MAX_WORDS_PER_SAMPLE = 200
 
 LABEL_NORMALIZATION = {
     "label_0": "Legitimate",
@@ -85,7 +85,7 @@ def main():
         # Apply the SAME preprocessing as training
         processed = _compact_text(text)
 
-        top_results = classifier(processed, truncation=True, max_length=96, top_k=3)
+        top_results = classifier(processed, truncation=True, max_length=128, top_k=3)
         result = top_results[0]
         raw_label = result["label"]
         label = _normalize_label(raw_label)

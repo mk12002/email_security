@@ -502,16 +502,16 @@ class Settings(BaseSettings):
         default=8000, description="Min samples per class during training"
     )
     slm_num_epochs: int = Field(
-        default=15, description="Number of training epochs for SLM (increased for better convergence)"
+        default=5, description="Number of training epochs (reduced for speed)"
     )
-    slm_per_device_batch_size: int = Field(
+    slm_per_device_train_batch_size: int = Field(
         default=32, description="Per-device batch size for SLM training (increased from 8)"
     )
     slm_gradient_accumulation_steps: int = Field(
         default=2, description="Gradient accumulation steps for SLM training"
     )
     slm_num_workers: int = Field(
-        default=6, description="Number of tokenization workers (increased from 2)"
+        default=2, description="Number of tokenization workers (reduced from 6 to prevent process hanging)"
     )
     slm_logging_steps: int = Field(
         default=50, description="Logging interval in steps"

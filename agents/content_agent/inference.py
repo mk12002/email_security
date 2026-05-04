@@ -19,8 +19,8 @@ from email_security.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
 
-MAX_WORDS_PER_SAMPLE = 180  # Must match training script default
-MAX_SEQ_LEN = 96  # Must match training tokenization max_length
+MAX_WORDS_PER_SAMPLE = 200  # Must match training script default (30GB RAM setting)
+MAX_SEQ_LEN = 128  # Must match training tokenization max_length (30GB RAM setting)
 
 
 

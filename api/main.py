@@ -626,65 +626,358 @@ async def soc_dashboard():
         return HTMLResponse(
                 """
 <!doctype html>
-<html>
+<html lang="en" class="dark">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Email Security SOC Dashboard</title>
+    <title>Email Security | SOC Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body{font-family:ui-sans-serif,system-ui,Segoe UI,Arial;margin:0;background:#f5f7fb;color:#13203a}
-        header{padding:16px 20px;background:#102542;color:#fff;display:flex;justify-content:space-between;align-items:center}
-        .wrap{padding:16px;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-        .card{background:#fff;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.08);padding:14px}
-        h2{font-size:16px;margin:0 0 10px}
-        table{width:100%;border-collapse:collapse;font-size:13px}
-        th,td{border-bottom:1px solid #e8edf5;padding:6px;text-align:left}
-        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-        .row{display:flex;gap:10px;flex-wrap:wrap}
-        .pill{padding:4px 8px;border-radius:999px;background:#eaf1ff;font-size:12px}
+        :root {
+            --bg-base: #0B0F19;
+            --bg-panel: rgba(19, 26, 42, 0.7);
+            --bg-card: rgba(26, 35, 58, 0.8);
+            --border: rgba(65, 83, 119, 0.4);
+            --text-main: #E2E8F0;
+            --text-muted: #94A3B8;
+            --accent-primary: #3B82F6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --red: #EF4444;
+            --amber: #F59E0B;
+            --green: #10B981;
+            --glass-blur: blur(12px);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, #111827, var(--bg-base) 60%);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.5;
+            padding-bottom: 2rem;
+            overflow-x: hidden;
+        }
+
+        /* Animated background elements */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.4;
+            animation: float 10s infinite ease-in-out alternate;
+        }
+        .orb-1 { top: -10%; left: -10%; width: 400px; height: 400px; background: rgba(59, 130, 246, 0.3); }
+        .orb-2 { bottom: -20%; right: -10%; width: 500px; height: 500px; background: rgba(139, 92, 246, 0.2); animation-delay: -5s; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 50px); }
+        }
+
+        header {
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        
+        .logo { font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        .logo span { color: var(--accent-primary); }
+        .timestamp { font-family: monospace; font-size: 0.875rem; color: var(--text-muted); background: var(--bg-card); padding: 0.25rem 0.75rem; border-radius: 9999px; border: 1px solid var(--border); }
+
+        .container { max-width: 1400px; margin: 2rem auto; padding: 0 1.5rem; display: grid; gap: 1.5rem; }
+        
+        /* Glass Panels */
+        .panel {
+            background: var(--bg-panel);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .panel:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+        .panel-title { font-size: 1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+
+        /* KPI Grid */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; text-align: center; position: relative; overflow: hidden; }
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent-primary); opacity: 0.5; }
+        .kpi-value { font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0; line-height: 1; }
+        .kpi-label { font-size: 0.875rem; color: var(--text-muted); }
+        
+        .val-red { color: var(--red); }
+        .val-amber { color: var(--amber); }
+        .val-green { color: var(--green); }
+        .val-blue { color: var(--accent-primary); }
+
+        /* Charts Layout */
+        .chart-row { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+
+        /* Tables */
+        .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; white-space: nowrap; }
+        th { background: rgba(0,0,0,0.2); padding: 1rem; text-align: left; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+        td { padding: 1rem; border-bottom: 1px solid rgba(65, 83, 119, 0.2); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+        
+        .pill { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; }
+        .pill.malicious { background: rgba(239, 68, 68, 0.2); color: #FCA5A5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .pill.high_risk { background: rgba(245, 158, 11, 0.2); color: #FCD34D; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .pill.suspicious { background: rgba(245, 158, 11, 0.1); color: #FDE68A; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .pill.safe, .pill.likely_safe { background: rgba(16, 185, 129, 0.2); color: #6EE7B7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .pill.action { background: rgba(59, 130, 246, 0.2); color: #93C5FD; border: 1px solid rgba(59, 130, 246, 0.3); margin-right: 0.25rem; }
+
+        .hash-id { font-family: monospace; color: var(--text-muted); }
+        
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        .d-1 { animation-delay: 0.1s; } .d-2 { animation-delay: 0.2s; } .d-3 { animation-delay: 0.3s; }
+        
+        @media (max-width: 900px) {
+            .chart-row { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
     <header>
-        <div><strong>SOC Dashboard</strong></div>
-        <div id="ts" class="mono"></div>
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-primary)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            SOC <span>Intelligence</span>
+        </div>
+        <div id="ts" class="timestamp">Connecting...</div>
     </header>
-    <div class="wrap">
-        <section class="card"><h2>Queue Health</h2><div id="queue"></div></section>
-        <section class="card"><h2>Verdicts</h2><div id="verdicts" class="row"></div></section>
-        <section class="card"><h2>Response Actions</h2><div id="actions" class="row"></div></section>
-        <section class="card"><h2>Recent Reports</h2><div id="reports"></div></section>
-        <section class="card"><h2>Recent Agent Outputs</h2><div id="agents"></div></section>
+
+    <div class="container">
+        <!-- Key Metrics -->
+        <div class="kpi-grid fade-in">
+            <div class="kpi-card">
+                <div class="kpi-label">Analyzed Emails</div>
+                <div class="kpi-value val-blue" id="kpi-total">-</div>
+            </div>
+            <div class="kpi-card" style="--accent-primary: var(--red);">
+                <div class="kpi-label">Malicious Threats</div>
+                <div class="kpi-value val-red" id="kpi-malicious">-</div>
+            </div>
+            <div class="kpi-card" style="--accent-primary: var(--amber);">
+                <div class="kpi-label">Average Risk Score</div>
+                <div class="kpi-value val-amber" id="kpi-risk">-</div>
+            </div>
+            <div class="kpi-card" style="--accent-primary: var(--green);">
+                <div class="kpi-label">Active Agents/Queues</div>
+                <div class="kpi-value val-green" id="kpi-queues">-</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="chart-row fade-in d-1">
+            <div class="panel">
+                <div class="panel-title">Verdict Distribution</div>
+                <div class="chart-container">
+                    <canvas id="verdictChart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Automated Response Actions</div>
+                <div class="chart-container">
+                    <canvas id="actionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Threats Table -->
+        <div class="panel fade-in d-2">
+            <div class="panel-title">
+                Recent Threat Reports
+                <span class="pill" style="background: rgba(255,255,255,0.1); border:none; color:white;" id="report-count">0 items</span>
+            </div>
+            <div class="table-wrap">
+                <table id="reports-table">
+                    <thead>
+                        <tr>
+                            <th>Analysis ID</th>
+                            <th>Time</th>
+                            <th>Verdict</th>
+                            <th>Risk Score</th>
+                            <th>Remediation Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Initializing telemetry...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
+
     <script>
-        function table(rows, headers){
-            if(!rows || !rows.length){return '<em>No data</em>'}
-            let h = '<table><thead><tr>'+headers.map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>';
-            for(const r of rows){h += '<tr>'+headers.map(k=>`<td>${(r[k] ?? '')}</td>`).join('')+'</tr>'}
-            return h + '</tbody></table>';
+        // Chart instances
+        let verdictChart = null;
+        let actionChart = null;
+
+        // Chart.js global defaults for dark theme
+        Chart.defaults.color = '#94A3B8';
+        Chart.defaults.borderColor = 'rgba(65, 83, 119, 0.2)';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        function initCharts() {
+            const ctx1 = document.getElementById('verdictChart').getContext('2d');
+            verdictChart = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Malicious', 'High Risk', 'Suspicious', 'Safe'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#EF4444', '#F59E0B', '#FCD34D', '#10B981'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('actionChart').getContext('2d');
+            
+            // Create gradient for bars
+            const gradient = ctx2.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+
+            actionChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Executions',
+                        data: [],
+                        backgroundColor: gradient,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: 'rgba(59, 130, 246, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { drawBorder: false } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
         }
-        async function refresh(){
-            const res = await fetch('/soc/overview');
-            const data = await res.json();
-            document.getElementById('ts').textContent = new Date(data.generated_at).toLocaleString();
-            document.getElementById('queue').innerHTML = table((data.queue_health||[]).map(q=>({
-                queue:q.queue, exists:q.exists, messages_ready:q.messages_ready, consumers:q.consumers
-            })), ['queue','exists','messages_ready','consumers']);
 
-            const verdicts = data.reports?.verdict_counts || {};
-            document.getElementById('verdicts').innerHTML = Object.entries(verdicts).map(([k,v])=>`<span class='pill'>${k}: ${v}</span>`).join('') || '<em>None</em>';
-            const actions = data.response_actions || {};
-            document.getElementById('actions').innerHTML = Object.entries(actions).map(([k,v])=>`<span class='pill'>${k}: ${v}</span>`).join('') || '<em>None</em>';
-
-            document.getElementById('reports').innerHTML = table((data.reports?.recent||[]).map(r=>({
-                analysis_id:r.analysis_id, created_at:r.created_at, verdict:r.verdict, overall_risk_score:r.overall_risk_score,
-                recommended_actions:(r.recommended_actions||[]).join(',')
-            })), ['analysis_id','created_at','verdict','overall_risk_score','recommended_actions']);
-
-            document.getElementById('agents').innerHTML = table((data.agent_outputs||[]).slice(0,40), ['analysis_id','agent_name','risk_score','confidence']);
+        function formatVerdict(v) {
+            const normalized = String(v).toLowerCase();
+            return `<span class="pill ${normalized}">${String(v).toUpperCase().replace('_', ' ')}</span>`;
         }
-        refresh();
-        setInterval(refresh, 10000);
+
+        function formatActions(actions) {
+            if (!actions || actions.length === 0) return `<span class="pill" style="background:transparent;border:1px dashed var(--border);color:var(--text-muted)">None</span>`;
+            return actions.map(a => `<span class="pill action">${a}</span>`).join('');
+        }
+
+        async function refreshData() {
+            try {
+                const res = await fetch('/soc/overview');
+                const data = await res.json();
+                
+                // Update Timestamp
+                document.getElementById('ts').innerHTML = `Live &bull; ${new Date(data.generated_at).toLocaleTimeString()}`;
+
+                // Update KPIs
+                const reports = data.reports || {};
+                const verdicts = reports.verdict_counts || {};
+                const queues = (data.queue_health || []).filter(q => q.exists).length;
+                
+                document.getElementById('kpi-total').textContent = reports.count || 0;
+                document.getElementById('kpi-malicious').textContent = verdicts.malicious || 0;
+                document.getElementById('kpi-risk').textContent = (reports.avg_risk_score || 0).toFixed(2);
+                document.getElementById('kpi-queues').textContent = queues;
+
+                // Update Verdict Chart
+                if (verdictChart) {
+                    verdictChart.data.datasets[0].data = [
+                        verdicts.malicious || 0,
+                        verdicts.high_risk || 0,
+                        verdicts.suspicious || 0,
+                        (verdicts.safe || 0) + (verdicts.likely_safe || 0)
+                    ];
+                    verdictChart.update();
+                }
+
+                // Update Action Chart
+                if (actionChart && data.response_actions) {
+                    const actionEntries = Object.entries(data.response_actions).sort((a,b) => b[1] - a[1]);
+                    actionChart.data.labels = actionEntries.map(e => e[0].replace(/_/g, ' '));
+                    actionChart.data.datasets[0].data = actionEntries.map(e => e[1]);
+                    actionChart.update();
+                }
+
+                // Update Table
+                const tbody = document.querySelector('#reports-table tbody');
+                document.getElementById('report-count').textContent = `${(reports.recent || []).length} items`;
+                
+                if (reports.recent && reports.recent.length > 0) {
+                    tbody.innerHTML = reports.recent.map(r => `
+                        <tr>
+                            <td class="hash-id">${r.analysis_id.substring(0,8)}...${r.analysis_id.substring(r.analysis_id.length-4)}</td>
+                            <td style="color:var(--text-muted)">${new Date(r.created_at).toLocaleTimeString()}</td>
+                            <td>${formatVerdict(r.verdict)}</td>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="width:50px; height:6px; background:var(--bg-base); border-radius:3px; overflow:hidden;">
+                                        <div style="width:${Math.min(100, r.overall_risk_score * 100)}%; height:100%; background: ${r.overall_risk_score > 0.8 ? 'var(--red)' : r.overall_risk_score > 0.5 ? 'var(--amber)' : 'var(--green)'};"></div>
+                                    </div>
+                                    <span style="font-family:monospace">${r.overall_risk_score.toFixed(2)}</span>
+                                </div>
+                            </td>
+                            <td>${formatActions(r.recommended_actions)}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding: 2rem;">No recent activity</td></tr>`;
+                }
+
+            } catch (err) {
+                console.error("Dashboard refresh failed:", err);
+                document.getElementById('ts').innerHTML = `<span style="color:var(--red)">Connection Lost</span>`;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            refreshData();
+            setInterval(refreshData, 5000); // 5s refresh
+        });
     </script>
 </body>
 </html>

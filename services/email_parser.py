@@ -87,10 +87,17 @@ class EmailParserService:
         except Exception as exc:
             logger.warning("OCR extraction failed gracefully", error=str(exc))
 
+        # Extract Graph identity fields for the action layer
+        internet_message_id = (headers.get("message_id") or "").strip()
+        recipients = headers.get("to", [])
+        user_principal_name = recipients[0] if recipients else ""
+
         payload = {
             "event_type": "NewEmailEvent",
             "analysis_id": analysis_id,
             "source_file": str(file_path),
+            "internet_message_id": internet_message_id,
+            "user_principal_name": user_principal_name,
             "headers": headers,
             "body": {
                 "plain": body_plain,

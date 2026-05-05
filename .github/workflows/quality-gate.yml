@@ -26,7 +26,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run quality gate
-        run: python scripts/run_quality_gate.py
+        run: python tools/run_quality_gate.py
 
       - name: Upload quality gate artifacts
         if: always()

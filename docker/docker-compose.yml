@@ -66,6 +66,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-api
+    
+    env_file: ../.env
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
@@ -86,6 +88,10 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    deploy:
+      resources:
+        limits:
+          memory: 4G
     restart: unless-stopped
 
   parser_service:
@@ -93,7 +99,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-parser
-    command: ["python", "-m", "email_security.services.parser_worker"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.services.parser_worker"]
     environment:
       <<: *common-app-env
       EMAIL_DROP_DIR: /mnt/email_drop
@@ -114,7 +121,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-orchestrator
-    command: ["python", "-m", "email_security.orchestrator.runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.orchestrator.runner"]
     environment:
       <<: *common-app-env
       AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
@@ -137,6 +145,10 @@ services:
       - email_security_net
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
     restart: unless-stopped
 
   header_agent_service:
@@ -144,7 +156,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-header-agent
-    command: ["python", "-m", "email_security.agents.service_runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: header_agent
@@ -164,7 +177,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-content-agent
-    command: ["python", "-m", "email_security.agents.service_runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: content_agent
@@ -177,6 +191,10 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    deploy:
+      resources:
+        limits:
+          memory: 5G
     restart: unless-stopped
 
   url_agent_service:
@@ -184,7 +202,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-url-agent
-    command: ["python", "-m", "email_security.agents.service_runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: url_agent
@@ -204,7 +223,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-attachment-agent
-    command: ["python", "-m", "email_security.agents.service_runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: attachment_agent
@@ -217,6 +237,10 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    deploy:
+      resources:
+        limits:
+          memory: 4G
     restart: unless-stopped
 
   sandbox_agent_service:
@@ -224,7 +248,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-sandbox-agent
-    command: ["python", "-m", "email_security.agents.service_runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: sandbox_agent
@@ -249,7 +274,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-threat-intel-agent
-    command: ["python", "-m", "email_security.agents.service_runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: threat_intel_agent
@@ -264,6 +290,10 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    deploy:
+      resources:
+        limits:
+          memory: 4G
     restart: unless-stopped
 
   user_behavior_agent_service:
@@ -271,7 +301,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: email-security-user-behavior-agent
-    command: ["python", "-m", "email_security.agents.service_runner"]
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.agents.service_runner"]
     environment:
       <<: *common-app-env
       AGENT_NAME: user_behavior_agent
@@ -288,6 +319,23 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
+
+  sandbox_executor_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-sandbox-executor
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.sandbox.executor_service"]
+    environment:
+      <<: *common-app-env
+    volumes:
+      - attachments_data:/mnt/attachments
+      - app_logs:/app/email_security/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - email_security_net
+    restart: unless-stopped
   # Agent Services – Placeholder for individual agent containers
   # ---------------------------------------------------------------------------
   # In later phases, each agent will run as its own container:
@@ -312,35 +360,30 @@ services:
   # threat_intel_agent:
   #   ...
   # ---------------------------------------------------------------------------
-  # Database – PostgreSQL
+  # Database, Message Queue, and Cache
   # ---------------------------------------------------------------------------
-  database:
-    image: postgres:16-alpine
-    container_name: email-security-db
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-email_security}
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: email-security-rabbitmq
     ports:
-      - "${DB_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - email_security_net
-    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: email-security-redis
     ports:
       - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -348,47 +391,35 @@ services:
       retries: 5
     networks:
       - email_security_net
-    restart: unless-stopped
 
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    container_name: email-security-rabbitmq
+  database:
+    image: postgres:16-alpine
+    container_name: email-security-db
+    env_file: ../.env
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-email_security}
     ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - "${DB_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
-      retries: 8
+      retries: 5
     networks:
       - email_security_net
-    restart: unless-stopped
 
-# ---------------------------------------------------------------------------
-# Volumes
-# ---------------------------------------------------------------------------
 volumes:
-  postgres_data:
-    driver: local
-  rabbitmq_data:
-    driver: local
-  redis_data:
-    driver: local
-  app_logs:
-    driver: local
-  app_models:
-    driver: local
   attachments_data:
     driver: local
   email_drop:
     driver: local
   ioc_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_models:
     driver: local
 
 # ---------------------------------------------------------------------------

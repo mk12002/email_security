@@ -71,15 +71,18 @@ email_security/
 ├── api/                           # FastAPI REST service
 ├── services/                      # Shared services (logging, etc.)
 ├── configs/                       # Configuration management
+├── config/                        # YAML config files (model, logging)
 ├── preprocessing/                 # Data preprocessing pipelines
-├── datasets/                      # Raw training datasets
 ├── datasets_processed/            # Processed/feature-engineered data
 ├── models/                        # Trained ML models
-├── threat_intelligence/           # Threat intel feeds & IOC data
+├── data/                          # Local data stores (IOC DB, etc.)
 ├── sandbox/                       # Sandbox integration modules
 ├── docker/                        # Dockerfile & docker-compose
-├── scripts/                       # Setup & utility scripts
+├── scripts/                       # Shell scripts (setup, run tests, start)
+├── tools/                         # Python utility & training scripts
 ├── tests/                         # Test suite
+│   ├── unit/                      #   Unit tests
+│   └── integration/               #   Integration tests
 ├── logs/                          # Application logs (gitignored)
 └── docs/                          # Documentation
 ```
@@ -155,6 +158,14 @@ After setup, validate end-to-end on Ubuntu:
 source venv/bin/activate
 pytest tests/
 cd docker && docker compose up --build
+```
+
+Alternatively, use the provided shell scripts:
+```bash
+./scripts/run_tests.sh           # Run all tests
+./scripts/run_tests.sh unit      # Run unit tests only
+./scripts/run_tests.sh integration  # Run integration tests only
+./scripts/start_system.sh        # Start API server
 ```
 
 ---

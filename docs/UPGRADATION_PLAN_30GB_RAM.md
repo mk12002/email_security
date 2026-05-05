@@ -927,7 +927,7 @@ User must request tenant-level consent for Graph permissions:
 User can test the setup:
 ```bash
 # Test token acquisition and Graph connectivity
-python -c "from email_security.action_layer.graph_client import GraphActionBot; \
+python -c "from email_security.src.action_layer.graph_client import GraphActionBot; \
            bot = GraphActionBot(); \
            token = bot._get_token(); \
            print('Token acquired' if token else 'Failed to acquire token')"
@@ -1130,7 +1130,7 @@ from typing import Any
 import httpx
 import msal
 
-from email_security.configs.settings import settings
+from email_security.src.configs.settings import settings
 
 
 @dataclass
@@ -1178,7 +1178,7 @@ The response engine currently prints simulated actions and uses placeholder HTTP
 Recommended change pattern:
 
 ```python
-from email_security.action_layer.graph_client import GraphActionBot
+from email_security.src.action_layer.graph_client import GraphActionBot
 
 
 class ResponseEngine:
@@ -2077,7 +2077,7 @@ AZURE_SEARCH_INDEX_NAME=threat-indicators
 **Note:** This is entirely optional and beneficial only if you have Azure Search API access (which you mentioned). It enhances but is not required for Phase 2 completion.
 
 **Ready to Integrate (When Needed):**
-- Import: `from email_security.action_layer.azure_search_client import get_azure_search_client`
+- Import: `from email_security.src.action_layer.azure_search_client import get_azure_search_client`
 - Use in threat_intel_agent for advanced queries
 - Build semantic queries from email content
 - Rank results by confidence and severity
@@ -2433,6 +2433,12 @@ The following items are optional, high-value future enhancements to elevate the 
    - Highlights the exact byte sequences or headers that triggered the machine learning models using SHAP/LIME.
 4. **Adaptive Mitigation Policies**
    - Dynamically adjust Response Engine thresholds based on the user's historical click-rate profile (e.g., quarantine at 0.6 risk for the CFO, 0.8 for IT).
+5. **Live Memory Forensics Agent (Volatility + Detonation)**
+   - When a suspicious PE/executable attachment is detected, fully detonate it in a heavy sandbox and run Volatility to extract process memory strings and auto-generate Yara rules.
+6. **Honeytoken Ingestion Network**
+   - Automatically embed fake credentials or invisible tracking pixels inside safe outward-bound emails. If an attacker clicks or uses them, the system immediately blocks their IP network-wide.
+7. **D3.js Force-Directed Threat Topology Map**
+   - Upgrade the SOC Dashboard to feature a 3D network graph showing the relationship between attacking IP clusters, compromised senders, and targeted internal users over time.
 
 ---
 

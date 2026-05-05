@@ -115,6 +115,14 @@ class Settings(BaseSettings):
         default=8,
         description="Maximum indicators per phase sent to LLM for ATT&CK enrichment",
     )
+    storyline_enable_llm_mitre_enrichment: bool = Field(
+        default=False,
+        description="Enable Azure OpenAI enrichment for per-indicator ATT&CK mapping in storyline engine",
+    )
+    storyline_llm_max_indicators_per_phase: int = Field(
+        default=8,
+        description="Maximum indicators per phase sent to LLM for ATT&CK enrichment",
+    )
 
     # --- Threat Intelligence API Keys ---
     virustotal_api_key: Optional[str] = Field(

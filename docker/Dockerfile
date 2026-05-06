@@ -44,7 +44,7 @@ WORKDIR /app
 # Copy application code
 COPY . /app/email_security
 
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/email_security:/app
 
 # Create required directories
 RUN mkdir -p /app/email_security/logs /app/email_security/models /app/email_security/datasets /app/email_security/datasets_processed /app/email_security/threat_intelligence /app/models \

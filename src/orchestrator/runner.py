@@ -16,13 +16,13 @@ import psycopg2
 import redis
 from psycopg2.extras import Json
 
-from email_security.src.action_layer.response_engine import execute_actions
-from email_security.src.agents.model_warmup import warmup_models_at_startup
-from email_security.src.configs.settings import settings
-from email_security.src.orchestrator.langgraph_state import OrchestratorState
-from email_security.src.orchestrator.langgraph_workflow import LangGraphOrchestrator
-from email_security.src.services.logging_service import get_service_logger, setup_logging
-from email_security.src.services.messaging_service import RabbitMQClient
+from src.action_layer.response_engine import execute_actions
+from src.agents.model_warmup import warmup_models_at_startup
+from src.configs.settings import settings
+from src.orchestrator.langgraph_state import OrchestratorState
+from src.orchestrator.langgraph_workflow import LangGraphOrchestrator
+from src.services.logging_service import get_service_logger, setup_logging
+from src.services.messaging_service import RabbitMQClient
 
 logger = get_service_logger("orchestrator_runner")
 
@@ -224,7 +224,7 @@ class OrchestratorWorker:
             try:
                 fingerprint = self.redis_client.get(f"email_dedup_mapping:{analysis_id}")
                 if fingerprint:
-                    from email_security.src.orchestrator.deduplication import get_dedup_cache
+                    from src.orchestrator.deduplication import get_dedup_cache
                     # the decision needs an analysis_id and agent_results to be useful for caching
                     cache_payload = decision.copy()
                     cache_payload["analysis_id"] = analysis_id

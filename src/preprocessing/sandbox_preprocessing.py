@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from email_security.src.configs.settings import settings
+from src.configs.settings import settings
 
 try:
     from .sandbox_feature_contract import (
@@ -23,14 +23,14 @@ try:
     )
 except ImportError:
     try:
-        from email_security.src.preprocessing.sandbox_feature_contract import (
+        from src.preprocessing.sandbox_feature_contract import (
             SANDBOX_FEATURE_VERSION,
             SANDBOX_NUMERIC_FEATURE_COLUMNS,
             build_numeric_feature_map,
             ensure_numeric_feature_frame,
         )
     except ImportError:
-        from sandbox_feature_contract import (
+        from src.preprocessing.sandbox_feature_contract import (
             SANDBOX_FEATURE_VERSION,
             SANDBOX_NUMERIC_FEATURE_COLUMNS,
             build_numeric_feature_map,

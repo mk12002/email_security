@@ -9,12 +9,12 @@ from urllib.parse import urlparse
 
 import httpx
 
-from email_security.src.agents.url_agent.feature_extractor import extract_features
-from email_security.src.agents.url_agent.inference import predict
-from email_security.src.agents.url_agent.model_loader import load_model
-from email_security.src.agents.trust_signals import assess_transactional_legitimacy
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.url_agent.feature_extractor import extract_features
+from src.agents.url_agent.inference import predict
+from src.agents.url_agent.model_loader import load_model
+from src.agents.trust_signals import assess_transactional_legitimacy
+from src.configs.settings import settings
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("url_agent")
 
@@ -293,7 +293,7 @@ def _any_external_lookup_enabled() -> bool:
 
 def analyze(data: dict[str, Any]) -> dict[str, Any]:
     logger.info("Starting analysis", agent="url_agent")
-    from email_security.src.agents.url_agent.calibration import apply_calibration
+    from src.agents.url_agent.calibration import apply_calibration
     urls = data.get("urls", []) or []
     if not urls:
         return {"agent_name": "url_agent", "risk_score": 0.0, "confidence": 0.7, "indicators": ["no_urls_detected"]}

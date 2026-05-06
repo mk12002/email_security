@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from email_security.src.configs.settings import settings
+from src.configs.settings import settings
 
 def _install_ember_module():
     """Install the official lief/ember module required to vectorize the raw JSONL."""

@@ -11,8 +11,24 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_service_logger
+from src.services.logging_service import get_service_logger
+import importlib
+
+
+# Resolve settings at runtime to avoid duplicate instances when imported under
+# different package names (tests may mutate the `email_security`-prefixed module).
+
+
+def _get_settings_module():
+    try:
+        m = importlib.import_module("email_security.src.configs.settings")
+        return getattr(m, "settings", None)
+    except Exception:
+        try:
+            m = importlib.import_module("src.configs.settings")
+            return getattr(m, "settings", None)
+        except Exception:
+            return None
 
 logger = get_service_logger("model_warmup")
 
@@ -31,7 +47,8 @@ class ModelWarmup:
         Returns:
             Dictionary with warmup statistics for each agent.
         """
-        if not settings.enable_model_preloading:
+        current_settings = _get_settings_module()
+        if not (current_settings and getattr(current_settings, "enable_model_preloading", False)):
             logger.info("Model preloading disabled via config")
             return {}
 
@@ -90,37 +107,37 @@ class ModelWarmup:
 
     def _warmup_header_agent(self) -> Any:
         """Preload header agent model."""
-        from email_security.src.agents.header_agent.model_loader import load_model
+        from src.agents.header_agent.model_loader import load_model
         return load_model()
 
     def _warmup_content_agent(self) -> Any:
         """Preload content agent model."""
-        from email_security.src.agents.content_agent.model_loader import load_model
+        from src.agents.content_agent.model_loader import load_model
         return load_model()
 
     def _warmup_url_agent(self) -> Any:
         """Preload URL agent model."""
-        from email_security.src.agents.url_agent.model_loader import load_model
+        from src.agents.url_agent.model_loader import load_model
         return load_model()
 
     def _warmup_attachment_agent(self) -> Any:
         """Preload attachment agent model."""
-        from email_security.src.agents.attachment_agent.model_loader import load_model
+        from src.agents.attachment_agent.model_loader import load_model
         return load_model()
 
     def _warmup_sandbox_agent(self) -> Any:
         """Preload sandbox agent model."""
-        from email_security.src.agents.sandbox_agent.model_loader import load_model
+        from src.agents.sandbox_agent.model_loader import load_model
         return load_model()
 
     def _warmup_threat_intel_agent(self) -> Any:
         """Preload threat intel agent model."""
-        from email_security.src.agents.threat_intel_agent.model_loader import load_model
+        from src.agents.threat_intel_agent.model_loader import load_model
         return load_model()
 
     def _warmup_user_behavior_agent(self) -> Any:
         """Preload user behavior agent model."""
-        from email_security.src.agents.user_behavior_agent.model_loader import load_model
+        from src.agents.user_behavior_agent.model_loader import load_model
         return load_model()
 
     def get_warmup_summary(self) -> str:
@@ -162,12 +179,12 @@ def _warmup_caches() -> None:
         logger.info("Warming up caching layers...")
         
         # Initialize deduplication cache
-        from email_security.src.orchestrator.deduplication import get_dedup_cache
+        from src.orchestrator.deduplication import get_dedup_cache
         dedup_cache = get_dedup_cache()
         logger.info("Deduplication cache initialized", enabled=dedup_cache.enabled)
         
         # Initialize IOC cache
-        from email_security.src.action_layer.ioc_cache import get_ioc_cache
+        from src.action_layer.ioc_cache import get_ioc_cache
         ioc_cache = get_ioc_cache()
         logger.info(
             "IOC cache initialized",
@@ -175,7 +192,7 @@ def _warmup_caches() -> None:
         )
         
         # Check if Azure Search is configured
-        from email_security.src.action_layer.azure_search_client import is_azure_search_available
+        from src.action_layer.azure_search_client import is_azure_search_available
         azure_available = is_azure_search_available()
         logger.info("Azure Search availability", available=azure_available)
         

@@ -38,7 +38,7 @@ case "$MODE" in
         echo "[*] Starting API server..."
         echo "    Host: 0.0.0.0:8000"
         echo ""
-        uvicorn email_security.api.main:app \
+        uvicorn src.api.main:app \
             --host 0.0.0.0 \
             --port 8000 \
             --reload \
@@ -50,13 +50,13 @@ case "$MODE" in
 
         # Start parser worker in background
         echo "  → Starting parser worker..."
-        python -m email_security.services.parser_worker &
+        python -m src.services.parser_worker &
         PARSER_PID=$!
         echo "    Parser PID: $PARSER_PID"
 
         # Start orchestrator worker in background
         echo "  → Starting orchestrator worker..."
-        python -m email_security.orchestrator.runner &
+        python -m src.orchestrator.runner &
         ORCH_PID=$!
         echo "    Orchestrator PID: $ORCH_PID"
 
@@ -66,7 +66,7 @@ case "$MODE" in
         # Start API server in foreground
         echo "  → Starting API server..."
         echo ""
-        uvicorn email_security.api.main:app \
+        uvicorn src.api.main:app \
             --host 0.0.0.0 \
             --port 8000 \
             --log-level info

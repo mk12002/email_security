@@ -6,7 +6,7 @@ Calculates weighted threat scores from individual agent risk assessments.
 
 from typing import Any
 
-from email_security.src.services.logging_service import get_service_logger
+from src.services.logging_service import get_service_logger
 
 logger = get_service_logger("scoring_engine")
 

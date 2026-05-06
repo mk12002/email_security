@@ -7,16 +7,16 @@ from __future__ import annotations
 import os
 from typing import Any, Callable
 
-from email_security.src.agents.base_agent import BaseAgent
-from email_security.src.agents.header_agent import analyze as header_analyze
-from email_security.src.agents.content_agent import analyze as content_analyze
-from email_security.src.agents.url_agent import analyze as url_analyze
-from email_security.src.agents.attachment_agent import analyze as attachment_analyze
-from email_security.src.agents.sandbox_agent import analyze as sandbox_analyze
-from email_security.src.agents.threat_intel_agent import analyze as threat_intel_analyze
-from email_security.src.agents.user_behavior_agent.agent import analyze as user_behavior_analyze
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import setup_logging
+from src.agents.base_agent import BaseAgent
+from src.agents.header_agent import analyze as header_analyze
+from src.agents.content_agent import analyze as content_analyze
+from src.agents.url_agent import analyze as url_analyze
+from src.agents.attachment_agent import analyze as attachment_analyze
+from src.agents.sandbox_agent import analyze as sandbox_analyze
+from src.agents.threat_intel_agent import analyze as threat_intel_analyze
+from src.agents.user_behavior_agent.agent import analyze as user_behavior_analyze
+from src.configs.settings import settings
+from src.services.logging_service import setup_logging
 
 AGENT_FUNCTIONS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "header_agent": header_analyze,
@@ -57,7 +57,7 @@ def run() -> None:
     import logging
     logger = logging.getLogger(agent_name)
     try:
-        model_loader_mod = importlib.import_module(f"email_security.src.agents.{agent_name}.model_loader")
+        model_loader_mod = importlib.import_module(f"src.agents.{agent_name}.model_loader")
         if hasattr(model_loader_mod, "load_model"):
             logger.info("Pre-warming ML models before connecting to RabbitMQ...")
             model_loader_mod.load_model()

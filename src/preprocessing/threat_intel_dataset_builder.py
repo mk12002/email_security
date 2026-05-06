@@ -10,8 +10,8 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime, timezone
 
-from email_security.src.preprocessing.threat_intel_feature_contract import ioc_reference_schema, validate_dataframe
-from email_security.src.services.logging_service import get_service_logger
+from src.preprocessing.threat_intel_feature_contract import ioc_reference_schema, validate_dataframe
+from src.services.logging_service import get_service_logger
 
 logger = get_service_logger("threat_intel_dataset_builder")
 

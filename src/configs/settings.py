@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     )
 
     # --- RabbitMQ ---
-    rabbitmq_host: str = Field(default="rabbitmq", description="RabbitMQ host")
+    rabbitmq_host: str = Field(default="localhost", description="RabbitMQ host")
     rabbitmq_port: int = Field(default=5672, description="RabbitMQ AMQP port")
     rabbitmq_user: str = Field(default="guest", description="RabbitMQ username")
     rabbitmq_password: str = Field(default="guest", description="RabbitMQ password")
@@ -492,12 +492,6 @@ class Settings(BaseSettings):
     slm_max_seq_len: int = Field(
         default=256, description="Max sequence length for SLM training (increased for 30GB RAM)"
     )
-    slm_max_words_per_sample: int = Field(
-        default=512, description="Max words per sample (increased for 30GB RAM)"
-    )
-    slm_max_samples_per_class: int = Field(
-        default=500000, description="Max samples per class during training (increased for 30GB RAM)"
-    )
     slm_min_samples_per_class: int = Field(
         default=8000, description="Min samples per class during training"
     )
@@ -515,85 +509,6 @@ class Settings(BaseSettings):
     )
     slm_logging_steps: int = Field(
         default=50, description="Logging interval in steps"
-    )
-
-    # --- 30GB RAM Optimizations: Runtime Caching ---
-    enable_model_preloading: bool = Field(
-        default=True, description="Preload all agent models at startup for faster inference"
-    )
-    cache_ioc_memory_size_mb: int = Field(
-        default=1024, description="In-memory IOC cache size in MB (increased from 256)"
-    )
-    cache_url_reputation_size_mb: int = Field(
-        default=512, description="URL reputation cache size in MB"
-    )
-    cache_threat_intel_ttl_seconds: int = Field(
-        default=3600, description="Threat intel lookup cache TTL in seconds"
-    )
-    cache_model_artifacts_enabled: bool = Field(
-        default=True, description="Keep model tokenizers and vectorizers in memory"
-    )
-    request_deduplication_enabled: bool = Field(
-        default=True, description="Enable request-level deduplication for identical emails"
-    )
-
-    # --- 30GB RAM Optimizations: Orchestrator ---
-    orchestrator_max_concurrent_analyses: int = Field(
-        default=50, description="Maximum concurrent email analyses (increased from 10)"
-    )
-    orchestrator_worker_pool_size: int = Field(
-        default=16, description="Orchestrator worker pool size (increased concurrency)"
-    )
-    orchestrator_queue_depth: int = Field(
-        default=500, description="Max queue depth before backpressure (increased from 100)"
-    )
-
-    # --- 30GB RAM Optimizations: Preprocessing ---
-    preprocessing_chunk_size_mb: int = Field(
-        default=256, description="CSV/data chunk size for preprocessing (increased from 50)"
-    )
-    preprocessing_workers: int = Field(
-        default=8, description="Parallel workers for preprocessing (increased from 2)"
-    )
-    preprocessing_keep_features_in_memory: bool = Field(
-        default=True, description="Keep derived feature matrices in memory instead of disk-backing"
-    )
-
-    # --- Microsoft Graph Integration (Action Layer) ---
-    graph_tenant_id: Optional[str] = Field(
-        default=None, description="Azure AD tenant ID for Graph API authentication"
-    )
-    graph_client_id: Optional[str] = Field(
-        default=None, description="Azure AD application (client) ID for Graph API"
-    )
-    graph_client_secret: Optional[str] = Field(
-        default=None, description="Azure AD application secret for Graph API (keep secure)"
-    )
-    graph_authority: str = Field(
-        default="https://login.microsoftonline.com", description="Authority URL for Graph authentication"
-    )
-    graph_scopes: str = Field(
-        default="https://graph.microsoft.com/.default", description="Graph API scopes"
-    )
-    action_banner_enabled: bool = Field(
-        default=False, description="Enable warning banner insertion for medium-risk emails"
-    )
-    action_quarantine_enabled: bool = Field(
-        default=False, description="Enable email quarantine for high-risk emails"
-    )
-
-    # --- Azure Search Integration (Threat Intelligence) ---
-    azure_search_service: Optional[str] = Field(
-        default=None, description="Azure Search service name (e.g., 'contoso-search')"
-    )
-    azure_search_api_key: Optional[str] = Field(
-        default=None, description="Azure Search admin API key (keep secure)"
-    )
-    azure_search_enabled: bool = Field(
-        default=False, description="Enable Azure Search for advanced IOC queries and semantic search"
-    )
-    azure_search_index_name: str = Field(
-        default="threat-indicators", description="Azure Search index name for IOCs"
     )
 
     @property
@@ -645,3 +560,17 @@ def get_settings() -> Settings:
 
 # Module-level singleton for convenience
 settings = get_settings()
+
+# Ensure the settings singleton is available under alternative import paths
+# Some tests and modules import the settings module via the package root
+# `email_security.src.configs.settings` while application code imports
+# `src.configs.settings`. Register the common alias so both names refer to
+# the same module object and the same `settings` instance.
+try:
+    import sys
+    alias = "email_security.src.configs.settings"
+    if alias not in sys.modules:
+        sys.modules[alias] = sys.modules[__name__]
+except Exception:
+    # Best-effort only; failures here should not break normal startup.
+    pass

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from email_security.src.configs.settings import PROJECT_ROOT, settings
+from src.configs.settings import PROJECT_ROOT, settings
 
 
 _CALIBRATOR_CACHE: dict[str, dict[str, Any] | None] = {}

@@ -14,9 +14,9 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 import uvicorn
 
-from email_security.src.agents.sandbox_agent.agent import _detonate_attachment
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_service_logger, setup_logging
+from src.agents.sandbox_agent.agent import _detonate_attachment
+from src.configs.settings import settings
+from src.services.logging_service import get_service_logger, setup_logging
 
 logger = get_service_logger("sandbox_executor")
 app = FastAPI(title="Sandbox Executor", version="0.1.0")

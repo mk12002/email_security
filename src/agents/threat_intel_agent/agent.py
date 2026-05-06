@@ -14,13 +14,13 @@ from urllib.parse import quote, urlparse
 
 import httpx
 
-from email_security.src.configs import settings
-from email_security.src.services.logging_service import get_agent_logger
+from src.configs import settings
+from src.services.logging_service import get_agent_logger
 
 # Import the ML Pipeline components
-from email_security.src.agents.threat_intel_agent.feature_extractor import extract_features
-from email_security.src.agents.threat_intel_agent.model_loader import load_model
-from email_security.src.agents.threat_intel_agent.inference import predict
+from src.agents.threat_intel_agent.feature_extractor import extract_features
+from src.agents.threat_intel_agent.model_loader import load_model
+from src.agents.threat_intel_agent.inference import predict
 
 logger = get_agent_logger("threat_intel_agent")
 
@@ -31,7 +31,7 @@ IOC_SOURCE_ROOT = Path("datasets/threat_intelligence")
 URL_FALLBACK_ROOT = Path("datasets/url_dataset/malicious")
 
 # Curated static IOC seed list — always available regardless of feed state
-from email_security.src.agents.threat_intel_agent.seed_iocs import SEED_IOCS
+from src.agents.threat_intel_agent.seed_iocs import SEED_IOCS
 
 
 class IOCStore:
@@ -365,7 +365,7 @@ def _collect_iocs_from_feeds() -> list[tuple[str, str, str]]:
     # Locate the unified processed CSV
     unified_path = Path("datasets_processed/threat_intel/unified_ioc_reference.csv")
     if not unified_path.is_absolute():
-        from email_security.src.configs.settings import PROJECT_ROOT
+        from src.configs.settings import PROJECT_ROOT
         unified_path = PROJECT_ROOT / unified_path
 
     if not unified_path.exists():

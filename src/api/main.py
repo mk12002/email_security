@@ -27,17 +27,17 @@ from loguru import logger
 import psycopg2
 import redis.asyncio as redis_async
 
-from email_security.src.api.schemas import (
+from src.api.schemas import (
     AgentDirectTestRequest,
     AgentDirectTestResponse,
     EmailAnalysisRequest,
     EmailAnalysisResponse,
     HealthResponse,
 )
-from email_security.src.configs.settings import settings
-from email_security.src.services.email_parser import EmailParserService
-from email_security.src.services.logging_service import setup_logging
-from email_security.src.services.messaging_service import RabbitMQClient
+from src.configs.settings import settings
+from src.services.email_parser import EmailParserService
+from src.services.logging_service import setup_logging
+from src.services.messaging_service import RabbitMQClient
 
 
 URL_REGEX = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
@@ -163,7 +163,7 @@ async def lifespan(app: FastAPI):
 
     if settings.runtime_bootstrap_enabled:
         try:
-            from email_security.tools.bootstrap_runtime_state import bootstrap_runtime_state
+            from src.tools.bootstrap_runtime_state import bootstrap_runtime_state
 
             bootstrap_report = bootstrap_runtime_state(
                 declare_results_queue=bool(settings.runtime_bootstrap_declare_results_queue),
@@ -303,7 +303,7 @@ def _extract_ips(content: str, urls: list[str]) -> list[str]:
 
 
 def _get_agent_test_function(agent_name: str):
-    from email_security.src.agents.service_runner import AGENT_FUNCTIONS
+    from src.agents.service_runner import AGENT_FUNCTIONS
 
     if agent_name not in AGENT_FUNCTIONS:
         raise HTTPException(
@@ -478,7 +478,7 @@ def _build_soc_overview() -> dict:
 
 async def _threat_intel_refresh_loop(stop_event: asyncio.Event) -> None:
     """Periodically refresh IOC store and emit staleness alerts."""
-    from email_security.src.agents.threat_intel_agent.agent import get_ioc_store_status, refresh_ioc_store
+    from src.agents.threat_intel_agent.agent import get_ioc_store_status, refresh_ioc_store
 
     refresh_every = max(30, int(settings.ioc_refresh_seconds))
     logger.info("Threat-intel auto-refresh loop started", refresh_every_seconds=refresh_every)
@@ -1026,7 +1026,7 @@ async def orchestrator_ws(websocket: WebSocket):
 @app.post("/ops/garuda/process-retries", tags=["Operations"])
 async def process_garuda_retry_queue(max_items: int = 25, _auth: None = Depends(_require_api_key)):
         """Process pending Garuda retries and return reconciliation stats."""
-        from email_security.src.garuda_integration.retry_queue import process_garuda_retries
+        from src.garuda_integration.retry_queue import process_garuda_retries
 
         return process_garuda_retries(max_items=max_items)
 
@@ -1034,7 +1034,7 @@ async def process_garuda_retry_queue(max_items: int = 25, _auth: None = Depends(
 @app.get("/ops/threat-intel/status", tags=["Operations"])
 async def threat_intel_status(_auth: None = Depends(_require_api_key)):
         """Return IOC store lifecycle health and staleness information."""
-        from email_security.src.agents.threat_intel_agent.agent import get_ioc_store_status
+        from src.agents.threat_intel_agent.agent import get_ioc_store_status
 
         return get_ioc_store_status()
 
@@ -1042,7 +1042,7 @@ async def threat_intel_status(_auth: None = Depends(_require_api_key)):
 @app.post("/ops/threat-intel/refresh", tags=["Operations"])
 async def threat_intel_refresh(force: bool = False, _auth: None = Depends(_require_api_key)):
         """Trigger IOC feed refresh lifecycle job now."""
-        from email_security.src.agents.threat_intel_agent.agent import refresh_ioc_store
+        from src.agents.threat_intel_agent.agent import refresh_ioc_store
 
         return refresh_ioc_store(force=force)
 
@@ -1075,7 +1075,7 @@ async def analyze_email(request: EmailAnalysisRequest, _auth: None = Depends(_re
     # OCR: extract hidden URLs from image/PDF attachments
     ocr_urls: list[str] = []
     try:
-        from email_security.src.services.ocr_service import extract_urls_from_attachments
+        from src.services.ocr_service import extract_urls_from_attachments
         ocr_urls = extract_urls_from_attachments(attachments)
         if ocr_urls:
             all_urls = sorted(set(all_urls + ocr_urls))
@@ -1115,7 +1115,7 @@ async def analyze_email(request: EmailAnalysisRequest, _auth: None = Depends(_re
         },
     }
 
-    from email_security.src.orchestrator.deduplication import dedup_email_analysis
+    from src.orchestrator.deduplication import dedup_email_analysis
     dedup_result, was_cached, fingerprint = dedup_email_analysis(payload)
     
     if was_cached and dedup_result:

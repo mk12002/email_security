@@ -7,8 +7,8 @@ Runs the loaded XGBoost model against extracted features to produce predictions.
 from typing import Any, Optional
 import pandas as pd
 
-from email_security.src.preprocessing.threat_intel_feature_contract import MESSAGE_FEATURE_COLUMNS, get_zero_features
-from email_security.src.services.logging_service import get_agent_logger
+from src.preprocessing.threat_intel_feature_contract import MESSAGE_FEATURE_COLUMNS, get_zero_features
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("threat_intel_agent")
 

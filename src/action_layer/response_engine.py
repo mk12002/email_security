@@ -11,9 +11,9 @@ from typing import Any
 
 import httpx
 
-from email_security.src.action_layer.graph_client import get_graph_client, GraphActionResult
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_service_logger
+from src.action_layer.graph_client import get_graph_client, GraphActionResult
+from src.configs.settings import settings
+from src.services.logging_service import get_service_logger
 
 logger = get_service_logger("response_engine")
 

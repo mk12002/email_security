@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any, Optional
 import xgboost as xgb
 
-from email_security.src.agents.ml_runtime import resolve_model_path
-from email_security.src.services.logging_service import get_agent_logger
-from email_security.src.configs.settings import settings
+from src.agents.ml_runtime import resolve_model_path
+from src.services.logging_service import get_agent_logger
+from src.configs.settings import settings
 
 logger = get_agent_logger("user_behavior_agent")
 

@@ -6,11 +6,11 @@ from typing import Any
 
 from Levenshtein import distance as levenshtein_distance
 
-from email_security.src.agents.header_agent.feature_extractor import extract_features
-from email_security.src.agents.header_agent.inference import predict
-from email_security.src.agents.header_agent.model_loader import load_model
-from email_security.src.agents.ml_runtime import clamp as _clamp
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.header_agent.feature_extractor import extract_features
+from src.agents.header_agent.inference import predict
+from src.agents.header_agent.model_loader import load_model
+from src.agents.ml_runtime import clamp as _clamp
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("header_agent")
 

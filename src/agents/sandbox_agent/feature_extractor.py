@@ -6,11 +6,11 @@ from typing import Any
 
 import numpy as np
 
-from email_security.src.preprocessing.sandbox_feature_contract import (
+from src.preprocessing.sandbox_feature_contract import (
     SANDBOX_NUMERIC_FEATURE_COLUMNS,
     build_numeric_feature_map,
 )
-from email_security.src.services.logging_service import get_agent_logger
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("sandbox_agent")
 

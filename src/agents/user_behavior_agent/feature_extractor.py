@@ -6,8 +6,8 @@ from typing import Any
 import sqlite3
 from pathlib import Path
 
-from email_security.src.services.logging_service import get_agent_logger
-from email_security.src.preprocessing.user_behavior_feature_contract import extract_behavior_features
+from src.services.logging_service import get_agent_logger
+from src.preprocessing.user_behavior_feature_contract import extract_behavior_features
 
 logger = get_agent_logger("user_behavior_agent")
 

@@ -13,12 +13,12 @@ full LangGraph pipeline.
 
 from typing import Any
 
-from email_security.src.orchestrator.llm_reasoner import generate_reasoning
-from email_security.src.orchestrator.scoring_engine import calculate_threat_score
-from email_security.src.orchestrator.threat_correlation import correlate_threats
-from email_security.src.orchestrator.counterfactual_engine import calculate_counterfactual, threshold_for_verdict
-from email_security.src.orchestrator.storyline_engine import generate_storyline
-from email_security.src.services.logging_service import get_service_logger
+from src.orchestrator.llm_reasoner import generate_reasoning
+from src.orchestrator.scoring_engine import calculate_threat_score
+from src.orchestrator.threat_correlation import correlate_threats
+from src.orchestrator.counterfactual_engine import calculate_counterfactual, threshold_for_verdict
+from src.orchestrator.storyline_engine import generate_storyline
+from src.services.logging_service import get_service_logger
 
 logger = get_service_logger("decision_engine")
 

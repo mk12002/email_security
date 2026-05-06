@@ -1,0 +1,5 @@
+sample_id,filename,file_extension,executed,return_code,timed_out,spawned_processes,suspicious_process_count,file_entropy,connect_calls,execve_calls,file_write_calls,sequence_length,sequence_process_calls,sequence_network_calls,sequence_filesystem_calls,sequence_registry_calls,sequence_memory_calls,critical_chain_detected,behavior_risk_score,pseudo_label,label,source
+runtime_1778049604620_payload,payload.exe,.exe,1,0,0,2,3,3.12,1,2,0,3,2,1,0,0,0,1,1.0,1,,runtime_detonation
+runtime_1778049604623_payload,payload.sh,.sh,1,0,0,2,3,2.52,1,2,0,3,2,1,0,0,0,1,1.0,1,,runtime_detonation
+runtime_1778050542941_payload,payload.exe,.exe,1,0,0,2,3,3.12,1,2,0,3,2,1,0,0,0,1,1.0,1,,runtime_detonation
+runtime_1778050542943_payload,payload.sh,.sh,1,0,0,2,3,2.52,1,2,0,3,2,1,0,0,0,1,1.0,1,,runtime_detonation

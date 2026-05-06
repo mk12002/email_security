@@ -6,12 +6,12 @@ import math
 from datetime import datetime, timezone
 from typing import Any
 
-from email_security.src.agents.user_behavior_agent.feature_extractor import extract_features
-from email_security.src.agents.user_behavior_agent.inference import predict
-from email_security.src.agents.user_behavior_agent.model_loader import load_model
-from email_security.src.agents.ml_runtime import clamp as _clamp
-from email_security.src.agents.trust_signals import assess_transactional_legitimacy
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.user_behavior_agent.feature_extractor import extract_features
+from src.agents.user_behavior_agent.inference import predict
+from src.agents.user_behavior_agent.model_loader import load_model
+from src.agents.ml_runtime import clamp as _clamp
+from src.agents.trust_signals import assess_transactional_legitimacy
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("user_behavior_agent")
 

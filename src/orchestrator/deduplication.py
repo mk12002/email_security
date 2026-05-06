@@ -14,8 +14,30 @@ import json
 from typing import Any, Optional
 from datetime import datetime, timedelta
 
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_service_logger
+from src.services.logging_service import get_service_logger
+import importlib
+
+# Resolve the canonical settings singleton at runtime to avoid duplicate
+# cached `settings` instances when tests or modules import the settings
+# under different package names (e.g., `src.configs.settings` vs
+# `email_security.src.configs.settings`). Prefer the `email_security`-prefixed
+# module when available so tests that mutate that object are respected.
+
+
+def _get_settings_module():
+    """Return the settings object from the most appropriate module."""
+    try:
+        m = importlib.import_module("email_security.src.configs.settings")
+        return getattr(m, "settings", None)
+    except Exception:
+        try:
+            m = importlib.import_module("src.configs.settings")
+            return getattr(m, "settings", None)
+        except Exception:
+            return None
+
+
+settings = _get_settings_module()
 
 logger = get_service_logger("deduplication")
 
@@ -283,7 +305,9 @@ def dedup_email_analysis(
         - was_cached: Boolean indicating if result was from cache
         - fingerprint: Computed email fingerprint (SHA256)
     """
-    if not settings.request_deduplication_enabled:
+    # Evaluate current settings at call time (tests may mutate settings)
+    current_settings = _get_settings_module() or settings
+    if not (current_settings and getattr(current_settings, "request_deduplication_enabled", False)):
         return None, False, None
     
     try:

@@ -24,7 +24,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 try:
-    from email_security.src.configs.settings import PROJECT_ROOT
+    from src.configs.settings import PROJECT_ROOT
 except ImportError:
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 

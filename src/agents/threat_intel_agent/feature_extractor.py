@@ -7,8 +7,8 @@ Transforms candidate IOCs + IOCStore metadata into consistent ML features.
 import time
 from typing import Any
 
-from email_security.src.preprocessing.threat_intel_feature_contract import extract_features_from_matches
-from email_security.src.services.logging_service import get_agent_logger
+from src.preprocessing.threat_intel_feature_contract import extract_features_from_matches
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("threat_intel_agent")
 

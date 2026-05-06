@@ -8,8 +8,8 @@ into a safe decision for explainability.
 from typing import Any
 import copy
 
-from email_security.src.orchestrator.scoring_engine.scorer import calculate_threat_score
-from email_security.src.services.logging_service import get_service_logger
+from src.orchestrator.scoring_engine.scorer import calculate_threat_score
+from src.services.logging_service import get_service_logger
 
 logger = get_service_logger("counterfactual_engine")
 

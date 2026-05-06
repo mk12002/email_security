@@ -8,8 +8,8 @@ import json
 
 from openai import AzureOpenAI
 
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_service_logger
+from src.configs.settings import settings
+from src.services.logging_service import get_service_logger
 
 logger = get_service_logger("storyline_engine")
 

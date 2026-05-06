@@ -14,8 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from email_security.src.agents.ml_runtime import clamp as _clamp
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.ml_runtime import clamp as _clamp
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
 

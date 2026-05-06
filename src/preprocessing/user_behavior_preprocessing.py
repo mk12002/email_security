@@ -13,7 +13,7 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from email_security.src.preprocessing.user_behavior_feature_contract import extract_behavior_features
+from src.preprocessing.user_behavior_feature_contract import extract_behavior_features
 
 # ---------------------------------------------------------------------------
 # Virtual Enterprise Constants

@@ -5,12 +5,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from email_security.src.agents.content_agent.feature_extractor import extract_features
-from email_security.src.agents.content_agent.inference import predict
-from email_security.src.agents.content_agent.model_loader import load_model
-from email_security.src.agents.ml_runtime import clamp as _clamp
-from email_security.src.agents.trust_signals import assess_transactional_legitimacy
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.content_agent.feature_extractor import extract_features
+from src.agents.content_agent.inference import predict
+from src.agents.content_agent.model_loader import load_model
+from src.agents.ml_runtime import clamp as _clamp
+from src.agents.trust_signals import assess_transactional_legitimacy
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("content_agent")
 

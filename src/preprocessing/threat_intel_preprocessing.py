@@ -28,7 +28,7 @@ from urllib.parse import urlparse
 import numpy as np
 import pandas as pd
 
-from email_security.src.preprocessing.threat_intel_feature_contract import (
+from src.preprocessing.threat_intel_feature_contract import (
     MESSAGE_FEATURE_COLUMNS,
     TRAINING_COLUMNS,
     extract_features_from_matches,
@@ -39,7 +39,7 @@ from email_security.src.preprocessing.threat_intel_feature_contract import (
 # The datasets live at <project_root>/../datasets/threat_intelligence/
 # ---------------------------------------------------------------------------
 try:
-    from email_security.src.configs.settings import PROJECT_ROOT
+    from src.configs.settings import PROJECT_ROOT
 except ImportError:
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -54,7 +54,7 @@ BENIGN_DIR = DATASET_ROOT / "benign"
 # 0.  Logging
 # ---------------------------------------------------------------------------
 try:
-    from email_security.src.services.logging_service import get_service_logger
+    from src.services.logging_service import get_service_logger
     logger = get_service_logger("threat_intel_preprocessing")
 except Exception:
     import logging

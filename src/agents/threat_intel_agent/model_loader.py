@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, Optional
 import xgboost as xgb
 
-from email_security.src.agents.ml_runtime import resolve_model_path
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.ml_runtime import resolve_model_path
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("threat_intel_agent")
 

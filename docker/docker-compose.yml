@@ -114,6 +114,8 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   orchestrator_service:
@@ -145,6 +147,8 @@ services:
       - email_security_net
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      disable: true
     deploy:
       resources:
         limits:
@@ -170,6 +174,8 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   content_agent_service:
@@ -195,6 +201,8 @@ services:
       resources:
         limits:
           memory: 5G
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   url_agent_service:
@@ -216,6 +224,8 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   attachment_agent_service:
@@ -241,6 +251,8 @@ services:
       resources:
         limits:
           memory: 4G
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   sandbox_agent_service:
@@ -262,6 +274,8 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   # NOTE:
@@ -294,6 +308,8 @@ services:
       resources:
         limits:
           memory: 4G
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   user_behavior_agent_service:
@@ -316,6 +332,8 @@ services:
         condition: service_healthy
     networks:
       - email_security_net
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
@@ -335,6 +353,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - email_security_net
+    healthcheck:
+      disable: true
     restart: unless-stopped
   # Agent Services – Placeholder for individual agent containers
   # ---------------------------------------------------------------------------

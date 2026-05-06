@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from email_security.src.garuda_integration import bridge, retry_queue
+from email_security.src.garuda_integration import retry_queue
+from email_security.src.garuda_integration import bridge
 from email_security.src.orchestrator.langgraph_workflow import LangGraphOrchestrator
 
 

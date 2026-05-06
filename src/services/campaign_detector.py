@@ -16,7 +16,7 @@ import hashlib
 import time
 from typing import Any
 
-from email_security.src.services.logging_service import get_service_logger
+from src.services.logging_service import get_service_logger
 
 logger = get_service_logger("campaign_detector")
 

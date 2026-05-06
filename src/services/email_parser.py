@@ -20,10 +20,10 @@ try:
 except Exception:  # pragma: no cover
     extract_msg = None
 
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_service_logger
-from email_security.src.services.messaging_service import RabbitMQClient
-from email_security.src.services.ocr_service import extract_urls_from_attachments
+from src.configs.settings import settings
+from src.services.logging_service import get_service_logger
+from src.services.messaging_service import RabbitMQClient
+from src.services.ocr_service import extract_urls_from_attachments
 
 logger = get_service_logger("email_parser")
 
@@ -206,10 +206,14 @@ class EmailParserService:
 
     def parse_and_publish(self, file_path: str | Path) -> dict[str, Any]:
         payload = self.parse_file(file_path)
-        self.messaging.connect()
-        self.messaging.publish_new_email(payload)
-        self.messaging.close()
-        logger.info("Published NewEmailEvent", analysis_id=payload["analysis_id"])
+        try:
+            self.messaging.connect()
+            self.messaging.publish_new_email(payload)
+            self.messaging.close()
+            logger.info("Published NewEmailEvent", analysis_id=payload["analysis_id"])
+        except Exception as msg_exc:
+            # If messaging fails (e.g., RabbitMQ not available), log but don't fail the parse
+            logger.warning(f"Failed to publish to message queue: {msg_exc} - Email parsing still succeeded")
         return payload
 
     def _extract_headers(self, message) -> dict[str, Any]:

@@ -16,10 +16,10 @@ import docker
 import httpx
 from docker.errors import DockerException, ImageNotFound, NotFound
 
-from email_security.src.agents.sandbox_agent.inference import predict
-from email_security.src.agents.sandbox_agent.model_loader import load_model
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.sandbox_agent.inference import predict
+from src.agents.sandbox_agent.model_loader import load_model
+from src.configs.settings import settings
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("sandbox_agent")
 

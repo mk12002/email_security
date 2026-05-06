@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
-from email_security.src.agents.ml_runtime import load_model_bundle, resolve_model_path
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.ml_runtime import load_model_bundle, resolve_model_path
+from src.configs.settings import settings
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("url_agent")
 

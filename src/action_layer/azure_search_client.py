@@ -17,8 +17,22 @@ import json
 from typing import Any, Optional
 from datetime import datetime, timedelta
 
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_service_logger
+from src.services.logging_service import get_service_logger
+import importlib
+
+
+# Resolve settings dynamically to respect tests or alternate import paths
+def _get_settings():
+    try:
+        m = importlib.import_module("email_security.src.configs.settings")
+        return getattr(m, "settings", None)
+    except Exception:
+        try:
+            m = importlib.import_module("src.configs.settings")
+            return getattr(m, "settings", None)
+        except Exception:
+            return None
+
 
 logger = get_service_logger("azure_search")
 
@@ -440,9 +454,10 @@ def get_azure_search_client() -> Optional[AzureSearchClient]:
     if _azure_search_client is not None:
         return _azure_search_client
     
-    # Check if Azure Search is configured
-    search_service = getattr(settings, "azure_search_service", None)
-    api_key = getattr(settings, "azure_search_api_key", None)
+    # Check if Azure Search is configured (resolve settings at call time)
+    current_settings = _get_settings()
+    search_service = getattr(current_settings, "azure_search_service", None) if current_settings else None
+    api_key = getattr(current_settings, "azure_search_api_key", None) if current_settings else None
     
     if not search_service or not api_key:
         logger.debug("Azure Search not configured")

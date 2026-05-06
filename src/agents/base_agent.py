@@ -8,9 +8,9 @@ from abc import ABC, abstractmethod
 import time
 from typing import Any
 
-from email_security.src.configs.settings import settings
-from email_security.src.services.logging_service import get_agent_logger
-from email_security.src.services.messaging_service import RabbitMQClient
+from src.configs.settings import settings
+from src.services.logging_service import get_agent_logger
+from src.services.messaging_service import RabbitMQClient
 
 
 class BaseAgent(ABC):

@@ -10,9 +10,9 @@ from typing import Any
 
 import httpx
 
-from email_security.src.configs.settings import PROJECT_ROOT, settings
-from email_security.src.services.logging_service import get_service_logger
-from email_security.src.services.messaging_service import RabbitMQClient
+from src.configs.settings import PROJECT_ROOT, settings
+from src.services.logging_service import get_service_logger
+from src.services.messaging_service import RabbitMQClient
 
 logger = get_service_logger("garuda_retry")
 

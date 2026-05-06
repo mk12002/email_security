@@ -6,11 +6,11 @@ import math
 from pathlib import Path
 from typing import Any
 
-from email_security.src.agents.attachment_agent.feature_extractor import extract_features
-from email_security.src.agents.attachment_agent.inference import predict
-from email_security.src.agents.attachment_agent.model_loader import load_model
-from email_security.src.agents.ml_runtime import clamp as _clamp
-from email_security.src.services.logging_service import get_agent_logger
+from src.agents.attachment_agent.feature_extractor import extract_features
+from src.agents.attachment_agent.inference import predict
+from src.agents.attachment_agent.model_loader import load_model
+from src.agents.ml_runtime import clamp as _clamp
+from src.services.logging_service import get_agent_logger
 
 logger = get_agent_logger("attachment_agent")
 

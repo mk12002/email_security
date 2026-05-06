@@ -10,9 +10,9 @@ import shutil
 import time
 from pathlib import Path
 
-from email_security.src.configs.settings import settings
-from email_security.src.services.email_parser import EmailParserService
-from email_security.src.services.logging_service import setup_logging, get_service_logger
+from src.configs.settings import settings
+from src.services.email_parser import EmailParserService
+from src.services.logging_service import setup_logging, get_service_logger
 
 logger = get_service_logger("parser_worker")
 

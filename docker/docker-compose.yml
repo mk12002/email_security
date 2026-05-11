@@ -178,7 +178,7 @@ services:
       <<: *common-app-env
       AGENT_NAME: header_agent
     volumes:
-      - ../../models:/app/models:ro
+      - ../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
     depends_on:
@@ -201,7 +201,7 @@ services:
       <<: *common-app-env
       AGENT_NAME: content_agent
     volumes:
-      - ../../models:/app/models:ro
+      - ../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
     depends_on:
@@ -228,7 +228,7 @@ services:
       <<: *common-app-env
       AGENT_NAME: url_agent
     volumes:
-      - ../../models:/app/models:ro
+      - ../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
     depends_on:
@@ -251,7 +251,7 @@ services:
       <<: *common-app-env
       AGENT_NAME: attachment_agent
     volumes:
-      - ../../models:/app/models:ro
+      - ../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
     depends_on:
@@ -278,7 +278,7 @@ services:
       <<: *common-app-env
       AGENT_NAME: sandbox_agent
     volumes:
-      - ../../models:/app/models:ro
+      - ../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
       - /var/run/docker.sock:/var/run/docker.sock
@@ -307,10 +307,10 @@ services:
       <<: *common-app-env
       AGENT_NAME: threat_intel_agent
     volumes:
-      - ../../models:/app/models:ro
+      - ../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - ioc_data:/app/email_security/data
-      - ../../datasets:/app/datasets:ro
+      - ../datasets:/app/datasets:ro
       - app_logs:/app/email_security/logs
     depends_on:
       rabbitmq:
@@ -336,8 +336,8 @@ services:
       <<: *common-app-env
       AGENT_NAME: user_behavior_agent
     volumes:
-      - ../../models:/app/models:ro
-      - ../../data:/app/data:ro
+      - ../models:/app/models:ro
+      - ../data:/app/data:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
     depends_on:

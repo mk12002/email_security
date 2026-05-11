@@ -40,10 +40,8 @@ def setup_logging(
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
         "<level>{level: <8}</level> | "
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
-        "<level>{message}</level>"
+        "<level>{message}</level> | <cyan>{extra}</cyan>"
     )
-    if hasattr(logger, "_extra"):
-        console_format += " | {extra}"
 
     logger.add(
         sys.stderr,

@@ -44,7 +44,22 @@ class BaseAgent(ABC):
         )
 
     def run(self) -> None:
-        while True:
+        import signal
+
+        self._is_running = True
+
+        def _on_shutdown(sig, frame):
+            self.logger.info("Graceful shutdown signal received")
+            self._is_running = False
+            try:
+                self.messaging.shutdown()
+            except Exception:
+                pass
+
+        signal.signal(signal.SIGTERM, _on_shutdown)
+        signal.signal(signal.SIGINT, _on_shutdown)
+
+        while self._is_running:
             try:
                 self.messaging.connect()
                 self.messaging.declare_new_email_fanout(self.queue_name)
@@ -52,10 +67,14 @@ class BaseAgent(ABC):
                 self.logger.info("Agent worker started", queue=self.queue_name)
                 self.messaging.consume(self.queue_name, self._handle_message)
             except Exception as exc:
+                if not self._is_running:
+                    break
                 self.logger.exception("Agent consumer loop failed; reconnecting", error=str(exc))
                 try:
                     self.messaging.close()
                 except Exception:
                     pass
-                self.messaging = RabbitMQClient()
+                # Exponential backoff is handled in messaging.connect(),
+                # but we add a small safety sleep here as well.
                 time.sleep(2)
+        self.logger.info("Agent worker stopped")

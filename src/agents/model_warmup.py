@@ -166,11 +166,21 @@ def warmup_models_at_startup() -> dict[str, dict[str, Any]]:
     warmup = ModelWarmup()
     results = warmup.warmup_all_models()
     logger.info(warmup.get_warmup_summary())
-    
+
     # Also initialize caches
     _warmup_caches()
-    
+
     return results
+
+
+def warmup_orchestrator_at_startup() -> None:
+    """
+    Warmup only the components needed by the orchestrator (caches, etc).
+    Does NOT preload agent models to save RAM and avoid missing volume errors.
+    """
+    logger.info("Orchestrator warmup started...")
+    _warmup_caches()
+    logger.info("Orchestrator warmup complete")
 
 
 def _warmup_caches() -> None:

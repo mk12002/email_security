@@ -21,18 +21,21 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI
 from fastapi import Depends, File, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 import psycopg2
 import redis.asyncio as redis_async
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from src.api.schemas import (
     AgentDirectTestRequest,
     AgentDirectTestResponse,
+    DiskHealth,
     EmailAnalysisRequest,
     EmailAnalysisResponse,
     HealthResponse,
+    RabbitMQHealth,
 )
 from src.configs.settings import settings
 from src.services.email_parser import EmailParserService
@@ -511,11 +514,71 @@ async def root_redirect():
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health_check():
     """Return the current health status of the API service."""
+    import shutil
+
+    overall_status = "healthy"
+
+    # --- RabbitMQ health ---
+    mq = RabbitMQClient()
+    mq_status = "healthy"
+    mq_error = None
+    queue_depths = {}
+
+    try:
+        mq.connect()
+        monitored_queues = [settings.results_queue, settings.rabbitmq_dead_letter_queue]
+        stats = mq.get_multi_queue_stats(monitored_queues)
+        for stat in stats:
+            queue_depths[stat["queue"]] = stat.get("messages_ready", 0)
+    except Exception as exc:
+        mq_status = "unhealthy"
+        mq_error = str(exc)
+        overall_status = "degraded"
+        logger.warning("Health check detected unhealthy RabbitMQ connection", error=mq_error)
+    finally:
+        mq.close()
+
+    # --- Disk space health ---
+    try:
+        usage = shutil.disk_usage("/")
+        free_gb = round(usage.free / (1024 ** 3), 2)
+        total_gb = round(usage.total / (1024 ** 3), 2)
+        usage_pct = round((usage.used / usage.total) * 100, 1)
+
+        if free_gb < 2.0:
+            disk_status = "critical"
+            overall_status = "degraded"
+        elif free_gb < 5.0:
+            disk_status = "warning"
+        else:
+            disk_status = "healthy"
+
+        disk_health = DiskHealth(
+            status=disk_status,
+            free_gb=free_gb,
+            total_gb=total_gb,
+            usage_percent=usage_pct,
+        )
+    except Exception:
+        disk_health = None
+
     return HealthResponse(
-        status="healthy",
+        status=overall_status,
         version="0.1.0",
         environment=settings.app_env,
+        rabbitmq=RabbitMQHealth(
+            status=mq_status,
+            error=mq_error,
+            queue_depths=queue_depths,
+        ),
+        disk=disk_health,
     )
+
+
+@app.get("/metrics", tags=["System"])
+async def metrics():
+    """Export Prometheus metrics."""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/ui", tags=["Frontend"])
@@ -756,6 +819,27 @@ async def soc_dashboard():
         .fade-in { animation: fadeIn 0.5s ease forwards; }
         .d-1 { animation-delay: 0.1s; } .d-2 { animation-delay: 0.2s; } .d-3 { animation-delay: 0.3s; }
         
+        .back-btn {
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.05);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .back-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 15px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+        
         @media (max-width: 900px) {
             .chart-row { grid-template-columns: 1fr; }
         }
@@ -766,11 +850,19 @@ async def soc_dashboard():
     <div class="bg-orb orb-2"></div>
 
     <header>
-        <div class="logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-primary)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            SOC <span>Intelligence</span>
+        <a href="/ui" style="text-decoration:none; color:inherit;">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-primary)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                SOC <span>Intelligence</span>
+            </div>
+        </a>
+        <div style="display:flex; align-items:center; gap:1.5rem;">
+            <a href="/ui" class="back-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Home
+            </a>
+            <div id="ts" class="timestamp">Connecting...</div>
         </div>
-        <div id="ts" class="timestamp">Connecting...</div>
     </header>
 
     <div class="container">

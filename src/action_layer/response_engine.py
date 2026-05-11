@@ -179,14 +179,19 @@ class ResponseEngine:
                 graph_message_id = resolved
                 logger.info("Resolved message ID via Graph", analysis_id=analysis_id, upn=upn)
             else:
-                logger.warning("Failed to resolve message ID", analysis_id=analysis_id, upn=upn)
+                logger.warning(
+                    "Failed to resolve message ID; falling back to simulated mode",
+                    analysis_id=analysis_id, upn=upn,
+                )
+                self._execute_simulated_actions(actions, analysis_id)
                 return
 
         if not graph_message_id:
             logger.warning(
-                "Cannot execute actions: no graph_message_id available",
+                "No graph_message_id available; falling back to simulated mode",
                 analysis_id=analysis_id,
             )
+            self._execute_simulated_actions(actions, analysis_id)
             return
 
         # Execute quarantine for high-risk emails

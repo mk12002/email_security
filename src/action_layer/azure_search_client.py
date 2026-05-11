@@ -122,6 +122,10 @@ class AzureSearchClient:
                 SearchFieldDataType,
                 SimpleField,
                 SearchableField,
+                SemanticConfiguration,
+                SemanticPrioritizedFields,
+                SemanticField,
+                SemanticSearch,
             )
             from azure.core.credentials import AzureKeyCredential
             
@@ -133,76 +137,33 @@ class AzureSearchClient:
             
             # Define index schema for threat indicators
             fields = [
-                SimpleField(
-                    name="id",
-                    type=SearchFieldDataType.String,
-                    key=True,
-                    sortable=True,
-                ),
-                SearchableField(
-                    name="indicator",
-                    type=SearchFieldDataType.String,
-                    sortable=True,
-                    filterable=True,
-                ),
-                SimpleField(
-                    name="indicator_type",
-                    type=SearchFieldDataType.String,
-                    filterable=True,
-                    facetable=True,
-                ),
-                SimpleField(
-                    name="severity",
-                    type=SearchFieldDataType.String,
-                    filterable=True,
-                    facetable=True,
-                ),
-                SimpleField(
-                    name="source",
-                    type=SearchFieldDataType.String,
-                    filterable=True,
-                    facetable=True,
-                ),
-                SearchableField(
-                    name="description",
-                    type=SearchFieldDataType.String,
-                ),
-                SimpleField(
-                    name="first_seen_ts",
-                    type=SearchFieldDataType.DateTimeOffset,
-                    filterable=True,
-                    sortable=True,
-                ),
-                SimpleField(
-                    name="last_seen_ts",
-                    type=SearchFieldDataType.DateTimeOffset,
-                    filterable=True,
-                    sortable=True,
-                ),
-                SimpleField(
-                    name="confidence",
-                    type=SearchFieldDataType.Double,
-                    filterable=True,
-                    sortable=True,
-                ),
-                SearchableField(
-                    name="tags",
-                    type=SearchFieldDataType.String,
-                    collection=True,
-                    filterable=True,
-                    facetable=True,
-                ),
+                SimpleField(name="id", type=SearchFieldDataType.String, key=True, sortable=True),
+                SearchableField(name="indicator", type=SearchFieldDataType.String, sortable=True, filterable=True),
+                SimpleField(name="indicator_type", type=SearchFieldDataType.String, filterable=True, facetable=True),
+                SimpleField(name="severity", type=SearchFieldDataType.String, filterable=True, facetable=True),
+                SimpleField(name="source", type=SearchFieldDataType.String, filterable=True, facetable=True),
+                SearchableField(name="description", type=SearchFieldDataType.String),
+                SimpleField(name="first_seen_ts", type=SearchFieldDataType.DateTimeOffset, filterable=True, sortable=True),
+                SimpleField(name="last_seen_ts", type=SearchFieldDataType.DateTimeOffset, filterable=True, sortable=True),
+                SimpleField(name="confidence", type=SearchFieldDataType.Double, filterable=True, sortable=True),
+                SearchableField(name="tags", type=SearchFieldDataType.String, collection=True, filterable=True, facetable=True),
             ]
+            
+            # Define semantic configuration
+            semantic_config = SemanticConfiguration(
+                name="default",
+                prioritized_fields=SemanticPrioritizedFields(
+                    title_field=SemanticField(field_name="indicator"),
+                    content_fields=[SemanticField(field_name="description")],
+                    keywords_fields=[SemanticField(field_name="tags")],
+                ),
+            )
+            semantic_search = SemanticSearch(configurations=[semantic_config])
             
             index = SearchIndex(
                 name=self.index_name,
                 fields=fields,
-                semantic_config={
-                    "defaultConfiguration": {
-                        "titleField": {"fieldName": "indicator"},
-                        "contentFields": [{"fieldName": "description"}],
-                    }
-                },
+                semantic_search=semantic_search,
             )
             
             # Create or update index
@@ -213,7 +174,7 @@ class AzureSearchClient:
             return True
             
         except Exception as e:
-            logger.warning("Failed to ensure index exists", error=str(e))
+            logger.warning("Failed to ensure index exists", error=str(e), exc_info=True)
             return False
     
     def upload_indicators(self, indicators: list[dict[str, Any]]) -> tuple[int, int]:
@@ -239,15 +200,24 @@ class AzureSearchClient:
             # Prepare documents for upload
             documents = []
             for ioc in indicators:
+                # Ensure ISO format with Z for DateTimeOffset fields
+                first_seen = ioc.get("first_seen_ts")
+                if isinstance(first_seen, (int, float)):
+                    first_seen = datetime.fromtimestamp(first_seen).isoformat() + "Z"
+                
+                last_seen = ioc.get("last_seen_ts")
+                if isinstance(last_seen, (int, float)):
+                    last_seen = datetime.fromtimestamp(last_seen).isoformat() + "Z"
+
                 doc = {
-                    "id": f"{ioc['indicator_type']}:{ioc['indicator']}".replace("/", "_"),
+                    "id": f"{ioc['indicator_type']}:{ioc['indicator']}".replace("/", "_").replace(":", "_"),
                     "indicator": ioc["indicator"],
                     "indicator_type": ioc["indicator_type"],
                     "severity": ioc.get("severity", "unknown"),
                     "source": ioc.get("source", "unknown"),
                     "description": ioc.get("description", ""),
-                    "first_seen_ts": ioc.get("first_seen_ts"),
-                    "last_seen_ts": ioc.get("last_seen_ts"),
+                    "first_seen_ts": first_seen,
+                    "last_seen_ts": last_seen,
                     "confidence": ioc.get("confidence", 0.5),
                     "tags": ioc.get("tags", []),
                 }
@@ -265,9 +235,10 @@ class AzureSearchClient:
                         if result.get("succeeded"):
                             successful += 1
                         else:
+                            logger.warning(f"Document upload failed: {result.get('key')}", error=result.get("errorMessage"))
                             failed += 1
                 except Exception as e:
-                    logger.warning("Batch upload failed", error=str(e), batch_start=i)
+                    logger.warning("Batch upload failed", error=str(e), exc_info=True, batch_start=i)
                     failed += len(batch)
             
             logger.info(

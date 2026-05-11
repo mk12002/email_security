@@ -23,7 +23,7 @@ graph TD
         Auth --> Rate[Rate Limit and Tenant Quota]:::core
         Rate --> Parse[Email Parser MIME plus Header plus Body]:::core
         Parse --> Norm[Canonical Event Builder with Correlation ID]:::core
-        Norm --> OCR[OCR Extractor for image attachments]:::core
+        Norm --> OCR[Azure AI Vision OCR for image/PDF analysis]:::core
         OCR --> IOC[IOC Extraction URLs IPs Domains Hashes]:::core
         IOC --> Envelope[Envelope Serializer JSON schema validated]:::core
     end
@@ -145,7 +145,7 @@ graph TD
     subgraph Explainability[Counterfactual and Narrative]
         ExplainSeed --> CF[Counterfactual engine minimal changes to flip class]:::llm
         CF --> Why[Reason extraction top positive and negative contributors]:::llm
-        Why --> LLM[Azure OpenAI SOC reasoning pass]:::llm
+        Why --> LLM[Azure OpenAI Reasoning and Attack Synthesis]:::llm
         LLM --> Story[Chronological attack storyline synthesis]:::llm
         Story --> Rec[Action recommendation generation]:::llm
     end
@@ -337,7 +337,7 @@ graph TD
 
     subgraph DocumentImagePath[Document and Image Path]
         Type -->|pdf doc image| SafeRender[Safe rasterization in isolated worker]:::det
-        SafeRender --> OCR[OCR text extraction]:::det
+        SafeRender --> OCR[Azure AI Vision Cloud Analysis]:::det
         OCR --> Hidden[Hidden text layer and tiny font detector]:::det
         Hidden --> URLExtract[Extract embedded and visual URLs]:::det
         URLExtract --> Reinjection[Send discovered URLs to URL analysis queue]:::proc
@@ -418,6 +418,7 @@ graph TD
     Hit -->|partial or no| Queue[Prepare unresolved IOC query batch]:::proc
 
     subgraph ProviderFanout[External Intelligence Providers]
+        Queue --> AZS[Azure AI Search Semantic Search]:::api
         Queue --> VT[VirusTotal adapter]:::api
         Queue --> OTX[AlienVault OTX adapter]:::api
         Queue --> Abuse[AbuseIPDB adapter]:::api

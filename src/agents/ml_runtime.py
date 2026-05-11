@@ -11,7 +11,9 @@ from typing import Any
 import joblib
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# `src/agents/ml_runtime.py` lives under `email_security/src/agents/`, so the
+# package root is two parents up and the workspace root is one level above that.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 logger = logging.getLogger("ml_runtime")
 

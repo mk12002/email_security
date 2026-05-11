@@ -16,6 +16,7 @@ import httpx
 
 from src.configs import settings
 from src.services.logging_service import get_agent_logger
+from src.action_layer.azure_search_client import get_azure_search_client
 
 # Import the ML Pipeline components
 from src.agents.threat_intel_agent.feature_extractor import extract_features
@@ -170,9 +171,17 @@ class IOCStore:
             return []
 
         matches = []
-        for val in values:
-            if self.lookup_single(val):
-                matches.append(val)
+        with self._connect() as conn:
+            for val in values:
+                # Still using the LRU cache if possible, but the cache calls _lookup_single
+                # which opens its own connection. This is still bad.
+                # I'll bypass the cache for batch lookups or use a better pattern.
+                row = conn.execute(
+                    "SELECT 1 FROM iocs WHERE indicator = ?",
+                    (val,)
+                ).fetchone()
+                if row:
+                    matches.append(val)
         return matches
 
     def clear_cache(self) -> None:
@@ -358,9 +367,109 @@ def _read_txt_iocs(file_path: Path) -> list[tuple[str, str, str]]:
     return rows
 
 
+def _harvest_from_abuseipdb() -> list[tuple[str, str, str]]:
+    """Harvest high-confidence malicious IPs from AbuseIPDB blacklist."""
+    if not settings.abuseipdb_api_key or not settings.enable_abuseipdb_lookup:
+        return []
+    try:
+        headers = {"Key": settings.abuseipdb_api_key, "Accept": "application/json"}
+        # Fetch the top 1000 IPs with confidence >= 90
+        params = {"confidenceMinimum": 90, "limit": 1000}
+        with httpx.Client(timeout=settings.threat_intel_harvest_timeout_seconds, follow_redirects=True) as client:
+            resp = client.get(settings.abuseipdb_blacklist_url, headers=headers, params=params)
+            resp.raise_for_status()
+            data = resp.json().get("data", [])
+            return [(item.get("ipAddress"), "ip", "abuseipdb_blacklist") for item in data if item.get("ipAddress")]
+    except Exception as e:
+        logger.warning(f"AbuseIPDB harvesting failed: {e}")
+        return []
+
+
+def _harvest_from_malwarebazaar() -> list[tuple[str, str, str]]:
+    """Harvest recent malware hashes from MalwareBazaar."""
+    if not settings.enable_malwarebazaar_lookup:
+        return []
+    try:
+        # MalwareBazaar API uses a POST with 'query' parameter
+        headers = {}
+        if settings.virustotal_api_key: # Reusing VT key or checking if we have one (user didn't give specific MB key)
+             # Wait, I don't have a MB key. I'll just try without it but with proper headers.
+             pass
+        
+        data = {"query": "get_recent", "selector": "100"}
+        with httpx.Client(timeout=settings.threat_intel_harvest_timeout_seconds, follow_redirects=True) as client:
+            resp = client.post(settings.malwarebazaar_api_url, data=data)
+            resp.raise_for_status()
+            items = resp.json().get("data", [])
+            return [(item.get("sha256_hash"), "hash", "malwarebazaar_recent") for item in items if item.get("sha256_hash")]
+    except Exception as e:
+        logger.warning(f"MalwareBazaar harvesting failed: {e}")
+        return []
+
+
+def _harvest_from_urlhaus() -> list[tuple[str, str, str]]:
+    """Harvest recent malicious URLs from URLhaus."""
+    if not settings.enable_urlhaus_lookup:
+        return []
+    try:
+        with httpx.Client(timeout=settings.threat_intel_harvest_timeout_seconds, follow_redirects=True) as client:
+            resp = client.get(settings.urlhaus_recent_csv_url)
+            resp.raise_for_status()
+            lines = resp.text.splitlines()
+            rows: list[tuple[str, str, str]] = []
+            for line in lines:
+                if line.startswith("#") or not line.strip():
+                    continue
+                # CSV format: id, dateadded, url, url_status, threat, ...
+                parts = line.split(",")
+                if len(parts) >= 3:
+                    url = parts[2].strip().strip('"')
+                    if url:
+                        rows.append((url, "url", "urlhaus_recent"))
+            return rows
+    except Exception as e:
+        logger.warning(f"URLhaus harvesting failed: {e}")
+        return []
+
+
+def _harvest_from_openphish() -> list[tuple[str, str, str]]:
+    """Harvest phishing URLs from OpenPhish feed."""
+    if not settings.enable_openphish_lookup:
+        return []
+    try:
+        with httpx.Client(timeout=settings.threat_intel_harvest_timeout_seconds, follow_redirects=True) as client:
+            resp = client.get(settings.openphish_feed_url)
+            resp.raise_for_status()
+            return [(line.strip(), "url", "openphish_feed") for line in resp.text.splitlines() if line.strip()]
+    except Exception as e:
+        logger.warning(f"OpenPhish harvesting failed: {e}")
+        return []
+
+
+def _harvest_external_feeds() -> list[tuple[str, str, str]]:
+    """Aggregate IOCs from all enabled external API feeds."""
+    if not settings.enable_external_feed_harvesting:
+        return []
+    
+    logger.info("Starting external threat intelligence harvesting...")
+    results: list[tuple[str, str, str]] = []
+    
+    # Run harvesters sequentially (can be parallelized in future phases)
+    results.extend(_harvest_from_abuseipdb())
+    results.extend(_harvest_from_malwarebazaar())
+    results.extend(_harvest_from_urlhaus())
+    results.extend(_harvest_from_openphish())
+    
+    logger.info(f"External harvesting complete. Found {len(results)} candidate IOCs.")
+    return results
+
+
 def _collect_iocs_from_feeds() -> list[tuple[str, str, str]]:
-    """Ingest IOCs from the cleaned, unified dataset rather than raw feeds."""
+    """Ingest IOCs from both external API feeds and local unified datasets."""
     rows: list[tuple[str, str, str]] = []
+    
+    # Harvest from external APIs first
+    rows.extend(_harvest_external_feeds())
     
     # Locate the unified processed CSV
     unified_path = Path("datasets_processed/threat_intel/unified_ioc_reference.csv")
@@ -894,27 +1003,13 @@ def _virustotal_hash_score(hashes: list[str]) -> tuple[float, list[str]]:
 
 
 def _external_enrichment_score(iocs: dict[str, list[str]]) -> tuple[float, list[str]]:
-    import signal
     domains = [str(item) for item in (iocs.get("domains") or [])]
     ips = [str(item) for item in (iocs.get("ips") or [])]
     hashes = [str(item) for item in (iocs.get("hashes") or [])]
     provider_scores: list[float] = []
     indicators: list[str] = []
 
-    # Set global timeout for entire external enrichment to prevent agent from stalling
-    enrichment_timeout_seconds = 5.0
-
-    def timeout_handler(signum, frame):
-        raise TimeoutError(f"External enrichment exceeded {enrichment_timeout_seconds}s budget")
-
-    supports_alarm = hasattr(signal, "SIGALRM")
-    old_handler = None
-
     try:
-        if supports_alarm:
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(int(enrichment_timeout_seconds) + 1)
-
         otx_score, otx_indicators = _otx_score(domains + ips + hashes)
         if otx_score > 0.0:
             provider_scores.append(otx_score)
@@ -935,24 +1030,9 @@ def _external_enrichment_score(iocs: dict[str, list[str]]) -> tuple[float, list[
             provider_scores.append(vt_hash_score)
         indicators.extend(vt_hash_indicators)
 
-        if supports_alarm:
-            signal.alarm(0)
-            if old_handler is not None:
-                signal.signal(signal.SIGALRM, old_handler)
-    except TimeoutError:
-        logger.warning("External enrichment timeout; skipping for this analysis")
-        indicators.append("external_enrichment_timeout")
-        if supports_alarm:
-            signal.alarm(0)
-            if old_handler is not None:
-                signal.signal(signal.SIGALRM, old_handler)
     except Exception as exc:
         logger.warning(f"External enrichment failed: {exc}")
         indicators.append("external_enrichment_error")
-        if supports_alarm:
-            signal.alarm(0)
-            if old_handler is not None:
-                signal.signal(signal.SIGALRM, old_handler)
 
     if not provider_scores:
         return 0.0, indicators
@@ -976,16 +1056,34 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
 
     # Fast offline SQLite lookup
     matches = _STORE.lookup(candidates)
+    logger.info(f"Local IOC lookup complete: {len(matches)} matches", agent="threat_intel_agent")
 
     # ML Inference Pipeline
     agent_model = load_model()
+    logger.info("Extracting features", agent="threat_intel_agent")
     features = extract_features(data, matches, _STORE)
+    logger.info("Running prediction", agent="threat_intel_agent")
     prediction = predict(features, agent_model)
     
     # Build explanation indicators
-    if matches:
+    azure_search_matches = []
+    if candidates and settings.azure_search_enabled:
+        search_client = get_azure_search_client()
+        if search_client:
+            # Query top 3 candidates for semantic similarity
+            for query_ioc in candidates[:3]:
+                try:
+                    search_hits = search_client.semantic_search(query_ioc)
+                    for hit in search_hits:
+                        if hit.get("score", 0) > 2.0: # Only high-relevance hits
+                            azure_search_matches.append(f"azure_search_hit:{hit['indicator']}({hit['type']})")
+                except Exception:
+                    pass
+
+    if matches or azure_search_matches:
         # Prefix with highest risk matching indicator (typically limit to 10 for log brevity)
         report_matches = [f"ioc_match:{m}" for m in matches[:10]]
+        report_matches.extend(azure_search_matches[:5])
     else:
         report_matches = ["no_local_ioc_hits"]
 

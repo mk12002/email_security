@@ -1,335 +1,216 @@
-# Agentic Email Security System — Complete Startup & Run Guide
+# Agentic Email Security System - Startup Guide
 
-> **Last Updated:** April 20, 2026
+> Last Updated: May 7, 2026
 
----
+## Is `startup.sh` Sufficient?
 
-## Table of Contents
+Yes, for full containerized startup.
 
-1. [Prerequisites](#prerequisites)
-2. [Architecture Overview](#architecture-overview)
-3. [Step 1 — Environment Configuration](#step-1--environment-configuration)
-4. [Step 2 — Start the Complete System](#step-2--start-the-complete-system)
-9. [Accessing the Frontend](#accessing-the-frontend)
-10. [Testing with .eml Files](#testing-with-eml-files)
-11. [Full Docker Deployment (Alternative)](#full-docker-deployment-alternative)
-12. [API Endpoints Reference](#api-endpoints-reference)
-13. [Troubleshooting](#troubleshooting)
-14. [Shutdown Procedure](#shutdown-procedure)
+- Use `scripts/startup.sh` when you want the complete Docker stack (API, parser, orchestrator, all agents, DB, Redis, RabbitMQ).
+- Use `scripts/start_system.sh` only for local Python-process mode (`--api` or `--full`), not for full Docker lifecycle.
 
----
+When I run extra `docker compose` commands, that is usually for post-start verification (health, logs, queues), not because startup failed.
 
-## Prerequisites
-
-| Requirement | Minimum Version | Notes |
-|---|---|---|
-| Python | 3.10+ | 3.11 recommended |
-| Docker | 29.x | For infrastructure containers |
-| Docker Compose | v5.x (plugin) | `docker compose` (not `docker-compose`) |
-| OS | Linux | Tested on Ubuntu / Kali Linux |
-| RAM | 8 GB+ | ML models need ~2 GB during warm-up |
-
-### API Keys Required (configured in `.env`)
-
-| Service | Variable | Required? |
-|---|---|---|
-| Azure OpenAI | `AZURE_OPENAI_API_KEY` | **Yes** — LLM reasoning / explanations |
-| VirusTotal | `VIRUSTOTAL_API_KEY` | Recommended — URL & hash lookups |
-| Google Safe Browsing | `GOOGLE_SAFE_BROWSING_API_KEY` | Recommended |
-| AbuseIPDB | `ABUSEIPDB_API_KEY` | Recommended |
-| URLScan | `URLSCAN_API_KEY` | Optional |
-| Shodan | `SHODAN_API_KEY` | Optional |
-| OCR.space | `OCR_SPACE_API_KEY` | Optional — image/PDF text extraction |
-
----
-
-## Architecture Overview
-
-The system has **4 process groups** that must all be running:
-
-```
-┌──────────────────────────────────────────────────────┐
-│  INFRASTRUCTURE (Docker containers)                  │
-│  PostgreSQL · Redis · RabbitMQ                       │
-└───────────────────────┬──────────────────────────────┘
-                        │
-┌───────────────────────▼──────────────────────────────┐
-│  API SERVER (FastAPI + Uvicorn)                       │
-│  Serves frontend UI · Accepts /analyze-email          │
-│  Accepts /ingest-raw-email · Serves /reports/{id}     │
-└───────────────────────┬──────────────────────────────┘
-                        │ publishes events to RabbitMQ
-┌───────────────────────▼──────────────────────────────┐
-│  7 AGENT WORKERS (one process per agent)              │
-│  header · content · url · attachment · sandbox        │
-│  threat_intel · user_behavior                         │
-│  Each consumes from its own RabbitMQ queue             │
-│  Each publishes results to email.results.queue         │
-└───────────────────────┬──────────────────────────────┘
-                        │
-┌───────────────────────▼──────────────────────────────┐
-│  ORCHESTRATOR                                         │
-│  Consumes email.results.queue                         │
-│  Merges results · Runs LangGraph pipeline             │
-│  Generates verdict, scores, LLM explanation            │
-│  Saves report to PostgreSQL                            │
-└──────────────────────────────────────────────────────┘
-```
-
----
-
-## Step 1 — Environment Configuration
+## Recommended Way To Start The Entire System
 
 ```bash
 cd /home/LabsKraft/new_work/email_security
+chmod +x scripts/startup.sh
+./scripts/startup.sh
 ```
 
-The `.env` file is already configured. Key local-dev overrides at the bottom of `.env` connect to Docker-hosted infrastructure:
+What this script does:
 
-```ini
-# LOCAL DEVELOPMENT OVERRIDES (already set in .env)
-RABBITMQ_HOST=localhost
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/email_security
-REDIS_URL=redis://localhost:6379/0
-IOC_DB_PATH=data/ioc_store.db
-EMAIL_DROP_DIR=./email_drop
-ATTACHMENT_VOLUME_DIR=./attachments
-```
+1. Ensures required directories exist (`logs`, `data`).
+2. Detects compose command (`docker compose` preferred).
+3. Runs compose startup with build.
+4. Waits briefly and prints verification hints.
 
-> **Tip:** If running everything inside Docker instead, comment out these overrides.
+## Optional Startup Modes
 
----
-
-## Step 2 — Start the Complete System
-
-The system comes with an optimized startup script that starts the infrastructure, API server, ML models, agents, and orchestrator in a stable, sequential manner. This script automatically handles waiting for services to initialize and loading ML models sequentially to prevent crashes or Out-Of-Memory (OOM) errors.
-
-```bash
-cd /home/LabsKraft/new_work
-./start_system.sh
-```
-
-**What the script does automatically:**
-1. **Starts Infrastructure:** Boots Docker containers for PostgreSQL, Redis, and RabbitMQ.
-2. **Waits for Readiness:** Continuously pings RabbitMQ until it is ready to accept connections.
-3. **Starts API & Warms up ML:** Boots the Uvicorn-based API Server. It pauses execution until the API server reports healthy (which includes warming up the large Content Phishing detection transformer).
-4. **Starts Core Workers:** Launces Orchestrator, Sandbox Executor, and Parser Worker in the background.
-5. **Starts Agents Sequentially:** Loops through the 7 agents and launches them with a pause in between, ensuring that concurrent ML initialization and DB queries do not cause the system to freeze or crash.
-
-All microservices write logs to `/tmp/emailsec_logs/`.
-
-**Verify it is running:**
-```bash
-tail -f /tmp/emailsec_logs/api.log
-# Look for: "Application startup complete."
-```
-
----
-
-## Accessing the Frontend
-
-Once the API server is running:
-
-| Page | URL | Description |
-|---|---|---|
-| **SOC Dashboard** | http://localhost:8000/ui | Main dashboard — queue health, verdict history, agent outputs |
-| **Email Analysis** | http://localhost:8000/ui/analyze | Upload `.eml`/`.msg`/`.txt` files for full pipeline analysis |
-| **Agent Testing** | http://localhost:8000/ui/agents | Test individual agents with custom payloads |
-| **SOC Live Dashboard** | http://localhost:8000/soc/dashboard | Analyst-facing dashboard with auto-refresh |
-| **API Docs** | http://localhost:8000/docs | Swagger/OpenAPI interactive docs |
-| **RabbitMQ Management** | http://localhost:15672 | Queue monitoring (login: `guest` / `guest`) |
-
----
-
-## Testing with .eml Files
-
-### Method 1: Frontend Upload (Recommended)
-
-1. Navigate to **http://localhost:8000/ui/analyze**
-2. Drag and drop (or click to browse) an `.eml` file
-3. Click **🚀 Start Analysis**
-4. Watch the **Live Agent Pipeline** for real-time WebSocket updates
-5. The report auto-loads when all 7 agents finish
-
-### Method 2: cURL Upload
-
-```bash
-curl -X POST http://localhost:8000/ingest-raw-email \
-  -F "file=@./email_drop/live_check_sample.eml"
-```
-
-Response gives you an `analysis_id`. Poll the report:
-
-```bash
-curl http://localhost:8000/reports/<analysis_id>
-```
-
-### Method 3: Parser Worker (File Drop)
-
-Copy `.eml` files into `./email_drop/` and the parser worker auto-detects and processes them.
-
-### Available Test Files
-
-| File | Type | Description |
-|---|---|---|
-| `email_drop/live_check_sample.eml` | **Malicious** | Fake invoice, double-extension `.pdf.exe` attachment, Win32 API shellcode payload |
-| `email_drop/IEEE ICNPCV 2026 - PAYMENT REMINDER.eml` | **Legitimate** | Real IEEE conference payment reminder via Microsoft CMT, DKIM/SPF/DMARC all pass |
-| `email_drop/Dabur & Sony invite you to AINCAT'26.eml` | **Legitimate** | Conference invitation email |
-
----
-
-## Full Docker Deployment (Alternative)
-
-To run **everything** inside Docker (no local Python needed):
+### Full Docker (direct compose)
 
 ```bash
 cd /home/LabsKraft/new_work/email_security/docker
-
-# Build and start all services
-docker compose up --build -d
-
-# With sandbox detonation support (dev only)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+docker compose up -d --build
 ```
 
-This starts all containers: `api_service`, `parser_service`, `orchestrator_service`, all 7 agent services, `database`, `redis`, `rabbitmq`.
-
-**View logs:**
+### Local Python processes (non-container app runtime)
 
 ```bash
-docker compose logs -f api_service
-docker compose logs -f orchestrator_service
-docker compose logs -f header_agent_service
+cd /home/LabsKraft/new_work/email_security
+chmod +x scripts/start_system.sh
+./scripts/start_system.sh --full
 ```
 
----
-
-## API Endpoints Reference
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/health` | Health check |
-| `GET` | `/ui` | SOC Dashboard |
-| `GET` | `/ui/analyze` | File upload analysis page |
-| `GET` | `/ui/agents` | Individual agent testing |
-| `POST` | `/analyze-email` | Submit structured email JSON for analysis |
-| `POST` | `/ingest-raw-email` | Upload raw `.eml`/`.msg`/`.txt` file |
-| `GET` | `/reports/{analysis_id}` | Fetch completed analysis report |
-| `GET` | `/soc/dashboard` | Live SOC dashboard |
-| `GET` | `/soc/overview` | SOC data API (queue health, verdicts) |
-| `GET` | `/agent-test/agents` | List testable agents |
-| `GET` | `/agent-test/examples` | Sample payloads for each agent |
-| `POST` | `/agent-test/{agent_name}` | Direct single-agent test |
-| `GET` | `/ops/threat-intel/status` | IOC store health |
-| `POST` | `/ops/threat-intel/refresh` | Force IOC feed refresh |
-| `POST` | `/ops/garuda/process-retries` | Process Garuda retry queue |
-| `WS` | `/ws/orchestrator` | WebSocket for real-time pipeline updates |
-
----
-
-## Troubleshooting
-
-### API server won't start
-
-```
-ModuleNotFoundError: No module named 'email_security'
-```
-
-**Fix:** Make sure `PYTHONPATH` includes the project root:
+## Immediate Post-Start Verification
 
 ```bash
-export PYTHONPATH=/home/LabsKraft/new_work
-```
-
-### ML model warm-up takes too long
-
-First startup downloads and caches the transformer model. Subsequent starts are faster (~30s). Watch for:
-
-```
-Content ML model warmed up successfully.
-```
-
-### Agent not consuming messages
-
-Check the agent log and verify AGENT_NAME is set:
-
-```bash
-tail -50 /tmp/header_agent.log
-```
-
-Common issue: Agent process exited silently. Restart it:
-
-```bash
-AGENT_NAME=header_agent nohup python -m email_security.agents.service_runner \
-    > /tmp/header_agent.log 2>&1 &
-```
-
-### Report not ready (404 on /reports/{id})
-
-- Check the orchestrator is running and consuming
-- Check that all 7 agents delivered results (check `agent_outputs` in `/soc/overview`)
-- The orchestrator waits up to 90 seconds (configurable) before finalizing with partial results
-
-### RabbitMQ connection refused
-
-```bash
-docker ps | grep rabbitmq
-# Ensure the container is healthy
-docker compose -f docker/docker-compose.yml up -d rabbitmq
-```
-
-### Database connection error
-
-```bash
-docker ps | grep db
-docker exec email-security-db pg_isready -U postgres
-```
-
----
-
-## Shutdown Procedure
-
-### Local Development
-
-```bash
-# 1. Stop API server (Ctrl+C in Terminal 1)
-
-# 2. Stop orchestrator (Ctrl+C in Terminal 3)
-
-# 3. Stop parser worker if running (Ctrl+C in Terminal 4)
-
-# 4. Kill all agent workers
-pkill -f "email_security.agents.service_runner"
-
-# 5. (Optional) Stop Docker infrastructure
 cd /home/LabsKraft/new_work/email_security/docker
-docker compose down
-# Add -v to also remove volumes (clears all data):
-# docker compose down -v
+docker compose ps
 ```
 
-### Docker Deployment
+Healthy baseline:
+
+- `api_service` should be `healthy`.
+- `rabbitmq`, `database`, `redis` should be `healthy`.
+- `orchestrator_service`, `parser_service`, and all 7 agent services should be `Up`.
+
+Queue health:
+
+```bash
+cd /home/LabsKraft/new_work/email_security/docker
+docker compose exec -T rabbitmq rabbitmqctl list_queues name messages consumers
+```
+
+Expected steady state for active flow:
+
+- Agent queues have `consumers >= 1`.
+- No unbounded queue growth.
+
+## User Interfaces & Observability
+
+Access the following web-based interfaces for real-time monitoring and interaction:
+
+### 🌐 Primary Interfaces
+- **Main Control Center**: [http://localhost:8000/ui](http://localhost:8000/ui) — *Central landing page for system navigation.*
+- **SOC Intelligence Dashboard**: [http://localhost:8000/soc/dashboard](http://localhost:8000/soc/dashboard) — *Real-time threat metrics, risk distributions, and response status.*
+- **Email Analysis Tool**: [http://localhost:8000/ui/analyze](http://localhost:8000/ui/analyze) — *Manual file upload for instant email analysis.*
+- **Agent Testing Lab**: [http://localhost:8000/ui/agents](http://localhost:8000/ui/agents) — *Isolated testing of individual AI agents with custom payloads.*
+
+### 🛠️ Developer & Health Tools
+- **API Documentation (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs) — *Interactive API exploration.*
+- **Prometheus Metrics**: [http://localhost:8000/metrics](http://localhost:8000/metrics) — *Raw telemetry for Prometheus scraping and health monitoring.*
+- **OpenAPI JSON**: [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
+
+## Core Endpoints You Will Use Most
+
+- `GET /health`
+- `GET /metrics`
+- `POST /ingest-raw-email`
+- `POST /analyze-email`
+- `GET /reports/{analysis_id}`
+- `GET /ui`
+- `GET /ui/analyze`
+- `GET /ui/agents`
+- `GET /soc/dashboard`
+- `GET /soc/overview`
+
+## Health Checks
+
+### API + Broker Health
+
+```bash
+curl -s http://localhost:8000/health | python3 -m json.tool
+```
+
+Look for:
+
+- `status`: `healthy` or `degraded`
+- `rabbitmq.status`: `healthy`
+- `rabbitmq.queue_depths` present
+
+### Live E2E Sanity Check
+
+```bash
+FILE=/home/LabsKraft/new_work/test_phishing_from_host.eml
+INGEST_RESP=$(curl -s -X POST -F "file=@$FILE" http://localhost:8000/ingest-raw-email)
+echo "$INGEST_RESP"
+```
+
+Then poll:
+
+```bash
+ANALYSIS_ID=$(printf '%s' "$INGEST_RESP" | python3 -c 'import sys,json; print(json.load(sys.stdin).get("analysis_id",""))')
+curl -s "http://localhost:8000/reports/$ANALYSIS_ID" | python3 -m json.tool
+```
+
+## Prometheus and Metrics Validation
+
+### App metrics endpoint
+
+```bash
+curl -s http://localhost:8000/metrics | head -n 80
+```
+
+You should see standard and custom metrics (for example RabbitMQ publish/consume histograms).
+
+### Quick metric presence checks
+
+```bash
+curl -s http://localhost:8000/metrics | grep -E "rabbitmq_publish_duration_ms|rabbitmq_consume_duration_ms|rabbitmq_active_connections" || true
+```
+
+### Optional: run a temporary Prometheus to scrape `/metrics`
+
+Create scrape config:
+
+```bash
+cat >/tmp/emailsec-prometheus.yml <<'YAML'
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: email_security_api
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+YAML
+```
+
+Run Prometheus:
+
+```bash
+docker run --rm -d --name emailsec-prom \
+  --add-host=host.docker.internal:host-gateway \
+  -p 9090:9090 \
+  -v /tmp/emailsec-prometheus.yml:/etc/prometheus/prometheus.yml:ro \
+  prom/prometheus
+```
+
+Open:
+
+- Prometheus UI: `http://localhost:9090`
+- Example query: `rabbitmq_publish_duration_ms_count`
+
+Stop temporary Prometheus:
+
+```bash
+docker stop emailsec-prom
+```
+
+## Useful Runtime Observability Commands
+
+```bash
+cd /home/LabsKraft/new_work/email_security/docker
+docker compose logs -f --tail=200 api_service
+docker compose logs -f --tail=200 orchestrator_service
+docker compose logs -f --tail=200 attachment_agent_service
+docker compose logs -f --tail=200 sandbox_agent_service
+```
+
+```bash
+cd /home/LabsKraft/new_work/email_security/docker
+docker compose logs --since 15m | grep -E "AMQPHeartbeatTimeout|StreamLostError|Traceback|ERROR"
+```
+
+## Shutdown
+
+Containerized stack:
 
 ```bash
 cd /home/LabsKraft/new_work/email_security/docker
-docker compose down        # stop containers, keep data
-docker compose down -v     # stop containers AND delete volumes
+docker compose down
 ```
 
----
+Remove volumes too (destructive):
 
-## Quick Start / Summary
-
-To start the system locally:
 ```bash
-cd /home/LabsKraft/new_work
-./start_system.sh
+cd /home/LabsKraft/new_work/email_security/docker
+docker compose down -v
 ```
 
-**To Stop the System:**
-```bash
-./stop_system.sh
-```
+## Troubleshooting Notes
 
-**Open Browser:**
-Once started, navigate to http://localhost:8000/ui
+- If startup appears fine but reports stay at 404, check `orchestrator_service` logs and queue consumers.
+- If API health is degraded, inspect RabbitMQ connectivity first.
+- If ingestion works but final actions fail, check Garuda/Graph integration endpoints and credentials.

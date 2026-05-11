@@ -128,8 +128,26 @@ def process_garuda_retries(max_items: int = 25) -> dict[str, Any]:
 
     try:
         mq.connect()
-        mq.channel.queue_declare(queue=retry_queue, durable=True)
-        mq.channel.queue_declare(queue=dead_queue, durable=True)
+        # Avoid queue argument mismatches: first check whether queues already
+        # exist (passive declare). If not, create them with expected settings.
+        # NOTE: pika closes the channel on a failed passive declare, so we
+        # must reconnect before attempting the fallback active declare.
+        try:
+            mq.channel.queue_declare(queue=retry_queue, passive=True)
+        except Exception:
+            # Channel is now closed — reconnect to get a fresh channel
+            mq.connect()
+            mq.channel.queue_declare(
+                queue=retry_queue,
+                durable=True,
+                arguments=mq._queue_arguments(),
+            )
+
+        try:
+            mq.channel.queue_declare(queue=dead_queue, passive=True)
+        except Exception:
+            mq.connect()
+            mq.channel.queue_declare(queue=dead_queue, durable=True)
 
         for _ in range(max_items):
             method, _properties, body = mq.channel.basic_get(queue=retry_queue, auto_ack=False)

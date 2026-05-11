@@ -20,10 +20,10 @@ Azure AI Search is Microsoft's managed search service for semantic search, full-
 
 ### Required API Credentials
 ```env
-AZURE_SEARCH_SERVICE=contoso-search              # Service name (NOT full URL)
-AZURE_SEARCH_API_KEY=your-admin-key-here         # Admin API key (64+ char hex)
-AZURE_SEARCH_ENABLED=false                       # Feature flag (enable after testing)
-AZURE_SEARCH_INDEX_NAME=threat-indicators        # Index name (can customize)
+AZURE_SEARCH_SERVICE=ktaft-search                # Service name (e.g., ktaft-search)
+AZURE_SEARCH_API_KEY=your-admin-key-here         # Admin API key
+AZURE_SEARCH_ENABLED=true                        # Set to true to enable enrichment
+AZURE_SEARCH_INDEX_NAME=threat-indicators        # Default index
 ```
 
 ### How to Get These
@@ -45,6 +45,30 @@ AZURE_SEARCH_INDEX_NAME=threat-indicators        # Index name (can customize)
 - ✅ You want threat landscape analysis (faceted by severity/source)
 - ✅ You have historical IOC database to index
 - ❌ You only need basic lookups (use local IOC cache instead)
+
+---
+
+## ✅ Azure AI Vision (OCR Integration)
+
+### What It Is
+High-fidelity cloud-based image analysis for extracting text, barcodes, and hidden URLs from email attachments.
+
+### What We Implemented
+- ✅ **Official SDK Migration**: Using `azure-ai-vision-imageanalysis`.
+- ✅ **Hybrid Extraction**: Merges local `pyzbar` (fast) with Azure Cloud (high fidelity).
+- ✅ **Barcode/QR Support**: Automatic URL extraction from visual codes.
+- ✅ **Content Injection**: Extracted text is fed to the Content Agent for phishing analysis.
+
+### Required API Credentials
+```env
+AZURE_OCR_ENDPOINT=https://kraft-vision.cognitiveservices.azure.com/
+AZURE_OCR_KEY=your-ocr-key-here
+```
+
+### When to Use
+- ✅ You want to extract text from screenshots or posters.
+- ✅ You need to detect phishing URLs inside QR codes.
+- ✅ You want high-fidelity OCR for non-standard fonts.
 
 ---
 
@@ -111,11 +135,11 @@ ACTION_QUARANTINE_ENABLED=0                               # 1=enable quarantine
 
 ### Configuration
 ```env
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_ENDPOINT=https://kraft-cyber.cognitiveservices.azure.com/
 AZURE_OPENAI_API_KEY=your-api-key-here
-AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
+AZURE_OPENAI_DEPLOYMENT=gpt-4.1-mini
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
-STORYLINE_ENABLE_LLM_MITRE_ENRICHMENT=false
+STORYLINE_ENABLE_LLM_MITRE_ENRICHMENT=true
 ```
 
 ---

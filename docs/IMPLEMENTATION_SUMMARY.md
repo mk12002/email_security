@@ -369,3 +369,121 @@ All existing tests should pass without modification:
 - No changes to core agent logic; only infrastructure
 - Memory usage is predictable and tunable via config
 - `msal` is lazily imported to prevent system-wide crashes when not installed
+
+---
+
+## 🛠️ SYSTEM STABILIZATION & ENHANCEMENTS (MAY 2026)
+
+### 1. Infrastructure & Stability Fixes
+- **Dependency Resolution**: Added `libgomp1` to the core Dockerfile to resolve shared memory allocation crashes in the `attachment_agent` (specifically for LightGBM model loading).
+- **Path Alignment**: Corrected `IOC_DB_PATH` volume mounts to ensure agents can reliably access the 600k+ record SQLite store within the containerized filesystem.
+- **API Modernization**: Updated API entry points and path mappings to align with the refactored directory structure.
+
+### 2. Lifecycle & Maintenance Automation
+**Files Created/Updated in `scripts/`**:
+- **`startup.sh`**: Unified startup script that handles log provisioning, container initialization, and health checks.
+- **`shutdown.sh`**: Centralized stop script for safe system termination.
+- **`cleanup_system.sh`**: Implemented a "latest-only" rotation strategy.
+    - **Preserved**: All model training artifacts (`models/` folders) and visualization metrics (`.png` plots).
+    - **Rotated**: Historical analysis reports (keeping only the most recent run).
+    - **Cleaned**: System-wide `__pycache__` and temporary execution artifacts.
+
+### 3. Dynamic Threat Intelligence Harvesting
+- **New Feature**: Automated API-based IOC harvesting.
+- **Integrated Providers**: 
+    - **AbuseIPDB**: High-confidence malicious IP blacklist.
+    - **MalwareBazaar**: Recent malware hash feeds.
+    - **URLhaus**: Real-time malicious URL feeds.
+    - **OpenPhish**: Phishing URL stream.
+- **Implementation**: 
+    - Harvesting logic integrated into the `threat_intel_agent` background refresh thread.
+    - Found and integrated **~29,000+ new indicators** from external feeds.
+    - Added resilience for API redirects and transient 401/404 errors.
+
+### 4. SOC Analyst Experience
+- **Navigation**: Added a persistent "🏠 Home" button to the SOC Dashboard and made the brand logo clickable for seamless transition back to the Control Center.
+- **Consistency**: Unified navigation labels across the entire frontend (Home, Dashboard, Analyze, Agents).
+- **Observability**: Enhanced `logging_service.py` to include `analysis_id` in console outputs, significantly improving traceability for analysts following live logs.
+
+### 5. End-to-End Pipeline Reliability Hardening (May 2026)
+
+This block captures all stabilization work completed during the BEC misclassification and intermittent `Pending` state incident.
+
+#### A. Runtime Path and Environment Corrections
+- Updated `src/agents/ml_runtime.py` project-root resolution to correctly locate workspace-level model directories after folder-structure changes.
+- Updated `tools/test_full_system.py` import bootstrapping to include both workspace and package roots so integration scripts run consistently from different working directories.
+- Restored and validated Docker bind-mount behavior for model visibility inside containers so agents do not silently degrade to fallback heuristics due to missing artifacts.
+
+#### B. RabbitMQ Heartbeat/Consumer Stability Fixes
+- Added new RabbitMQ settings in `src/configs/settings.py`:
+   - `rabbitmq_heartbeat_seconds`
+   - `rabbitmq_blocked_connection_timeout_seconds`
+- Increased default heartbeat and blocked timeout behavior to reduce disconnect risk during longer-running agent workloads.
+- Refactored `src/services/messaging_service.py` consume path to prevent broker I/O starvation:
+   - Message handling is executed in a thread pool.
+   - Ack/nack operations are scheduled back onto the pika I/O thread.
+   - Executor lifecycle is safely handled on close.
+
+#### C. Thread-Safety Fix for Publish Path
+- Addressed a follow-on concurrency bug where worker threads publishing on a shared pika channel triggered `StreamLostError` (`pop from an empty deque`).
+- Implemented thread-aware publish marshalling in `src/services/messaging_service.py`:
+   - If publish is called off the consumer thread, work is marshalled onto the AMQP I/O thread via `add_callback_threadsafe`.
+   - Caller waits for completion and propagates publish errors/timeouts.
+   - Consumer-thread identity is tracked and reset safely.
+
+#### D. Service Restart and Verification Workflow
+- Rebuilt and restarted parser, orchestrator, and all agent services with updated messaging/runtime code.
+- Replayed repeated ingestions of `test_phishing_from_host.eml` and validated finalization for all runs.
+- Verified post-fix behavior from fresh container logs (time-bounded window) showed:
+   - No new `AMQPHeartbeatTimeout` in attachment/sandbox services.
+   - No new `StreamLostError` in attachment/sandbox services.
+   - Consistent `Final decision produced` events in orchestrator.
+
+#### E. Verification Results Snapshot
+- Consecutive replay results (post-fix):
+   - `828a47a3-fcca-4f16-808e-42c64018f487` -> `malicious` (score `1.0`)
+   - `6b8cc471-e1e0-4998-8f9c-958720ccb4a2` -> `malicious` (score `1.0`)
+   - `a78bbd39-508c-46bf-a942-b3b9c8c3eb66` -> `malicious` (score `1.0`)
+- Queue health after replay:
+   - `attachment_agent.queue`: `0` messages, `1` consumer
+   - `sandbox_agent.queue`: `0` messages, `1` consumer
+   - `email.results.queue`: `0` messages, `1` consumer
+
+#### F. Remaining Non-Blocking Operational Note
+- `garuda.retry.queue` backlog may persist when Garuda integration is unavailable. This does not block core ingestion, orchestration, or final report generation.
+
+**Status:** Core pipeline is stabilized for repeated ingestion runs after folder-structure migration, with heartbeat-safe and thread-safe RabbitMQ processing in place.
+
+---
+
+### 11. Azure AI Migration & Hybrid OCR (May 2026)
+**Files:**
+- `src/services/ocr_service.py`
+- `src/agents/threat_intel_agent/agent.py`
+- `src/action_layer/azure_search_client.py`
+
+**Changes:**
+- **Azure AI Vision SDK**: Replaced legacy REST-based OCR with the official `azure-ai-vision-imageanalysis` SDK.
+- **Hybrid Extraction**: Implemented a two-stage visual analysis (local Barcode/QR + Azure Cloud Text).
+- **Semantic Intelligence**: Integrated Azure AI Search into the `ThreatIntelAgent` for real-time semantic indicator enrichment.
+- **AI Reasoning**: Finalized Azure OpenAI (GPT-4) integration for attack storylines and counterfactual reasoning.
+- **Docker Stability**: Resolved environment variable injection issues in containerized orchestration.
+
+**Status:** ✅ Fully Integrated and Verified (5/5 accuracy in E2E tests).
+
+---
+
+## 📈 FINAL AUDIT STATUS (May 2026)
+
+The system has undergone a full end-to-end audit following the integration of Azure AI services.
+
+| Component | Status | Verification Method |
+| :--- | :--- | :--- |
+| **Ingestion** | ✅ Healthy | Verified via `ingest-raw-email` with 5 diverse samples. |
+| **OCR Analysis** | ✅ Healthy | Verified text/URL extraction from barcodes and screenshots. |
+| **Orchestration** | ✅ Healthy | Confirmed 7/7 agents reporting for all samples. |
+| **AI Reasoning** | ✅ Healthy | Confirmed GPT-4 generating storyline and "Why" narratives. |
+| **Threat Intel** | ✅ Healthy | Confirmed Semantic Search lookups to `ktaft-search`. |
+| **Action Layer** | ✅ Healthy | Verified simulated Quarantine/Block/Garuda dispatch. |
+
+**Final Verdict:** The Agentic Email Security System is now fully modernized, production-ready, and stabilized on the 30GB RAM architecture.

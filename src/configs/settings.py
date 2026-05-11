@@ -13,8 +13,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-# Project root directory
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Project root directory (moved inside src/configs/ so needs one more .parent)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -51,6 +51,14 @@ class Settings(BaseSettings):
     rabbitmq_port: int = Field(default=5672, description="RabbitMQ AMQP port")
     rabbitmq_user: str = Field(default="guest", description="RabbitMQ username")
     rabbitmq_password: str = Field(default="guest", description="RabbitMQ password")
+    rabbitmq_heartbeat_seconds: int = Field(
+        default=600,
+        description="AMQP heartbeat interval in seconds (increase for long-running agent tasks)",
+    )
+    rabbitmq_blocked_connection_timeout_seconds: int = Field(
+        default=600,
+        description="Blocked connection timeout in seconds for pika connections",
+    )
     new_email_exchange: str = Field(
         default="email.new.exchange", description="Exchange for new email events"
     )
@@ -65,6 +73,31 @@ class Settings(BaseSettings):
         default="email.dead.letter.queue",
         description="Dead-letter queue for failed message processing",
     )
+    rabbitmq_poison_queue: str = Field(
+        default="email.poison.queue",
+        description="Queue for unrecoverable failed messages",
+    )
+    rabbitmq_max_retries: int = Field(
+        default=5, description="Maximum reconnection or message retry attempts"
+    )
+    rabbitmq_backoff_base: float = Field(
+        default=1.0, description="Base for exponential backoff (seconds)"
+    )
+    rabbitmq_backoff_max: float = Field(
+        default=32.0, description="Maximum backoff time (seconds)"
+    )
+    rabbitmq_circuit_breaker_threshold: int = Field(
+        default=10, description="Number of failures before circuit breaker opens"
+    )
+    rabbitmq_circuit_breaker_timeout: int = Field(
+        default=60, description="Time in seconds before circuit breaker attempts reset"
+    )
+    enable_message_compression: bool = Field(
+        default=True, description="Enable gzip compression for large message payloads"
+    )
+    compression_threshold_kb: int = Field(
+        default=10, description="Payload size threshold in KB to trigger compression"
+    )
 
     # --- Parser / Ingestion ---
     email_drop_dir: str = Field(
@@ -78,20 +111,20 @@ class Settings(BaseSettings):
     )
 
     # --- OCR / Attachment Text Extraction ---
-    ocr_space_api_key: Optional[str] = Field(
-        default=None, description="OCR.Space API key"
-    )
-    ocr_space_api_url: str = Field(
-        default="https://api.ocr.space/parse/image", description="OCR.Space API endpoint"
-    )
     enable_ocr_extraction: bool = Field(
         default=False, description="Enable OCR extraction for image/PDF attachments"
     )
     ocr_max_file_size_mb: float = Field(
-        default=1.0, description="Maximum attachment size in MB for OCR extraction"
+        default=5.0, description="Maximum attachment size in MB for OCR extraction"
     )
     ocr_timeout_seconds: float = Field(
-        default=15.0, description="Timeout in seconds for OCR requests"
+        default=30.0, description="Timeout in seconds for OCR requests"
+    )
+    azure_ocr_endpoint: Optional[str] = Field(
+        default=None, description="Azure AI Vision Endpoint"
+    )
+    azure_ocr_key: Optional[str] = Field(
+        default=None, description="Azure AI Vision API Key"
     )
 
     # --- Azure OpenAI ---
@@ -186,6 +219,19 @@ class Settings(BaseSettings):
     )
     shodan_api_key: Optional[str] = Field(
         default=None, description="Shodan API key"
+    )
+
+    threat_intel_harvest_timeout_seconds: float = Field(
+        default=30.0, description="Timeout in seconds for external feed harvesting"
+    )
+    enable_external_feed_harvesting: bool = Field(
+        default=True, description="Enable API-based IOC harvesting from external providers"
+    )
+    abuseipdb_blacklist_url: str = Field(
+        default="https://api.abuseipdb.com/api/v2/blacklist", description="AbuseIPDB blacklist endpoint"
+    )
+    urlhaus_recent_csv_url: str = Field(
+        default="https://urlhaus.abuse.ch/downloads/csv_recent/", description="URLhaus recent CSV feed"
     )
 
     # --- Model Paths ---

@@ -225,6 +225,14 @@
           document.getElementById("reportStructured").style.display = "block";
           document.getElementById("rawToggle").textContent = "Show Raw JSON";
 
+          // Sync agent states for the pipeline grid so they don't stay "Pending" if WS events were missed
+          if (body.agent_results && body.agent_results.length > 0) {
+            body.agent_results.forEach(a => {
+              agentStates[a.agent_name] = { risk_score: a.risk_score, confidence: a.confidence };
+            });
+            renderAgentGrid();
+          }
+
           if (window.mermaid) {
               setTimeout(() => {
                   try { mermaid.init(undefined, document.querySelectorAll('.mermaid')); } catch(e){}

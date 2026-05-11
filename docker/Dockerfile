@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfuzzy-dev \
     libssl-dev \
     git \
+    libzbar0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -31,7 +32,9 @@ LABEL version="0.1.0"
 # Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libfuzzy2 \
+    libgomp1 \
     curl \
+    libzbar0 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 1001 appuser \
     && useradd --uid 1001 --gid appuser --shell /bin/bash --create-home appuser

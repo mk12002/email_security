@@ -131,12 +131,37 @@ class EmailAnalysisResponse(BaseModel):
     )
 
 
+class RabbitMQHealth(BaseModel):
+    """Health status for RabbitMQ connection and queues."""
+
+    status: str = Field(..., description="Connection status (healthy/unhealthy)")
+    error: Optional[str] = Field(default=None, description="Detailed error message if unhealthy")
+    queue_depths: dict[str, int] = Field(
+        default_factory=dict, description="Current message counts for monitored queues"
+    )
+
+
+class DiskHealth(BaseModel):
+    """Disk space health status."""
+
+    status: str = Field(..., description="Disk status (healthy/warning/critical)")
+    free_gb: float = Field(..., description="Free disk space in GB")
+    total_gb: float = Field(..., description="Total disk space in GB")
+    usage_percent: float = Field(..., description="Disk usage percentage")
+
+
 class HealthResponse(BaseModel):
     """Response body for the /health endpoint."""
 
     status: str = Field(default="healthy")
     version: str = Field(default="0.1.0")
     environment: str = Field(default="development")
+    rabbitmq: Optional[RabbitMQHealth] = Field(
+        default=None, description="RabbitMQ-specific health details"
+    )
+    disk: Optional[DiskHealth] = Field(
+        default=None, description="Disk space health details"
+    )
 
 
 class AgentDirectTestRequest(BaseModel):

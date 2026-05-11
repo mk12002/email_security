@@ -22,6 +22,7 @@ def _supported(path: Path, parser: EmailParserService) -> bool:
 
 
 def run() -> None:
+    import signal
     setup_logging(settings.log_dir, settings.app_log_level, settings.log_format)
     parser = EmailParserService()
 
@@ -32,12 +33,24 @@ def run() -> None:
     processed_dir.mkdir(parents=True, exist_ok=True)
     failed_dir.mkdir(parents=True, exist_ok=True)
 
+    is_running = True
+
+    def _handle_shutdown(sig, frame):
+        nonlocal is_running
+        logger.info("Shutdown signal received", signal=sig)
+        is_running = False
+
+    signal.signal(signal.SIGTERM, _handle_shutdown)
+    signal.signal(signal.SIGINT, _handle_shutdown)
+
     logger.info("Parser worker started", drop_dir=str(drop_dir))
-    while True:
+    while is_running:
         candidates = [
             path for path in drop_dir.iterdir() if path.is_file() and _supported(path, parser)
         ]
         for file_path in candidates:
+            if not is_running:
+                break
             try:
                 event = parser.parse_and_publish(file_path)
                 logger.info(
@@ -50,7 +63,15 @@ def run() -> None:
                 logger.exception("Failed to parse email", file=str(file_path), error=str(exc))
                 shutil.move(str(file_path), str(failed_dir / file_path.name))
 
-        time.sleep(max(1, settings.parser_poll_seconds))
+        if is_running:
+            time.sleep(max(1, settings.parser_poll_seconds))
+    
+    # Ensure messaging client is closed
+    try:
+        parser.messaging.shutdown()
+    except Exception:
+        pass
+    logger.info("Parser worker stopped")
 
 
 if __name__ == "__main__":

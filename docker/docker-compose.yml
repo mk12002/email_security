@@ -5,8 +5,6 @@
 # Actual agent service containers will be added in later phases.
 # =============================================================================
 
-version: "3.9"
-
 x-common-app-env: &common-app-env
   APP_ENV: ${APP_ENV:-development}
   APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
@@ -76,9 +74,9 @@ services:
       API_PORT: 8000
     volumes:
       - app_logs:/app/email_security/logs
-      - app_models:/app/models
+      - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
-      - email_drop:/mnt/email_drop
+      - ../email_drop:/mnt/email_drop
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -107,8 +105,26 @@ services:
       PARSER_POLL_SECONDS: ${PARSER_POLL_SECONDS:-2}
     volumes:
       - attachments_data:/mnt/attachments
-      - email_drop:/mnt/email_drop
+      - ../email_drop:/mnt/email_drop
       - app_logs:/app/email_security/logs
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - email_security_net
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+
+  dlq_handler_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-dlq-handler
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.services.dlq_handler"]
+    environment:
+      <<: *common-app-env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -127,10 +143,6 @@ services:
     command: ["python", "-m", "email_security.src.orchestrator.runner"]
     environment:
       <<: *common-app-env
-      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
-      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
-      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
-      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-02-15-preview}
       GARUDA_API_BASE_URL: ${GARUDA_API_BASE_URL:-http://garuda-agent:8088}
       GARUDA_TIMEOUT_SECONDS: ${GARUDA_TIMEOUT_SECONDS:-15}
     volumes:
@@ -269,6 +281,7 @@ services:
       - ../../models:/app/models:ro
       - attachments_data:/mnt/attachments
       - app_logs:/app/email_security/logs
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -330,6 +343,24 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+    networks:
+      - email_security_net
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+
+  intel_sync_worker_service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: email-security-intel-sync
+    env_file: ../.env
+    command: ["python", "-m", "email_security.src.services.intel_sync_worker"]
+    environment:
+      <<: *common-app-env
+    volumes:
+      - ioc_data:/app/email_security/data
+      - app_logs:/app/email_security/logs
     networks:
       - email_security_net
     healthcheck:
@@ -433,8 +464,7 @@ services:
 volumes:
   attachments_data:
     driver: local
-  email_drop:
-    driver: local
+
   ioc_data:
     driver: local
   app_logs:

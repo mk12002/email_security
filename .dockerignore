@@ -1,0 +1,18 @@
+.git
+.github
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+analysis_reports
+logs
+data/*.db
+!data/ioc_store.db
+attachments
+email_drop/hard_set
+email_drop/dataset_samples
+venv
+.venv
+.env
+.env.*
+! .env.template

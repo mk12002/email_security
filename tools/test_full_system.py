@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 # Ensure email_security is importable
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT.parent))
+sys.path.insert(0, str(REPO_ROOT))
 os.chdir(str(REPO_ROOT))
 
 PASS = "✅ PASS"

@@ -102,7 +102,7 @@ const AgentUI = (() => {
   /* ── Topbar HTML ── */
   function topbarHTML(activePage) {
     const pages = [
-      { href: "/ui", label: "🏠 Overview", id: "overview" },
+      { href: "/ui", label: "🏠 Home", id: "overview" },
       { href: "/soc/dashboard", label: "📊 Dashboard", id: "dashboard" },
       { href: "/ui/analyze", label: "📤 Analyze", id: "analyze" },
       { href: "/ui/agents", label: "🧪 Agents", id: "agents" },

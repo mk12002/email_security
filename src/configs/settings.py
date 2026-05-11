@@ -13,8 +13,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-# Project root directory
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Project root directory (moved inside src/configs/ so needs one more .parent)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):

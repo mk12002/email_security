@@ -43,7 +43,7 @@ def test_threat_intel_smoke_ordering_and_signal() -> None:
 
     benign_payload = {
         "iocs": {
-            "domains": ["docs.google.com", "cdn.jsdelivr.net", "fonts.googleapis.com"],
+            "domains": ["example.com", "python.org", "w3.org"],
             "ips": ["35.190.247.0", "104.16.124.0", "13.107.42.14"],
             "hashes": [],
         }
